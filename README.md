@@ -55,16 +55,52 @@ Para detener la infraestructura local después de cerrar el desarrollo:
 npm run dev:down
 ```
 
-### Infraestructura MQTT
+### Infraestructura local
 
 ```bash
-npm run infra:up       # Inicia Mosquitto en el puerto 1883
+npm run infra:up       # Inicia Mosquitto y PostgreSQL
 npm run infra:down     # Detiene y elimina los contenedores
+npm run infra:reset-db-volume # Detiene servicios y recrea el volumen vacío
+npm run infra:reset-db # Borra el volumen y reinicializa PostgreSQL
 npm run infra:logs     # Muestra los logs de la infraestructura
 ```
 
-El Compose actual administra Mosquitto en `127.0.0.1:1883`. La base de datos
-PostgreSQL todavía no forma parte de esta configuración local.
+Antes de iniciar la infraestructura, copia `.env.example` como `.env` y
+configura las credenciales locales de PostgreSQL. El archivo `.env` está
+excluido del repositorio.
+
+Mosquitto queda disponible en `127.0.0.1:1883` y PostgreSQL en
+`127.0.0.1:${POSTGRES_PORT}`. Al crear el volumen por primera vez, PostgreSQL
+ejecuta `database/schema.sql` y crea las 18 tablas del modelo.
+
+Para comprobar el estado:
+
+```bash
+	docker compose --env-file .env -f infra/docker-compose.yml ps
+```
+
+Para listar las tablas desde PostgreSQL:
+
+```bash
+docker compose --env-file .env -f infra/docker-compose.yml exec postgres psql -U samavi -d samavi -c "\\dt"
+```
+
+`docker compose down` conserva los datos del volumen. Para reinicializar la
+base de datos desde cero usa:
+
+```bash
+npm run infra:reset-db
+```
+
+Este comando elimina permanentemente el volumen local y vuelve a ejecutar
+`database/schema.sql`.
+
+Si solo necesitas detener los servicios, eliminar el volumen y crear uno
+vacío, sin volver a levantar PostgreSQL, usa:
+
+```bash
+npm run infra:reset-db-volume
+```
 
 ### Backend
 

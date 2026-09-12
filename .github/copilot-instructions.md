@@ -66,7 +66,7 @@ Pendiente: refresh tokens, expiración exacta, recuperación de contraseña, reg
 - Nombres de tópicos MQTT en `kebab-case`, prefijados por granja/dispositivo, ej: `samavi/{deviceId}/eggs/count`.
 - Toda persistencia de datos entrantes por MQTT debe pasar por Prisma, no escribir SQL crudo salvo excepción justificada en comentario.
 - Migraciones de Prisma: nombrarlas descriptivamente (`add_egg_count_table`, no `update1`).
-- Commits en formato Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, etc.), cortos y concretos, con summary y descripción.
+- Commits en formato Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, etc.), cortos y concretos, con summary y descripción. ej. `feat: added postgresql in docker compose` y `Added PostgreSQL service to Docker Compose for local development and testing.`. En el summary mencionar el cambio principal, nada de cambios pequeños. En la descripción sí mencionar todos los cambios, concretamente.
 - No usar `any` en TypeScript. Tipar payloads MQTT y respuestas API explícitamente.
 
 ## Firmware (ESP32)
