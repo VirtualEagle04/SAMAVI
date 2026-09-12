@@ -1,0 +1,61 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include "config.h"
+
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASSWORD;
+const char* mqtt_server = MQTT_SERVER;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const int PIN_BOTON = 0;
+bool estadoAnteriorBoton = HIGH;
+
+void reconectarMQTT();
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_BOTON, INPUT_PULLUP);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando a WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi conectado, IP: " + WiFi.localIP().toString());
+
+  client.setServer(mqtt_server, 1883);
+}
+
+void reconectarMQTT() {
+  while (!client.connected()) {
+    Serial.println("Conectando a MQTT...");
+    if (client.connect("ESP32_Saman")) {
+      Serial.println("Conectado a MQTT");
+    } else {
+      Serial.print("Fallo, rc=");
+      Serial.print(client.state());
+      Serial.println(" reintentando en 2s");
+      delay(2000);
+    }
+  }
+}
+
+void loop() {
+  if (!client.connected()) reconectarMQTT();
+  client.loop();
+
+  bool estadoActualBoton = digitalRead(PIN_BOTON);
+
+  if (estadoActualBoton == LOW && estadoAnteriorBoton == HIGH) {
+    String payload = "{\"categoria\":\"AA\",\"cantidad\":1}";
+    client.publish("saman/conteo", payload.c_str());
+    Serial.println("Botón presionado -> publicado por MQTT: " + payload);
+    delay(50);
+  }
+
+  estadoAnteriorBoton = estadoActualBoton;
+}
