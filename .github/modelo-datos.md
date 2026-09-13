@@ -25,7 +25,7 @@ Convenciones generales:
 | 4 | CATEGORIA_PESO | Fuerte | codigo |
 | 5 | LOG_CONTEO | Fuerte | id |
 | 6 | CIERRE_DIARIO | Débil | (id_galpon, codigo_categoria_peso, fecha) |
-| 7 | BODEGA | Débil | (codigo_categoria_peso, fecha_corte) |
+| 7 | BODEGA | Débil | (id_galpon, codigo_categoria_peso, fecha_corte) |
 | 8 | MAYORISTA | Fuerte | id |
 | 9 | PRECIO | Unión M:N | (id_mayorista, codigo_categoria_peso) |
 | 10 | PEDIDO | Fuerte | id |
@@ -112,11 +112,12 @@ Total consolidado de bandejas producidas por galpón, categoría de peso y fecha
 | cantidad_bandejas | INT | NOT NULL, >= 0 | Bandejas completas (30 huevos c/u) producidas ese día para ese galpón y categoría |
 
 ### 3.7 BODEGA
-Inventario remanente (lo que queda en bodega) consolidado por categoría de peso y fecha de corte, tras aplicar pedidos/ventas. Es una sumatoria global, no por galpón (según el proceso real, el registro de bodega ya no discrimina por galpón).
+Inventario remanente (lo que queda en bodega) por galpón, categoría de peso y fecha de corte, tras aplicar pedidos/ventas. Cada galpón puede conservar cantidades diferentes para una misma categoría.
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| codigo_categoria_peso | VARCHAR(10) | PK compuesta, FK -> CATEGORIA_PESO(codigo) | |
+| id_galpon | INT | PK compuesta, FK -> GALPON(id) | Galpón al que pertenece el inventario remanente |
+| codigo_categoria_peso | VARCHAR(10) | PK compuesta, FK -> CATEGORIA_PESO(codigo) | Categoría de peso del inventario |
 | fecha_corte | DATE | PK compuesta | Fecha del corte (normalmente los jueves, o el día de venta) |
 | cantidad_bandejas | INT | NOT NULL, >= 0 | Bandejas remanentes en bodega |
 
@@ -140,12 +141,12 @@ Relación M:N entre MAYORISTA y CATEGORIA_PESO: precio vigente que un mayorista 
 | valor_unitario | DECIMAL(10,2) | NOT NULL, > 0 | Precio por bandeja vigente. No maneja histórico de vigencia (confirmado con el cliente): el precio real aplicado en cada venta queda registrado de forma inmutable en `DETALLE_VENTA.precio_aplicado`. |
 
 ### 3.10 PEDIDO
-Pedido realizado por un mayorista en un día de venta (martes, sábado o jueves).
+Pedido realizado por un mayorista en un momento específico de la jornada de venta (martes, sábado o jueves).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | INT | PK, autoincremental | |
-| fecha | DATE | NOT NULL | Fecha del pedido |
+| fecha | TIMESTAMP | NOT NULL | Fecha y hora en que se realizó el pedido |
 | estado | VARCHAR(20) | NOT NULL | Enum lógico: `pendiente`, `cargado`, `entregado`, `modificado`, `cancelado` |
 | id_mayorista | INT | NOT NULL, FK -> MAYORISTA(id) | |
 
@@ -247,19 +248,20 @@ Esta tabla reemplaza la necesidad de columnas `id_usuario` directas en PEDIDO y 
 | 4 | LOG_CONTEO | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
 | 5 | CIERRE_DIARIO | id_galpon | GALPON | N a 1 | RESTRICT |
 | 6 | CIERRE_DIARIO | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
-| 7 | BODEGA | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
-| 8 | PRECIO | id_mayorista | MAYORISTA | N a 1 | CASCADE |
-| 9 | PRECIO | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
-| 10 | PEDIDO | id_mayorista | MAYORISTA | N a 1 | RESTRICT |
-| 11 | DETALLE_PEDIDO | id_pedido | PEDIDO | N a 1 | CASCADE |
-| 12 | DETALLE_PEDIDO | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
-| 13 | VENTA | id_pedido | PEDIDO | 1 a 1 | RESTRICT |
-| 14 | DETALLE_VENTA | id_venta | VENTA | N a 1 | CASCADE |
-| 15 | DETALLE_VENTA | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
-| 16 | ROL_PERMISO | id_rol | ROL | N a 1 | CASCADE |
-| 17 | ROL_PERMISO | id_permiso | PERMISO | N a 1 | CASCADE |
-| 18 | USUARIO | id_rol | ROL | N a 1 | RESTRICT |
-| 19 | AUDITORIA | id_usuario | USUARIO | N a 1 | RESTRICT |
+| 7 | BODEGA | id_galpon | GALPON | N a 1 | RESTRICT |
+| 8 | BODEGA | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
+| 9 | PRECIO | id_mayorista | MAYORISTA | N a 1 | CASCADE |
+| 10 | PRECIO | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
+| 11 | PEDIDO | id_mayorista | MAYORISTA | N a 1 | RESTRICT |
+| 12 | DETALLE_PEDIDO | id_pedido | PEDIDO | N a 1 | CASCADE |
+| 13 | DETALLE_PEDIDO | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
+| 14 | VENTA | id_pedido | PEDIDO | 1 a 1 | RESTRICT |
+| 15 | DETALLE_VENTA | id_venta | VENTA | N a 1 | CASCADE |
+| 16 | DETALLE_VENTA | codigo_categoria_peso | CATEGORIA_PESO | N a 1 | RESTRICT |
+| 17 | ROL_PERMISO | id_rol | ROL | N a 1 | CASCADE |
+| 18 | ROL_PERMISO | id_permiso | PERMISO | N a 1 | CASCADE |
+| 19 | USUARIO | id_rol | ROL | N a 1 | RESTRICT |
+| 20 | AUDITORIA | id_usuario | USUARIO | N a 1 | RESTRICT |
 
 Las reglas de borrado (`CASCADE`/`RESTRICT`) son una recomendación de partida; deben confirmarse con el equipo antes de implementarse, especialmente en tablas históricas (LOG_CONTEO, CIERRE_DIARIO, BODEGA, AUDITORIA) donde probablemente se prefiera nunca borrar en cascada.
 
