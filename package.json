@@ -4,7 +4,7 @@
   "scripts": {
     "infra:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
-    "infra:reset-db-volume": "docker compose --env-file .env -f infra/docker-compose.yml down -v && docker volume create infra_postgres_data",
+    "infra:reset-db-vol": "docker compose --env-file .env -f infra/docker-compose.yml down -v && docker volume create infra_postgres_data",
     "infra:reset-db": "docker compose --env-file .env -f infra/docker-compose.yml down -v && docker compose --env-file .env -f infra/docker-compose.yml up -d",
     "infra:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f",
     "dev": "npm run infra:up && concurrently -n infra,backend,frontend -c magenta,blue,green \"npm run infra:logs\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
