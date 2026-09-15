@@ -5,13 +5,13 @@ services:
     env_file:
       - ../.env
     ports:
-      - "127.0.0.1:${MOSQUITTO_PORT:-1883}:1883"
+      - "${MOSQUITTO_PORT:-1883}:1883"
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - mosquitto_data:/mosquitto/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t samavi/healthcheck -n"]
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -i samavi-healthcheck -t samavi/healthcheck -n"]
       interval: 5s
       timeout: 5s
       retries: 5
