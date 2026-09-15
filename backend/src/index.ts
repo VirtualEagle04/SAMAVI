@@ -4,8 +4,9 @@ import mqtt, { type MqttClient } from "mqtt";
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
 const mqttUrl = process.env.MQTT_URL ?? "mqtt://localhost:1883";
-const mqttTopic = process.env.MQTT_TOPIC ?? "saman/conteo";
-const client: MqttClient = mqtt.connect(mqttUrl);
+const mqttTopic = process.env.MQTT_TOPIC ?? "samavi/conteo";
+const mqttClientId = process.env.MQTT_CLIENT_ID ?? "samavi-backend";
+const client: MqttClient = mqtt.connect(mqttUrl, { clientId: mqttClientId });
 
 client.on("connect", () => {
   console.log("MQTT: Conectado al broker MQTT");

@@ -27,7 +27,7 @@ void setup() {
   }
   Serial.println("\nWiFi conectado, IP: " + WiFi.localIP().toString());
 
-  client.setServer(mqtt_server, 1883);
+  client.setServer(mqtt_server, MQTT_PORT);
 }
 
 void reconectarMQTT() {
