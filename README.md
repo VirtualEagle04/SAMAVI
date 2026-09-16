@@ -1,4 +1,4 @@
-![](.github\samavi_header.png)
+![](.github/samavi_header.png)
 
 # SAMAVI
 
