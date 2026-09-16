@@ -1,3 +1,5 @@
+![](.github\samavi_header.png)
+
 # SAMAVI
 
 Sistema de Gestión Avícola El Samán: plataforma para el conteo automático de
