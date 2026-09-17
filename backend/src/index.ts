@@ -1,18 +1,25 @@
 import express from "express";
 import mqtt, { type MqttClient } from "mqtt";
+import { env } from "./config/env.js";
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
+import { prisma } from "./database/prisma.js";
 
 const app = express();
-const port = Number(process.env.PORT ?? 3001);
-const mqttUrl = process.env.MQTT_URL ?? "mqtt://localhost:1883";
-const mqttTopic = process.env.MQTT_TOPIC ?? "samavi/conteo";
-const mqttClientId = process.env.MQTT_CLIENT_ID ?? "samavi-backend";
-const client: MqttClient = mqtt.connect(mqttUrl, { clientId: mqttClientId });
+app.use(express.json());
+app.get("/health", (_request, response) => {
+  response.json({ status: "ok" });
+});
+app.use("/api/v1/auth", authRoutes);
+app.use(errorMiddleware);
+
+const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
 
 client.on("connect", () => {
   console.log("MQTT: Conectado al broker MQTT");
-  client.subscribe(mqttTopic, (error) => {
+  client.subscribe(env.mqttTopic, (error) => {
     if (error) {
-      console.error(`MQTT: Error al suscribirse a ${mqttTopic}:`, error.message);
+      console.error(`MQTT: Error al suscribirse a ${env.mqttTopic}:`, error.message);
     }
   });
 });
@@ -38,6 +45,15 @@ client.on("error", (error) => {
   console.error("MQTT:", error.message);
 });
 
-app.listen(port, () => {
-  console.log(`Backend corriendo en puerto ${port}`);
+const server = app.listen(env.port, () => {
+  console.log(`Backend corriendo en puerto ${env.port}`);
 });
+
+async function shutdown(): Promise<void> {
+  server.close();
+  await client.endAsync();
+  await prisma.$disconnect();
+}
+
+process.on("SIGINT", () => void shutdown());
+process.on("SIGTERM", () => void shutdown());
