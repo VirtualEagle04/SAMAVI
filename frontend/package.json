@@ -16,7 +16,9 @@
     "@mui/material": "^9.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "samavi": "file:.."
+    "samavi": "file:..",
+    "react-router-dom": "^7.18.4",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
