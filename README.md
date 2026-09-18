@@ -9,13 +9,13 @@ huevos y la gestión y monitoreo de una granja avícola.
 
 | Carpeta | Descripción |
 | --- | --- |
-| `backend/` | API y lógica del servidor con Node.js, Express y TypeScript. También contiene la integración MQTT del backend. |
+| `backend/` | API y lógica del servidor con Node.js, Express 5, TypeScript y Prisma. También contiene la integración MQTT del backend. |
 | `frontend/` | Aplicación web con React, TypeScript, Vite y Material UI. |
 | `infra/` | Configuración de infraestructura local mediante Docker Compose. |
 | `infra/mosquitto/` | Configuración del broker MQTT Mosquitto. |
 | `firmware/` | Proyecto PlatformIO del dispositivo y código que se ejecuta en el hardware. |
 | `firmware/include/` | Archivos de cabecera y configuración del firmware, incluyendo `config.h`. |
-| `firmware/src/` | Código fuente principal del firmware (`main.cpp`). |
+| `firmware/src/` | Código fuente del firmware. PlatformIO compila actualmente `main.cpp`. |
 
 ## Requisitos
 
@@ -45,6 +45,12 @@ npm run install:all
 ### Desarrollo completo
 
 ```bash
+npm run build:all
+```
+
+Este comando compila los archivos TypeScript a JavaScript, y genera el esquema de Prisma.
+
+```bash
 npm run dev
 ```
 
@@ -62,23 +68,22 @@ npm run dev:down
 ```bash
 npm run infra:up       # Inicia Mosquitto y PostgreSQL
 npm run infra:down     # Detiene y elimina los contenedores
-npm run infra:reset-db-volume # Detiene servicios y recrea el volumen vacío
-npm run infra:reset-db # Borra el volumen y reinicializa PostgreSQL
+npm run infra:reset    # Borra los volúmenes y reinicializa PostgreSQL
 npm run infra:logs     # Muestra los logs de la infraestructura
 ```
 
 Antes de iniciar la infraestructura, copia `.env.example` como `.env` y
-configura las credenciales locales de PostgreSQL. El archivo `.env` está
-excluido del repositorio.
+configura las credenciales locales de PostgreSQL y un `JWT_SECRET` de al menos
+32 caracteres. El archivo `.env` está excluido del repositorio.
 
 Mosquitto queda disponible en `127.0.0.1:1883` y PostgreSQL en
-`127.0.0.1:${POSTGRES_PORT}`. Al crear el volumen por primera vez, PostgreSQL
-ejecuta `database/schema.sql` y crea las 18 tablas del modelo.
+`127.0.0.1:15432`. Al crear el volumen por primera vez, PostgreSQL
+ejecuta `database/schema.sql` y crea las 19 tablas del esquema SQL.
 
 Para comprobar el estado:
 
 ```bash
-	docker compose --env-file .env -f infra/docker-compose.yml ps
+docker compose --env-file .env -f infra/docker-compose.yml ps
 ```
 
 Para listar las tablas desde PostgreSQL:
@@ -91,18 +96,11 @@ docker compose --env-file .env -f infra/docker-compose.yml exec postgres psql -U
 base de datos desde cero usa:
 
 ```bash
-npm run infra:reset-db
+npm run infra:reset
 ```
 
 Este comando elimina permanentemente el volumen local y vuelve a ejecutar
 `database/schema.sql`.
-
-Si solo necesitas detener los servicios, eliminar el volumen y crear uno
-vacío, sin volver a levantar PostgreSQL, usa:
-
-```bash
-npm run infra:reset-db-volume
-```
 
 ### Backend
 
@@ -111,7 +109,15 @@ npm --prefix backend run dev
 ```
 
 El backend se ejecuta con `tsx watch` y reinicia el proceso cuando cambia el
-código. Su puerto predeterminado es `3001`.
+código. Su puerto predeterminado es `3001`. Expone `GET /health` y el inicio de
+sesión en `POST /api/v1/auth/login`.
+
+Para generar el cliente Prisma y compilar el backend:
+
+```bash
+npm --prefix backend run prisma:generate
+npm --prefix backend run build
+```
 
 ### Frontend
 
@@ -122,11 +128,9 @@ npm --prefix frontend run lint      # Reglas Oxlint
 npm --prefix frontend run preview   # Sirve el build generado
 ```
 
-También se puede construir backend y frontend desde la raíz con:
-
-```bash
-npm run build:all
-```
+El login del frontend todavía usa usuarios simulados en
+`frontend/src/services/authService.ts`; la conexión con el endpoint del
+backend está pendiente.
 
 ### Firmware
 
@@ -144,7 +148,17 @@ cargar el firmware. No incluyas credenciales reales en el repositorio.
 
 ## Flujo recomendado
 
-1. Instalar las dependencias con los comandos de la sección de instalación.
-2. Iniciar el entorno con `npm run dev`.
-3. Conectar y cargar el firmware en el ESP32 desde PlatformIO.
-4. Consultar los logs con `npm run infra:logs` cuando se necesite revisar MQTT.
+1. Copiar `.env.example` como `.env` y completar los valores locales.
+2. Instalar las dependencias con `npm run install:all`.
+3. Compilar a JavaScript con `npm run build:all`.
+4. Iniciar el entorno con `npm run dev`.
+5. Conectar y cargar el firmware en el ESP32 desde PlatformIO.
+
+## Estado actual
+
+- El backend recibe y registra mensajes JSON del tópico MQTT configurado, pero
+	todavía no persiste esos eventos en Prisma.
+- Prisma modela actualmente `Rol` y `Usuario`. El esquema SQL contiene el
+	modelo relacional completo y sus datos iniciales.
+- El frontend tiene rutas y pantalla de login, pero aún no cuenta con un
+	dashboard conectado a la API.

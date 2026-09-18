@@ -4,12 +4,13 @@
   "scripts": {
     "infra:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
-    "infra:reset-db-vol": "docker compose --env-file .env -f infra/docker-compose.yml down -v && docker volume create infra_postgres_data",
-    "infra:reset-db": "docker compose --env-file .env -f infra/docker-compose.yml down -v && docker compose --env-file .env -f infra/docker-compose.yml up -d",
     "infra:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f",
-    "dev": "npm run infra:up && concurrently -n infra,backend,frontend -c magenta,blue,green \"npm run infra:logs\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "infra:logs:postgres": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres",
+    "infra:logs:mosquitto": "docker compose --env-file .env -f infra/docker-compose.yml logs -f mosquitto",
+    "infra:reset": "docker compose --env-file .env -f infra/docker-compose.yml down -v && docker volume create infra_postgres_data",
+    "dev": "npm run infra:up && concurrently -n infra-postgres,infra-mosquitto,backend,frontend -c bgMagenta,bgYellow,bgGreen,bgBlue \"npm run infra:logs:postgres\" \"npm run infra:logs:mosquitto\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:down": "npm run infra:down",
-    "build:all": "npm --prefix backend run build && npm --prefix frontend run build",
+    "build:all": "npm --prefix backend run prisma:generate && npm --prefix backend run build && npm --prefix frontend run build",
     "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install"
   },
   "devDependencies": {

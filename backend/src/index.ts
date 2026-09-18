@@ -3,7 +3,9 @@ import mqtt, { type MqttClient } from "mqtt";
 import { env } from "./config/env.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { produccionRoutes } from "./modules/produccion/produccion.routes.js";
 import { prisma } from "./database/prisma.js";
+import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
 
 const app = express();
 app.use(express.json());
@@ -11,6 +13,7 @@ app.get("/health", (_request, response) => {
   response.json({ status: "ok" });
 });
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/produccion", produccionRoutes);
 app.use(errorMiddleware);
 
 const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
@@ -32,13 +35,8 @@ client.on("close", () => {
   console.error("MQTT: Desconectado del broker MQTT");
 });
 
-client.on("message", (topic, message) => {
-  try {
-    const data: unknown = JSON.parse(message.toString());
-    console.log(`MQTT: Recibido de ${topic}: `, data);
-  } catch {
-    console.error(`MQTT: Payload JSON inválido recibido de ${topic}`);
-  }
+client.on("message", (_topic, message) => {
+  void handleProductionMessage(message);
 });
 
 client.on("error", (error) => {
