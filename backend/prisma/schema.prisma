@@ -26,3 +26,67 @@ model Usuario {
 
   @@map("usuario")
 }
+
+model Galpon {
+  id               Int             @id @default(autoincrement())
+  nombre           String          @db.VarChar(100)
+  gallinasActuales Int             @map("gallinas_actuales")
+  estado           String          @db.VarChar(20)
+  conteos          LogConteo[]
+  cierres          CierreDiario[]
+  bodegas          Bodega[]
+
+  @@map("galpon")
+}
+
+model CategoriaPeso {
+  codigo       String          @id @db.VarChar(10)
+  nombre       String          @db.VarChar(30)
+  pesoMinG     Int?            @map("peso_min_g")
+  pesoMaxG     Int?            @map("peso_max_g")
+  conteos      LogConteo[]
+  cierres      CierreDiario[]
+  bodegas      Bodega[]
+
+  @@map("categoria_peso")
+}
+
+model LogConteo {
+  id                  BigInt        @id @default(autoincrement())
+  timestamp           DateTime
+  cantidad            Int
+  idGalpon            Int           @map("id_galpon")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  galpon              Galpon        @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+  categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+
+  @@index([idGalpon, codigoCategoriaPeso, timestamp])
+  @@map("log_conteo")
+}
+
+model CierreDiario {
+  idGalpon            Int           @map("id_galpon")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  fecha               DateTime      @db.Date
+  cantidadBandejas    Int           @map("cantidad_bandejas")
+  cantidadSobrante    Int           @map("cantidad_sobrante")
+  galpon              Galpon        @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+  categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+
+  @@id([idGalpon, codigoCategoriaPeso, fecha])
+  @@index([fecha])
+  @@map("cierre_diario")
+}
+
+model Bodega {
+  idGalpon            Int           @map("id_galpon")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  fechaCorte          DateTime      @map("fecha_corte") @db.Date
+  cantidadBandejas    Int           @map("cantidad_bandejas")
+  galpon              Galpon        @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+  categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+
+  @@id([idGalpon, codigoCategoriaPeso, fechaCorte])
+  @@index([fechaCorte])
+  @@map("bodega")
+}

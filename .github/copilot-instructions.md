@@ -1,86 +1,100 @@
-# Copilot Instructions: SAMAVI
+# Instrucciones de Copilot: SAMAVI
 
 ## Contexto del proyecto
-SAMAVI (Sistema de Gestión Avícola El Samán) es un proyecto de grado académico (equipo de 3 personas) que automatiza el conteo de huevos y la gestión de producción de una granja avícola, El Samán.
-- Cliente: María Fernanda Durán (dueña). 
-- Carlos Andrés (hijo, hace el prorrateo)
-- Humberto (ventas y distribución)
-- Galponero y ayudante (recolección y clasificación).
 
-Gestión: Scrum en Trello (board `SAMAVI`, id `6a8cff9f099cc80690e0e07d`).
-Repo: github.com/VirtualEagle04/SAMAVI (rama main).
+SAMAVI (Sistema de Gestión Avícola El Samán) es un proyecto académico que
+automatiza el conteo de huevos y la gestión de producción de la granja El
+Samán.
 
-## Arquitectura
-- **Monolito modular**, NO microservicios. Separación por Docker Compose, no por servicios independientes.
-- Arquitectura confirmada: ESP32 → MQTT:8883 → Mosquitto → Backend Node/Express (:3001) → HTTP/JSON → Frontend (Vite+React, servido con nginx en prod) → HTTPS:443 → Usuarios. Backend → Prisma → PostgreSQL (:5432). Todo en Docker Compose sobre AWS Lightsail, con volúmenes `mosquitto_data` y `postgres_data`, snapshots cada 12 horas.
-- El ESP32 solo envía datos por MQTT. Toda escritura a base de datos ocurre en el backend. El ESP32 está deliberadamente excluido del modelo de datos.
-- Módulos de dominio dentro de `backend/src/modules/` (ej: `eggs`, `sensors`, `farm`, `auth`). Patrón por módulo: `*.controller.js` → `*.service.js` → `*.routes.js`.
-- Toda lógica MQTT vive aislada en `backend/src/mqtt/`, nunca mezclada con controllers/services de dominio.
+- Cliente: María Fernanda Durán, dueña.
+- Carlos Andrés: prorrateo.
+- Humberto: ventas y distribución.
+- Galponero y ayudante: recolección y clasificación.
+- Repositorio: `github.com/VirtualEagle04/SAMAVI`, rama `main`.
 
-## Stack a Usar
-- **Backend:** Node.js + Express 5 + Prisma ORM + TypeScript. `backend/index.js` actualmente solo loguea mensajes MQTT entrantes en el tópico `saman/conteo`.
-- **DB:** PostgreSQL vía Prisma ORM (no sugerir cambiarlo). Aún no hay servicio PostgreSQL en `infra/` (Docker Compose solo corre Mosquitto por ahora).
-- **IoT:** MQTT sobre Mosquitto (Docker, puerto 1883, acceso anónimo en dev).
-- **Hardware:** ESP32 DevKit + sensores VL53L0X (time-of-flight) únicamente.
-- **Frontend:** React 18 + TypeScript + Vite + MUI (Material UI). Actualmente en etapa de scaffold, sin dashboard construido aún.
-- **Firmware:** PlatformIO + C++. `firmware/samavi-firmware/main.cpp`.
+## Arquitectura actual
 
-## Modelo de datos
-- 18 tablas del esquema relacional.
-- Estructura en lenguaje natural del modelo de datos: `.github/modelo-datos.md`.
+- Monolito modular. No proponer microservicios.
+- ESP32 publica por MQTT a Mosquitto en desarrollo, normalmente por el puerto
+  `1883`.
+- El backend Node.js y Express escucha por defecto en el puerto `3001`.
+- El backend expone `GET /health` y `POST /api/v1/auth/login`.
+- PostgreSQL corre en Docker Compose y usa el puerto local configurable por
+  `POSTGRES_PORT`, cuyo valor predeterminado es `15432`.
+- El frontend usa React, TypeScript, Vite, Material UI, Zustand y React Router.
+- Toda la lógica MQTT debe permanecer en el backend y la persistencia debe
+  pasar por Prisma.
+- El ESP32 no escribe directamente en la base de datos.
+
+## Estructura actual
+
+- Backend: `backend/src/index.ts` y módulos en `backend/src/modules/`.
+- Autenticación: `backend/src/modules/auth/`.
+- Prisma: `backend/prisma/schema.prisma`.
+- SQL inicial: `database/schema.sql`.
+- Frontend: `frontend/src/`.
+- Firmware: `firmware/src/main.cpp`, con configuración local en
+  `firmware/include/config.h`.
+
+El backend implementa actualmente login con bcrypt y JWT, además de recibir y
+registrar mensajes JSON del tópico MQTT configurado. Los mensajes MQTT todavía
+no se persisten en Prisma. El frontend mantiene un login simulado y aún no está
+conectado al endpoint de autenticación.
+
+## Stack
+
+- Backend: Node.js, Express 5, TypeScript, Prisma, PostgreSQL, MQTT,
+  bcryptjs y jsonwebtoken.
+- Frontend: React 19, TypeScript, Vite, Material UI, Zustand y React Router 7.
+- Firmware: PlatformIO, C++, ESP32, PubSubClient y sensores VL53L0X.
+- Infraestructura local: Docker Compose con Mosquitto y PostgreSQL.
+
+Prisma modela actualmente `Rol` y `Usuario`. El esquema SQL contiene 19 tablas,
+incluida `gasto`, y se ejecuta al inicializar el volumen de PostgreSQL.
 
 ## Autenticación
-Esquema JWT (stateless, token en header `Authorization: Bearer`). Payload: `id`, `rol`, expiración.
 
-Flujo: 
-   1. Ingresar usuario y password
-   2. POST /auth/login
-   3. Buscar usuario por usuario
-   4. Devuelve usuario con password_hash y rol
-   5. Verificación de password con bcrypt
-   6. Generación de JWT
-   7. Resuesta 200 con JWT
-   8. Guardar JWT en memoria del cliente
-   9. Usuario solicita recursos con JWT en header
-   10. Middleware verifica JWT
-   11. Middleware verifica rol
-   12. Consultar datos solicitados
-   13. Devolver datos al cliente
+- Endpoint: `POST /api/v1/auth/login`.
+- Entrada: `login` y `password`.
+- Respuesta exitosa: token JWT y datos básicos del usuario.
+- El token usa el header `Authorization: Bearer <token>` para endpoints
+  protegidos.
+- Las credenciales inválidas responden con `401`.
+- Refresh tokens, recuperación de contraseña y registro de usuarios están
+  pendientes.
 
-Casos de falla definidos:
-- 401 credenciales inválidas
-- 401 token inválido/expirado
-- 403 rol insuficiente.
+## Reglas de código
 
-Pendiente: refresh tokens, expiración exacta, recuperación de contraseña, registro de usuarios.
+- Siempre envolver `JSON.parse` de payloads MQTT en `try/catch`.
+- Tipar payloads MQTT y respuestas API explícitamente. No usar `any` en
+  TypeScript.
+- Usar Prisma para persistencia. Evitar SQL crudo salvo una excepción
+  justificada.
+- Nombrar las migraciones de forma descriptiva.
+- Usar tópicos MQTT en kebab-case y prefijados por granja o dispositivo cuando
+  el contrato lo defina.
+- Mantener los cambios dentro del módulo responsable y evitar refactors no
+  relacionados.
+- Usar commits Conventional Commits si se solicita crear un commit.
+- No usar em-dashes ni punto y coma en la documentación del proyecto.
 
-## Lógica de negocio clave: Prorrateo
-1. **Distribución de ventas:** por cada peso (Y, Ext, AA, A, B, C, P), la cantidad vendida a cada precio se distribuye entre el pool de galpones(1, 3, 4, etc.) proporcional a la participación de cada galpón en la producción semanal de ese peso.
-   `Asig_G1 = ROUND(cantidad_vendida * participacion_G1)`, `Asig_G3 = ROUND(cantidad_vendida * participacion_G3)`, `Asig_G4 = cantidad_vendida - Asig_G1 - Asig_G3` (residual).
-2. **Gastos:** fijos e iguales por galpón activo.
-3. **Saldo por galpón** = ventas asignadas menos gastos.
-4. **Distribución a socios** = saldo x porcentaje de inversión por socio en ese galpón específico.
+## Firmware
 
-## Reglas del Código
-- Parseo de payloads MQTT: SIEMPRE `try/catch` alrededor de `JSON.parse`; los mensajes del ESP32 pueden llegar corruptos o incompletos.
-- Nombres de tópicos MQTT en `kebab-case`, prefijados por granja/dispositivo, ej: `samavi/{deviceId}/eggs/count`.
-- Toda persistencia de datos entrantes por MQTT debe pasar por Prisma, no escribir SQL crudo salvo excepción justificada en comentario.
-- Migraciones de Prisma: nombrarlas descriptivamente (`add_egg_count_table`, no `update1`).
-- Commits en formato Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, etc.), cortos y concretos, con summary y descripción. ej. `feat: added postgresql in docker compose` y `Added PostgreSQL service to Docker Compose for local development and testing.`. En el summary mencionar el cambio principal, nada de cambios pequeños. En la descripción sí mencionar todos los cambios, concretamente.
-- No usar `any` en TypeScript. Tipar payloads MQTT y respuestas API explícitamente.
+- No hardcodear credenciales en `main.cpp`. Usar `config.h`, excluido del
+  repositorio.
+- Mantener debounce en las lecturas de los sensores VL53L0X.
+- Manejar la reconexión de WiFi y MQTT explícitamente.
+- Pines XSHUT: D15, D4, D18, D13, D14 y D33.
+- I2C: SDA D22, SCL D21.
+- Direcciones I2C: `0x30` a `0x35`.
 
-## Firmware (ESP32)
-- Debounce obligatorio en lecturas del sensor VL53L0X.
-- Reconexión de WiFi y del broker MQTT manejada explícitamente (reintentos con backoff), nunca asumir conexión persistente.
-- No hardcodear credenciales WiFi/MQTT en `main.cpp`, usar `config.h` excluido del repo o variables de compilación.
-- Resiliencia offline recomendada: LittleFS (no SPIFFS) para cola en flash durante desconexión de WiFi/broker, formato `.jsonl`, republicación con QoS 1 al reconectar, e idempotencia del lado del backend.
-- Pines XSHUT asignados: D15/D4/D18/D13/D14/D33. I2C: SDA=D22/SCL=D21. Direcciones I2C: 0x30-0x35.
+## Lógica de prorrateo
 
-## Qué evitar
-- No proponer arquitectura de microservicios ni separar sensores en servicios independientes.
-- No sugerir MySQL, Mongo u otro motor de DB.
-- No usar REST/HTTP para comunicación ESP32 <-> backend, es exclusivamente MQTT.
-- No añadir dependencias pesadas sin justificar (prioridad: iteración rápida sobre escalabilidad prematura).
-- No inventar componentes o flujos no definidos: marcarlos como pendientes en vez de diseñarlos especulativamente.
-- No usar em-dashes.
-- No usar punto y coma.
+1. Distribuir las ventas por categoría entre el pool proporcional de galpones
+   según su participación semanal.
+2. Mantener el galpón 5 fuera de ese pool, con su propio balance.
+3. Restar gastos al valor de ventas asignado por galpón.
+4. Distribuir el saldo entre socios según `porcentaje_inversion`.
+
+Esta lógica pertenece a la capa de servicio y no debe duplicarse en el esquema
+SQL ni en el firmware.

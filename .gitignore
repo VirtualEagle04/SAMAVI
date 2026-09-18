@@ -24,6 +24,8 @@ volumes/
 .idea/
 .DS_Store
 Thumbs.db
+.postman
+postman
 
 # Frontend build artifacts
 frontend/dist/

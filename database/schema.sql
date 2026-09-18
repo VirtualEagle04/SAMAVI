@@ -58,7 +58,9 @@ CREATE TABLE log_conteo (
     CONSTRAINT fk_log_conteo_galpon
         FOREIGN KEY (id_galpon) REFERENCES galpon (id) ON DELETE RESTRICT,
     CONSTRAINT fk_log_conteo_categoria
-        FOREIGN KEY (codigo_categoria_peso) REFERENCES categoria_peso (codigo) ON DELETE RESTRICT
+        FOREIGN KEY (codigo_categoria_peso) REFERENCES categoria_peso (codigo) ON DELETE RESTRICT,
+    CONSTRAINT ck_log_conteo_cantidad
+        CHECK (cantidad IN (-1, 1))
 );
 
 CREATE TABLE cierre_diario (
@@ -66,6 +68,7 @@ CREATE TABLE cierre_diario (
     codigo_categoria_peso varchar(10) NOT NULL,
     fecha date NOT NULL,
     cantidad_bandejas integer NOT NULL CHECK (cantidad_bandejas >= 0),
+    cantidad_sobrante integer NOT NULL DEFAULT 0 CHECK (cantidad_sobrante >= 0 AND cantidad_sobrante < 30),
     PRIMARY KEY (id_galpon, codigo_categoria_peso, fecha),
     CONSTRAINT fk_cierre_diario_galpon
         FOREIGN KEY (id_galpon) REFERENCES galpon (id) ON DELETE RESTRICT,

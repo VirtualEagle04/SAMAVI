@@ -4,6 +4,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <time.h>
+#include <sys/time.h>
 #include "config.h"
 
 #define PIN_SCL 22
@@ -14,7 +15,7 @@ const uint8_t pinesXSHUT[NUM_SENSORES] = {15, 4, 18, 13, 14, 33};
 const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
 const char* MQTT_TOPIC = "samavi/conteo";
 const uint16_t DISTANCIA_MIN_MM = 10;
-const uint16_t DISTANCIA_MAX_MM = 50;
+const uint16_t DISTANCIA_MAX_MM = 100;
 const unsigned long INTERVALO_LECTURA_MS = 50;
 
 Adafruit_VL53L0X sensores[NUM_SENSORES];
@@ -51,7 +52,7 @@ void setup() {
   }
 
   conectarWiFi();
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  configTime(-5 * 3600, 0, "pool.ntp.org", "time.nist.gov");
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   Serial.println("6 sensores OK");
 }
@@ -87,10 +88,10 @@ void loop() {
         sensorActivo[i] = false;
       }
 
-      Serial.printf("S%d (%s): %u mm%s\n", i + 1, categorias[i], lectura,
-                    dentroDelRango ? " [en rango]" : "");
+      Serial.printf("S%d: %4d | ", i + 1, lectura);
     }
   }
+  Serial.println();
 }
 
 void conectarWiFi() {
@@ -122,13 +123,27 @@ void conectarMQTT() {
 }
 
 String obtenerTimestamp() {
+  struct timeval tiempoActual;
+  gettimeofday(&tiempoActual, nullptr);
+
   struct tm tiempo;
-  if (!getLocalTime(&tiempo, 1000)) {
-    return "1970-01-01T00:00:00.000Z";
+  if (!localtime_r(&tiempoActual.tv_sec, &tiempo)) {
+    return "1970-01-01T00:00:00.000-05:00";
   }
 
-  char timestamp[25];
-  strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S.000Z", &tiempo);
+  char timestamp[32];
+  snprintf(
+    timestamp,
+    sizeof(timestamp),
+    "%04d-%02d-%02dT%02d:%02d:%02d.%03ld-05:00",
+    tiempo.tm_year + 1900,
+    tiempo.tm_mon + 1,
+    tiempo.tm_mday,
+    tiempo.tm_hour,
+    tiempo.tm_min,
+    tiempo.tm_sec,
+    tiempoActual.tv_usec / 1000
+  );
   return String(timestamp);
 }
 

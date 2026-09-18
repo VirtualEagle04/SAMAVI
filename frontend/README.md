@@ -1,32 +1,35 @@
-# React + TypeScript + Vite
+# Frontend SAMAVI
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación web de SAMAVI construida con React 19, TypeScript, Vite, Material
+UI, Zustand y React Router.
 
-Currently, two official plugins are available:
+## Desarrollo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Desde la raíz del repositorio:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm --prefix frontend install
+npm --prefix frontend run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Comandos disponibles:
+
+```bash
+npm --prefix frontend run build
+npm --prefix frontend run lint
+npm --prefix frontend run preview
+```
+
+## Rutas actuales
+
+| Ruta | Vista |
+| --- | --- |
+| `/login` | Inicio de sesión |
+| `/admin` | Flujo inicial de administración |
+| `/galpon` | Flujo inicial de galpón |
+| `/ventas` | Flujo inicial de ventas y bodega |
+| `/app` | Flujo inicial general |
+
+La autenticación del frontend todavía usa usuarios simulados definidos en
+`src/services/authService.ts`. La integración con `POST /api/v1/auth/login` del
+backend está pendiente.
