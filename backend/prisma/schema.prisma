@@ -11,8 +11,28 @@ model Rol {
   id       Int       @id @default(autoincrement())
   nombre   String    @unique @db.VarChar(50)
   usuarios Usuario[]
+  permisos RolPermiso[]
 
   @@map("rol")
+}
+
+model Permiso {
+  id          Int          @id @default(autoincrement())
+  codigo      String       @unique @db.VarChar(50)
+  descripcion String       @db.VarChar(150)
+  roles       RolPermiso[]
+
+  @@map("permiso")
+}
+
+model RolPermiso {
+  idRol     Int     @map("id_rol")
+  idPermiso Int     @map("id_permiso")
+  rol       Rol     @relation(fields: [idRol], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [idPermiso], references: [id], onDelete: Cascade)
+
+  @@id([idRol, idPermiso])
+  @@map("rol_permiso")
 }
 
 model Usuario {
@@ -47,6 +67,9 @@ model CategoriaPeso {
   conteos      LogConteo[]
   cierres      CierreDiario[]
   bodegas      Bodega[]
+  precios      Precio[]
+  detallesPedido DetallePedido[]
+  detallesVenta DetalleVenta[]
 
   @@map("categoria_peso")
 }
@@ -89,4 +112,74 @@ model Bodega {
   @@id([idGalpon, codigoCategoriaPeso, fechaCorte])
   @@index([fechaCorte])
   @@map("bodega")
+}
+
+model Mayorista {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @db.VarChar(150)
+  ubicacion String?   @db.VarChar(150)
+  contacto  Json?
+  precios   Precio[]
+  pedidos   Pedido[]
+
+  @@map("mayorista")
+}
+
+model Precio {
+  idMayorista         Int           @map("id_mayorista")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  valorUnitario       Decimal       @map("valor_unitario") @db.Decimal(10, 2)
+  mayorista           Mayorista     @relation(fields: [idMayorista], references: [id], onDelete: Cascade)
+  categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+
+  @@id([idMayorista, codigoCategoriaPeso])
+  @@map("precio")
+}
+
+model Pedido {
+  id          Int             @id @default(autoincrement())
+  fecha       DateTime
+  estado      String          @db.VarChar(20)
+  idMayorista Int             @map("id_mayorista")
+  mayorista   Mayorista       @relation(fields: [idMayorista], references: [id], onDelete: Restrict)
+  detalles    DetallePedido[]
+  venta       Venta?
+
+  @@index([estado, fecha])
+  @@index([idMayorista, fecha])
+  @@map("pedido")
+}
+
+model DetallePedido {
+  idPedido            Int           @map("id_pedido")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  cantidadSolicitada  Int           @map("cantidad_solicitada")
+  pedido              Pedido        @relation(fields: [idPedido], references: [id], onDelete: Cascade)
+  categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+
+  @@id([idPedido, codigoCategoriaPeso])
+  @@map("detalle_pedido")
+}
+
+model Venta {
+  id        Int            @id @default(autoincrement())
+  fechaHora DateTime       @map("fecha_hora")
+  idPedido  Int            @unique @map("id_pedido")
+  pedido    Pedido         @relation(fields: [idPedido], references: [id], onDelete: Restrict)
+  detalles  DetalleVenta[]
+
+  @@index([fechaHora])
+  @@map("venta")
+}
+
+model DetalleVenta {
+  idVenta             Int           @map("id_venta")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  cantidadVendida     Int           @map("cantidad_vendida")
+  precioAplicado      Decimal       @map("precio_aplicado") @db.Decimal(10, 2)
+  venta               Venta         @relation(fields: [idVenta], references: [id], onDelete: Cascade)
+  categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+
+  @@id([idVenta, codigoCategoriaPeso])
+  @@map("detalle_venta")
 }

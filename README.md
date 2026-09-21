@@ -119,6 +119,29 @@ npm --prefix backend run prisma:generate
 npm --prefix backend run build
 ```
 
+#### Módulo de pedidos y ventas
+
+El backend expone el módulo comercial bajo `/api/v1/comercial`. Todas sus
+rutas requieren `Authorization: Bearer <token>`.
+
+- `GET|POST /mayoristas` y `GET|PATCH|DELETE /mayoristas/:id`
+- `GET /mayoristas/:mayoristaId/precios`
+- `PUT /mayoristas/:mayoristaId/precios`
+- `GET|POST /pedidos` y `GET|PATCH /pedidos/:id`
+- `POST /pedidos/:id/estado`
+- `POST|GET /pedidos/:pedidoId/ventas`
+
+Un pedido se crea en estado `pendiente` y puede pasar a `cargado`, o cancelarse
+antes de la entrega. Registrar una venta requiere un pedido cargado, recibe las
+cantidades vendidas y su distribución por galpón,
+valida el inventario más reciente y lo descuenta dentro de una transacción.
+La venta cambia el pedido a `entregado`.
+Los precios se consultan al registrar la venta y quedan guardados en sus
+detalles como `precio_aplicado`.
+
+Los permisos comerciales son `INGRESAR_PEDIDO`, `REGISTRAR_VENTA` y
+`EDITAR_PRECIOS`.
+
 ### Frontend
 
 ```bash
@@ -158,7 +181,8 @@ cargar el firmware. No incluyas credenciales reales en el repositorio.
 
 - El backend recibe y registra mensajes JSON del tópico MQTT configurado, pero
 	todavía no persiste esos eventos en Prisma.
-- Prisma modela actualmente `Rol` y `Usuario`. El esquema SQL contiene el
-	modelo relacional completo y sus datos iniciales.
+- Prisma modela usuarios, producción, inventario y las entidades del módulo de
+	pedidos y ventas. El esquema SQL contiene el modelo relacional completo y sus
+	datos iniciales.
 - El frontend tiene rutas y pantalla de login, pero aún no cuenta con un
 	dashboard conectado a la API.

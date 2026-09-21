@@ -1,11 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { prisma } from "../database/prisma.js";
 import { AppError } from "../shared/errors/app-error.js";
 
 export type AuthUser = {
   id: number;
   rol: string;
+  rolId: number;
 };
 
 declare global {
@@ -20,7 +22,8 @@ function isAuthPayload(payload: string | JwtPayload): payload is JwtPayload & Au
   return (
     typeof payload !== "string" &&
     typeof payload.id === "number" &&
-    typeof payload.rol === "string"
+    typeof payload.rol === "string" &&
+    typeof payload.rolId === "number"
   );
 }
 
@@ -40,7 +43,7 @@ export function authenticate(request: Request, _response: Response, next: NextFu
       return;
     }
 
-    request.auth = { id: payload.id, rol: payload.rol };
+    request.auth = { id: payload.id, rol: payload.rol, rolId: payload.rolId };
     next();
   } catch {
     next(new AppError(401, "Token inválido o expirado"));
@@ -53,6 +56,29 @@ export function requireRole(...roles: string[]) {
       next(new AppError(403, "Rol insuficiente"));
       return;
     }
+    next();
+  };
+}
+
+export function requirePermission(permissionCode: string) {
+  return async (request: Request, _response: Response, next: NextFunction): Promise<void> => {
+    if (!request.auth) {
+      next(new AppError(401, "Token requerido"));
+      return;
+    }
+
+    const permission = await prisma.rolPermiso.findFirst({
+      where: {
+        idRol: request.auth.rolId,
+        permiso: { codigo: permissionCode },
+      },
+    });
+
+    if (!permission) {
+      next(new AppError(403, "Permiso insuficiente"));
+      return;
+    }
+
     next();
   };
 }
