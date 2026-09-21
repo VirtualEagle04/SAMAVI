@@ -16,7 +16,7 @@ export async function login(input: LoginInput) {
     throw new AppError(401, "Credenciales inválidas");
   }
 
-  const payload = { id: user.id, rol: user.rol.nombre };
+  const payload = { id: user.id, rol: user.rol.nombre, rolId: user.rol.id };
   const token = jwt.sign(payload, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn,
   } as SignOptions);

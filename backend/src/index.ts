@@ -4,6 +4,7 @@ import { env } from "./config/env.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { produccionRoutes } from "./modules/produccion/produccion.routes.js";
+import { comercialRoutes } from "./modules/comercial/comercial.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
 
@@ -14,6 +15,7 @@ app.get("/health", (_request, response) => {
 });
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/produccion", produccionRoutes);
+app.use("/api/v1/comercial", comercialRoutes);
 app.use(errorMiddleware);
 
 const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
