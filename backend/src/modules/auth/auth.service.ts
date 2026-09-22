@@ -8,7 +8,13 @@ import type { LoginInput } from "./auth.schemas.js";
 export async function login(input: LoginInput) {
   const user = await prisma.usuario.findUnique({
     where: { login: input.login },
-    include: { rol: true },
+    include: {
+      rol: {
+        include: {
+          permisos: { include: { permiso: true } },
+        },
+      },
+    },
   });
 
   const passwordMatches = user ? await bcrypt.compare(input.password, user.passwordHash) : false;
@@ -28,6 +34,8 @@ export async function login(input: LoginInput) {
       nombre: user.nombre,
       login: user.login,
       rol: user.rol.nombre,
+      permisos: user.rol.permisos.map(({ permiso }) => permiso.codigo),
     },
+    permissions: user.rol.permisos.map(({ permiso }) => permiso.codigo),
   };
 }

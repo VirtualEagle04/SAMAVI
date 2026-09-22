@@ -7,9 +7,7 @@ import { useAuthStore } from "../../../stores/authStore"
 import type { Role } from "../../../services/authService"
 
 function roleToRoute(role: Role): string {
-  if (role === "Administrador") return "/admin"
-  if (role === "Galponero") return "/galpon"
-  return "/ventas"
+  return role ? "/dashboard" : "/login"
 }
 
 export default function LoginPage() {

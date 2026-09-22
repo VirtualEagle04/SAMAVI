@@ -1,27 +1,61 @@
 export type Role = "Administrador" | "Galponero" | "Vendedor"
 
-export interface AuthResponse {
-  user: string
-  role: Role
+interface LoginApiResponse {
+  token: string
+  user: {
+    login: string
+    rol: string
+    permisos: string[]
+  }
+  permissions: string[]
 }
 
-// TODO: conectar a POST /auth/login cuando el backend esté listo
-const MOCK_USERS: Record<string, { password: string; role: Role }> = {
-  admin: { password: "admin1234", role: "Administrador" },
-  galponero: { password: "galpon1234", role: "Galponero" },
-  vendedor: { password: "venta1234", role: "Vendedor" },
+export interface AuthResponse {
+  token: string
+  user: string
+  role: Role
+  permissions: string[]
 }
+
+const API_URL = import.meta.env.VITE_API_URL ?? ""
 
 export async function login(
   username: string,
   password: string
 ): Promise<AuthResponse> {
-  await new Promise((r) => setTimeout(r, 600))
+  let response: Response
 
-  const found = MOCK_USERS[username.toLowerCase()]
-  if (!found || found.password !== password) {
-    throw new Error("Usuario o contraseña incorrectos")
+  try {
+    response = await fetch(`${API_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login: username, password }),
+    })
+  } catch {
+    throw new Error("No se pudo conectar con el servidor")
   }
 
-  return { user: username, role: found.role }
+  const body = (await response.json().catch(() => null)) as
+    | LoginApiResponse
+    | { error?: string }
+    | null
+
+  if (!response.ok) {
+    throw new Error(
+      body && "error" in body && body.error
+        ? body.error
+        : "Usuario o contraseña incorrectos"
+    )
+  }
+
+  if (!body || !("token" in body) || !("user" in body)) {
+    throw new Error("La respuesta del servidor no es válida")
+  }
+
+  return {
+    token: body.token,
+    user: body.user.login,
+    role: body.user.rol as Role,
+    permissions: body.permissions ?? body.user.permisos,
+  }
 }
