@@ -1,8 +1,8 @@
 import { createTheme } from "@mui/material/styles"
 
-const BRAND = "#E57373"
-const BRAND_DARK = "#C62828"
-const BRAND_LIGHT = "#FFEBEE"
+const BRAND = "#e77978"
+const BRAND_DARK = "#c96768"
+const BRAND_LIGHT = "#f9d9d0"
 
 export const theme = createTheme({
   palette: {
@@ -14,13 +14,13 @@ export const theme = createTheme({
       contrastText: "#FFFFFF",
     },
     background: {
-      default: "#F2F2F7",
-      paper: "#FFFFFF",
+      default: "#fff8ed",
+      paper: "#fffdf9",
     },
     text: {
-      primary: "#1C1C1E",
-      secondary: "#3A3A3C",
-      disabled: "#8E8E93",
+      primary: "#432b24",
+      secondary: "#795e55",
+      disabled: "#a58b82",
     },
     error: {
       main: "#D32F2F",
@@ -29,7 +29,7 @@ export const theme = createTheme({
     success: {
       main: "#34C759",
     },
-    divider: "#E5E5EA",
+    divider: "#eadbd2",
   },
   typography: {
     fontFamily: "'Inter', -apple-system, 'SF Pro Text', system-ui, sans-serif",

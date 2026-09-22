@@ -6,11 +6,12 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/admin" element={<AppShell initialFlow="admin" />} />
-      <Route path="/galpon" element={<AppShell initialFlow="galpon" />} />
-      <Route path="/ventas" element={<AppShell initialFlow="bodega" />} />
-      <Route path="/app" element={<AppShell initialFlow="home" />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/dashboard" element={<AppShell />} />
+      <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/galpon" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/ventas" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/app" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }

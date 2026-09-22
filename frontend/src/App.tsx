@@ -1,75 +1,145 @@
-//import { useState, useCallback } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { T } from "./tokens"
-//import StockScreen from "./features/bodega/StockScreen"
-//import BodegaFlow from "./features/bodega/BodegaFlow"
-//import AdminScreen from "./features/admin/AdminScreen"
-//import ClasificacionScreen from "./features/clasificacion/ClasificacionScreen"
-//import GalponScreen from "./features/galpon/GalponScreen"
+import Alert from "@mui/material/Alert"
+import Avatar from "@mui/material/Avatar"
+import Box from "@mui/material/Box"
+import CircularProgress from "@mui/material/CircularProgress"
+import IconButton from "@mui/material/IconButton"
+import List from "@mui/material/List"
+import ListItemButton from "@mui/material/ListItemButton"
+import ListItemIcon from "@mui/material/ListItemIcon"
+import ListItemText from "@mui/material/ListItemText"
+import Paper from "@mui/material/Paper"
+import Stack from "@mui/material/Stack"
+import Typography from "@mui/material/Typography"
+import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded"
+import EggAltRoundedIcon from "@mui/icons-material/EggAltRounded"
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined"
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
+import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded"
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded"
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined"
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded"
 import { useAuthStore } from "./stores/authStore"
+import { listProductionCounts, type ProductionCount } from "./services/productionService"
+import type { Role } from "./services/authService"
 
-// Top-level flows
-type Flow = "home" | "bodega" | "admin" | "clasificacion" | "galpon"
+const drawerWidth = 260
 
+type Module = {
+  label: string
+  icon: typeof DashboardRoundedIcon
+  permission?: string
+}
 
-// ── iPhone 16 shell ────────────────────────────────────────────────────────
-function PhoneShell({ children, onLogout }: { children: React.ReactNode; onLogout?: () => void }) {
+const modules: Module[] = [
+  { label: "Resumen", icon: DashboardRoundedIcon },
+  { label: "Monitoreo de conteo", icon: EggAltRoundedIcon, permission: "VER_PRODUCCION" },
+  { label: "Producción", icon: TrendingUpRoundedIcon, permission: "VER_PRODUCCION" },
+  { label: "Inventario", icon: Inventory2OutlinedIcon, permission: "EDITAR_INVENTARIO" },
+  { label: "Ventas", icon: ShoppingCartOutlinedIcon, permission: "INGRESAR_PEDIDO" },
+]
+
+function formatTime(timestamp: string): string {
+  return new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" }).format(new Date(timestamp))
+}
+
+function initials(user: string | null): string {
+  return user?.slice(0, 2).toUpperCase() ?? "SA"
+}
+
+function Metric({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div style={{ width: "100%", height: "100%", background: "#E5E5EA", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "-apple-system, 'SF Pro Text', 'Inter', system-ui, sans-serif" }}>
-      <div style={{ width: 393, height: 852, background: T.bg, borderRadius: 54, overflow: "hidden", position: "relative", boxShadow: "0 0 0 1px rgba(0,0,0,0.08), 0 28px 72px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1)" }}>
-
-        {/* Status bar */}
-        <div style={{ height: 54, background: T.bg, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 28px 0", position: "relative", zIndex: 10, flexShrink: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: T.text }}>9:41</span>
-          <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", top: 12, width: 120, height: 30, background: T.text, borderRadius: 99 }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                aria-label="Cerrar sesión"
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center", color: T.label }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-              </button>
-            )}
-            <svg width="17" height="12" viewBox="0 0 17 12" fill={T.text}>
-              <rect x="0" y="4" width="3" height="8" rx="0.5" />
-              <rect x="4.5" y="2.5" width="3" height="9.5" rx="0.5" />
-              <rect x="9" y="1" width="3" height="11" rx="0.5" />
-              <rect x="13.5" y="0" width="3" height="12" rx="0.5" />
-            </svg>
-            <div style={{ width: 25, height: 13, borderRadius: 4, border: `1.5px solid ${T.text}`, padding: "1.5px 2px", display: "flex", alignItems: "center" }}>
-              <div style={{ width: "75%", height: "100%", background: T.text, borderRadius: 2 }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Screen content */}
-        <div style={{ position: "absolute", top: 54, bottom: 0, left: 0, right: 0, overflow: "hidden" }}>
-          {children}
-        </div>
-
-        {/* Home indicator */}
-        <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
-          <div style={{ width: 134, height: 5, borderRadius: 99, background: "rgba(0,0,0,0.18)" }} />
-        </div>
-      </div>
-    </div>
+    <Paper elevation={0} sx={{ p: 2.5, border: "1px solid", borderColor: "divider", borderLeft: `5px solid ${accent}`, borderRadius: 2.5, backgroundColor: "background.paper" }}>
+      <Typography variant="body2">{label}</Typography>
+      <Typography variant="h4" sx={{ mt: 0.75, fontWeight: 800 }}>{value}</Typography>
+    </Paper>
   )
 }
 
-// ── Root — router only ─────────────────────────────────────────────────────
-interface AppProps {
-  initialFlow?: Flow
+function MonitoringView({ token }: { token: string | null }) {
+  const [counts, setCounts] = useState<ProductionCount[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadCounts = async () => {
+    if (!token) return
+    try {
+      setError(null)
+      setCounts(await listProductionCounts(token))
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "No se pudo cargar el monitoreo")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadCounts()
+    const interval = window.setInterval(() => void loadCounts(), 10000)
+    return () => window.clearInterval(interval)
+  }, [token])
+
+  const totalCount = useMemo(() => counts.reduce((total, count) => total + count.cantidad, 0), [counts])
+  const activeSheds = useMemo(() => new Set(counts.map((count) => count.idGalpon)).size, [counts])
+  const latestCounts = counts.slice(0, 8)
+
+  return (
+    <Stack spacing={3}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { sm: "center" }, gap: 2 }}>
+        <Box>
+          <Typography variant="h4" sx={{ color: "text.primary", fontWeight: 800 }}>Monitoreo en vivo</Typography>
+          <Typography sx={{ color: "text.secondary", mt: 0.5 }}>Conteo de producción por galpón, actualizado automáticamente.</Typography>
+        </Box>
+        <IconButton onClick={() => void loadCounts()} aria-label="Actualizar monitoreo" sx={{ color: "primary.dark", alignSelf: { xs: "flex-start", sm: "auto" } }}>
+          <RefreshRoundedIcon />
+        </IconButton>
+      </Box>
+
+      {error && <Alert severity="warning">{error}</Alert>}
+
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 2 }}>
+        <Metric label="Huevos registrados" value={totalCount.toLocaleString("es-CO")} accent="#e77978" />
+        <Metric label="Galpones activos" value={activeSheds.toString()} accent="#eaa66f" />
+        <Metric label="Últimos registros" value={counts.length.toString()} accent="#b9a16b" />
+      </Box>
+
+      <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, overflow: "hidden", backgroundColor: "background.paper" }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, py: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+          <Typography variant="h6">Actividad reciente</Typography>
+          <Typography variant="body2">Los últimos conteos recibidos desde los dispositivos.</Typography>
+        </Box>
+        {isLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress size={28} /></Box>
+        ) : latestCounts.length === 0 ? (
+          <Box sx={{ px: 3, py: 8, textAlign: "center" }}>
+            <EggAltRoundedIcon sx={{ fontSize: 42, color: "primary.light", mb: 1 }} />
+            <Typography variant="h6">Esperando el primer conteo</Typography>
+            <Typography variant="body2">Cuando llegue información de un galpón, aparecerá aquí.</Typography>
+          </Box>
+        ) : (
+          <Stack divider={<Box sx={{ borderBottom: "1px solid", borderColor: "divider" }} />}>
+            {latestCounts.map((count) => (
+              <Box key={count.id} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr auto", sm: "1fr 1fr 0.7fr 0.5fr" }, gap: 2, alignItems: "center", px: { xs: 2, md: 3 }, py: 2 }}>
+                <Box><Typography sx={{ fontWeight: 700 }}>{count.galpon.nombre}</Typography><Typography variant="body2">{count.categoriaPeso.nombre}</Typography></Box>
+                <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary" }}>{new Date(count.timestamp).toLocaleDateString("es-CO")}</Typography>
+                <Typography sx={{ color: "text.secondary", textAlign: { sm: "right" } }}>{formatTime(count.timestamp)}</Typography>
+                <Typography sx={{ color: "primary.dark", fontWeight: 800, textAlign: "right" }}>+{count.cantidad}</Typography>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </Paper>
+    </Stack>
+  )
 }
 
-export default function App({ initialFlow: _initialFlow }: AppProps) {
-  const { logout } = useAuthStore()
+export default function App() {
+  const { user, role, permissions, token, logout } = useAuthStore()
   const navigate = useNavigate()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const visibleModules = modules.filter((module) => !module.permission || permissions.includes(module.permission))
 
   const handleLogout = () => {
     logout()
@@ -77,26 +147,22 @@ export default function App({ initialFlow: _initialFlow }: AppProps) {
   }
 
   return (
-    <PhoneShell onLogout={handleLogout}>
-      <div style={{ padding: 32 }}>
-        Módulos pendientes de implementación
-      </div>
-
-      {/*
-      {flow === "home" && (
-        <StockScreen
-          onStartOrder={() => setFlow("bodega")}
-          onAdmin={() => setFlow("admin")}
-          onClasificacion={() => setFlow("clasificacion")}
-          onGalpon={() => setFlow("galpon")}
-        />
-      )}
-
-      {flow === "bodega" && <BodegaFlow onExit={goHome} />}
-      {flow === "admin" && <AdminScreen onBack={goHome} />}
-      {flow === "clasificacion" && <ClasificacionScreen onBack={goHome} />}
-      {flow === "galpon" && <GalponScreen onBack={goHome} />}
-      */}
-    </PhoneShell>
+    <Box sx={{ minHeight: "100dvh", display: "flex", backgroundColor: "background.default", color: "text.primary" }}>
+      <Box component="aside" sx={{ width: drawerWidth, flexShrink: 0, display: { xs: mobileOpen ? "block" : "none", md: "block" }, position: { xs: "fixed", md: "relative" }, zIndex: 3, minHeight: "100dvh", backgroundColor: "#fffdf9", borderRight: "1px solid", borderColor: "divider" }}>
+        <Box sx={{ height: 82, px: 3, display: "flex", alignItems: "center", borderBottom: "1px solid", borderColor: "divider" }}><Typography variant="h6" sx={{ color: "#8c542f", fontWeight: 900, letterSpacing: 1 }}>SAMAVI</Typography></Box>
+        <Box sx={{ p: 2 }}>
+          <Typography variant="overline" sx={{ px: 1.5, color: "text.disabled", fontWeight: 700 }}>Módulos</Typography>
+          <List sx={{ mt: 1 }}>{visibleModules.map((module, index) => { const Icon = module.icon; return <ListItemButton key={module.label} selected={index === 0} onClick={() => setMobileOpen(false)} sx={{ mb: 0.5, borderRadius: 2, color: "text.secondary", "&.Mui-selected": { color: "primary.dark", backgroundColor: "primary.light" }, "&.Mui-selected:hover": { backgroundColor: "primary.light" } }}><ListItemIcon sx={{ minWidth: 40, color: "inherit" }}><Icon fontSize="small" /></ListItemIcon><ListItemText primary={module.label} /></ListItemButton> })}</List>
+        </Box>
+        <Box sx={{ position: "absolute", bottom: 20, left: 16, right: 16 }}><ListItemButton onClick={handleLogout} sx={{ borderRadius: 2, color: "text.secondary" }}><ListItemIcon sx={{ minWidth: 40, color: "inherit" }}><LogoutRoundedIcon fontSize="small" /></ListItemIcon><ListItemText primary="Cerrar sesión" /></ListItemButton></Box>
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box component="header" sx={{ height: 82, px: { xs: 2, md: 4 }, display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "background.paper", borderBottom: "1px solid", borderColor: "divider" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><IconButton onClick={() => setMobileOpen((open) => !open)} sx={{ display: { md: "none" }, color: "text.primary" }} aria-label="Abrir navegación"><MenuRoundedIcon /></IconButton><Box><Typography variant="body2">Panel de administración</Typography><Typography sx={{ fontWeight: 800 }}>Centro de operaciones</Typography></Box></Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}><IconButton aria-label="Notificaciones" sx={{ color: "text.secondary" }}><NotificationsNoneRoundedIcon /></IconButton><Avatar sx={{ width: 38, height: 38, bgcolor: "primary.light", color: "primary.dark", fontWeight: 800 }}>{initials(user)}</Avatar><Box sx={{ display: { xs: "none", sm: "block" } }}><Typography sx={{ fontWeight: 700, lineHeight: 1.2 }}>{user ?? "Usuario"}</Typography><Typography variant="body2">{role ?? "Invitado"}</Typography></Box></Box>
+        </Box>
+        <Box component="main" sx={{ p: { xs: 2, sm: 3, md: 5 }, maxWidth: 1440, margin: "0 auto" }}><MonitoringView token={token} /></Box>
+      </Box>
+    </Box>
   )
 }

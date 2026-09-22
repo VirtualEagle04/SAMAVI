@@ -5,27 +5,19 @@ import Stack from "@mui/material/Stack"
 import Button from "@mui/material/Button"
 import Alert from "@mui/material/Alert"
 import CircularProgress from "@mui/material/CircularProgress"
-import Divider from "@mui/material/Divider"
-import Typography from "@mui/material/Typography"
 import LoginFormFields from "../molecules/LoginFormFields"
 import { useAuthStore } from "../../stores/authStore"
 import type { Role } from "../../services/authService"
-
-const USERNAME_RE = /^[a-zA-Z0-9_]+$/
 
 function validate(username: string, password: string) {
   const errors = { username: "", password: "" }
 
   if (!username) {
     errors.username = "El usuario no puede estar vacío"
-  } else if (!USERNAME_RE.test(username)) {
-    errors.username = "El usuario no puede contener símbolos especiales"
   }
 
   if (!password) {
     errors.password = "La contraseña no puede estar vacía"
-  } else if (password.length < 8) {
-    errors.password = "La contraseña debe tener mínimo 8 caracteres"
   }
 
   return errors
@@ -43,8 +35,7 @@ export default function LoginForm() {
   const [fieldErrors, setFieldErrors] = useState({ username: "", password: "" })
   const [touched, setTouched] = useState(false)
 
-  const { login, quickLogin, isLoading, error, clearError } =
-    useAuthStore()
+  const { login, isLoading, error, clearError } = useAuthStore()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,11 +52,6 @@ export default function LoginForm() {
     if (updatedRole) {
       navigate(roleToRoute(updatedRole), { replace: true })
     }
-  }
-
-  const handleQuickLogin = () => {
-    quickLogin()
-    navigate("/admin", { replace: true })
   }
 
   const handleUsernameChange = (v: string) => {
@@ -113,24 +99,6 @@ export default function LoginForm() {
           )}
         </Button>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Divider sx={{ flex: 1 }} />
-          <Typography variant="body2" sx={{ color: "text.disabled", flexShrink: 0 }}>
-            o
-          </Typography>
-          <Divider sx={{ flex: 1 }} />
-        </Box>
-
-        <Button
-          variant="outlined"
-          fullWidth
-          color="primary"
-          onClick={handleQuickLogin}
-          disabled={isLoading}
-          sx={{ borderStyle: "dashed", color: "text.secondary", borderColor: "divider" }}
-        >
-          Acceso Rápido (Demo)
-        </Button>
       </Stack>
     </Box>
   )
