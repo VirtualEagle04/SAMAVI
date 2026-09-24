@@ -26,10 +26,41 @@ export async function registerCount(input: ProductionCountInput) {
   });
 }
 
-export async function listCounts() {
+export async function listCounts(galponId?: number, take = 100) {
   return prisma.logConteo.findMany({
+    where: {
+      ...(galponId ? { idGalpon: galponId } : {}),
+    },
     orderBy: { timestamp: "desc" },
-    take: 100,
+    take,
+    include: { galpon: true, categoriaPeso: true },
+  });
+}
+
+export async function listGalpones() {
+  return prisma.galpon.findMany({
+    orderBy: { id: "asc" },
+  });
+}
+
+const CATEGORY_ORDER = ["Y", "Ex", "AA", "A", "B", "C", "P"];
+
+export async function listCategorias() {
+  const categorias = await prisma.categoriaPeso.findMany();
+  return categorias.sort((a, b) => {
+    const idxA = CATEGORY_ORDER.indexOf(a.codigo);
+    const idxB = CATEGORY_ORDER.indexOf(b.codigo);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+  });
+}
+
+export async function listCierres(galponId?: number, fecha?: string) {
+  return prisma.cierreDiario.findMany({
+    where: {
+      ...(galponId ? { idGalpon: galponId } : {}),
+      ...(fecha ? { fecha: new Date(`${fecha}T00:00:00.000Z`) } : {}),
+    },
+    orderBy: [{ fecha: "desc" }, { idGalpon: "asc" }],
     include: { galpon: true, categoriaPeso: true },
   });
 }
