@@ -4,11 +4,7 @@ import Typography from "@mui/material/Typography"
 import AuthLayout from "../../../components/templates/AuthLayout"
 import LoginForm from "../../../components/organisms/LoginForm"
 import { useAuthStore } from "../../../stores/authStore"
-import type { Role } from "../../../services/authService"
-
-function roleToRoute(role: Role): string {
-  return role ? "/dashboard" : "/login"
-}
+import { getDefaultRouteForRole } from "../../../routing/roleRouting"
 
 export default function LoginPage() {
   const { isAuthenticated, role } = useAuthStore()
@@ -16,7 +12,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated && role) {
-      navigate(roleToRoute(role), { replace: true })
+      navigate(getDefaultRouteForRole(role), { replace: true })
     }
   }, [isAuthenticated, role, navigate])
 

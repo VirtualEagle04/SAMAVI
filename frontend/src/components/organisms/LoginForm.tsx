@@ -7,7 +7,7 @@ import Alert from "@mui/material/Alert"
 import CircularProgress from "@mui/material/CircularProgress"
 import LoginFormFields from "../molecules/LoginFormFields"
 import { useAuthStore } from "../../stores/authStore"
-import type { Role } from "../../services/authService"
+import { getDefaultRouteForRole } from "../../routing/roleRouting"
 
 function validate(username: string, password: string) {
   const errors = { username: "", password: "" }
@@ -21,12 +21,6 @@ function validate(username: string, password: string) {
   }
 
   return errors
-}
-
-function roleToRoute(role: Role): string {
-  if (role === "Administrador") return "/admin"
-  if (role === "Galponero") return "/galpon"
-  return "/ventas"
 }
 
 export default function LoginForm() {
@@ -48,9 +42,9 @@ export default function LoginForm() {
     clearError()
     await login(username, password)
 
-    const updatedRole = useAuthStore.getState().role
-    if (updatedRole) {
-      navigate(roleToRoute(updatedRole), { replace: true })
+    const { isAuthenticated, role } = useAuthStore.getState()
+    if (isAuthenticated && role) {
+      navigate(getDefaultRouteForRole(role), { replace: true })
     }
   }
 

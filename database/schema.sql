@@ -295,4 +295,5 @@ INSERT INTO gasto (concepto, valor) VALUES
 ('Salario Carlos Andrés', 799998);
 
 INSERT INTO usuario (nombre, login, password_hash, contacto, id_rol) VALUES
-('Admin', 'admin', '$2a$12$5hafiSCE.98sXCRkMvXMU.FxWUjb1FpNgl6Dh5CUrU73U7ZZk2YqS', '{"telefono": "3007778861"}', 1);
+('Admin', 'admin', '$2a$12$5hafiSCE.98sXCRkMvXMU.FxWUjb1FpNgl6Dh5CUrU73U7ZZk2YqS', '{"telefono": "3007778861"}', 1),
+('Galponero de Prueba', 'galponero', '$2b$12$wamfigxoiBH/7jUlo.NShe8OlmyVIcfoO3NgBeBs6jOu46PpmmveO', '{"telefono": "3000000000"}', 2);
