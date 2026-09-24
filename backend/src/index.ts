@@ -7,6 +7,7 @@ import { produccionRoutes } from "./modules/produccion/produccion.routes.js";
 import { comercialRoutes } from "./modules/comercial/comercial.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
+import { deviceTracker } from "./mqtt/device-status.js";
 
 const app = express();
 app.use(express.json());
@@ -20,11 +21,20 @@ app.use(errorMiddleware);
 
 const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
 
+const topicsToSubscribe = [
+  env.mqttTopic,
+  "$SYS/broker/clients/connected",
+  "samavi/esp32/#",
+  "samavi/status",
+  "samavi/heartbeat",
+];
+
 client.on("connect", () => {
   console.log("MQTT: Conectado al broker MQTT");
-  client.subscribe(env.mqttTopic, (error) => {
+  deviceTracker.setBrokerConnected(true);
+  client.subscribe(topicsToSubscribe, (error) => {
     if (error) {
-      console.error(`MQTT: Error al suscribirse a ${env.mqttTopic}:`, error.message);
+      console.error(`MQTT: Error al suscribirse a los tópicos:`, error.message);
     }
   });
 });
@@ -35,10 +45,11 @@ client.on("reconnect", () => {
 
 client.on("close", () => {
   console.error("MQTT: Desconectado del broker MQTT");
+  deviceTracker.setBrokerConnected(false);
 });
 
-client.on("message", (_topic, message) => {
-  void handleProductionMessage(message);
+client.on("message", (topic, message) => {
+  void handleProductionMessage(topic, message);
 });
 
 client.on("error", (error) => {

@@ -41,30 +41,30 @@ export const theme = createTheme({
     button: { textTransform: "none", fontWeight: 700, letterSpacing: "0.2px" },
   },
   shape: {
-    borderRadius: 14,
+    borderRadius: 8,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          minHeight: 56,
-          borderRadius: 14,
-          fontSize: "1.05rem",
+          minHeight: 48,
+          borderRadius: 8,
+          fontSize: "0.95rem",
           fontWeight: 700,
           boxShadow: "none",
           "&:hover": { boxShadow: "none" },
-          "&:active": { boxShadow: "none", transform: "scale(0.98)" },
+          "&:active": { boxShadow: "none", transform: "scale(0.99)" },
         },
         contained: {
           background: BRAND,
           "&:hover": { background: BRAND_DARK },
         },
         outlined: {
-          borderWidth: 2,
-          "&:hover": { borderWidth: 2 },
+          borderWidth: 1.5,
+          "&:hover": { borderWidth: 1.5 },
         },
         text: {
-          minHeight: 44,
+          minHeight: 40,
         },
       },
     },
@@ -76,19 +76,19 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiInputBase-root": {
-            fontSize: "1.05rem",
-            borderRadius: 12,
-            minHeight: 56,
+            fontSize: "1rem",
+            borderRadius: 8,
+            minHeight: 48,
           },
           "& .MuiInputLabel-root": {
-            fontSize: "1rem",
+            fontSize: "0.95rem",
             fontWeight: 500,
           },
           "& .MuiOutlinedInput-notchedOutline": {
             borderWidth: 1.5,
           },
           "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-            borderWidth: 2,
+            borderWidth: 1.5,
           },
         },
       },
@@ -96,7 +96,7 @@ export const theme = createTheme({
     MuiAlert: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
           fontSize: "0.95rem",
           fontWeight: 600,
           alignItems: "center",
@@ -107,9 +107,23 @@ export const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 20,
+          borderRadius: 10,
           boxShadow:
-            "0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.05)",
+            "0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.04)",
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 6,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        rounded: {
+          borderRadius: 10,
         },
       },
     },
