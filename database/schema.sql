@@ -240,7 +240,9 @@ INSERT INTO mayorista (nombre, ubicacion, contacto) VALUES
 ('Orlando', 'Calle 78, Pitalito, Huila', '{"telefono": "3145678901"}'),
 ('América', 'Carrera 34, La Plata, Huila', '{"telefono": "3156789012"}'),
 ('Económico', 'Avenida 56, Neiva, Huila', '{"telefono": "3167890123"}'),
-('Wilmer', 'Calle 90, Garzón, Huila', '{"telefono": "3178901234"}');
+('Wilmer', 'Calle 90, Garzón, Huila', '{"telefono": "3178901234"}'),
+('Granja', 'Carrera 78, Pitalito, Huila', '{"telefono": "3189012345"}'),
+('Fabián', 'Avenida 34, La Plata, Huila', '{"telefono": "3190123456"}');
 
 INSERT INTO rol (nombre) VALUES
 ('Administrador'),
@@ -335,3 +337,439 @@ INSERT INTO usuario (nombre, login, password_hash, contacto, id_rol) VALUES
 ('Administrador', 'admin', '$2a$12$5hafiSCE.98sXCRkMvXMU.FxWUjb1FpNgl6Dh5CUrU73U7ZZk2YqS', '{"telefono": "3007778861"}', 1), -- pass: 123
 ('Galponero', 'galponero', '$2a$12$FHHY8hDo6xxu6mYC8..AJ.NxtwfkD9.HZqxz4xXPLcbESFAIsT04q', '{"telefono": "3007778862"}', 2), -- pass: galponero
 ('Vendedor', 'vendedor', '$2a$12$tNcG4PWFfUuHT3vj5affx.v2S1osWBtTgE.oYqvDLoVd3fPWtLJfm', '{"telefono": "3007778863"}', 3); -- pass: vendedor
+
+INSERT INTO cierre_diario (id_galpon, codigo_categoria_peso, fecha, cantidad_bandejas, cantidad_sobrante) VALUES
+    (1, 'Ex', '2026-08-07', 7, 0),
+    (1, 'AA', '2026-08-07', 23, 0),
+    (1, 'A', '2026-08-07', 23, 0),
+    (1, 'B', '2026-08-07', 4, 0),
+    (1, 'Q', '2026-08-07', 1, 0),
+    (1, 'Ex', '2026-08-08', 6, 0),
+    (1, 'AA', '2026-08-08', 22, 0),
+    (1, 'A', '2026-08-08', 25, 0),
+    (1, 'B', '2026-08-08', 3, 0),
+    (1, 'Q', '2026-08-08', 1, 0),
+    (1, 'Y', '2026-08-09', 1, 0),
+    (1, 'Ex', '2026-08-09', 4, 0),
+    (1, 'AA', '2026-08-09', 24, 0),
+    (1, 'A', '2026-08-09', 28, 0),
+    (1, 'B', '2026-08-09', 2, 0),
+    (1, 'Ex', '2026-08-10', 5, 0),
+    (1, 'AA', '2026-08-10', 21, 0),
+    (1, 'A', '2026-08-10', 27, 0),
+    (1, 'B', '2026-08-10', 4, 0),
+    (1, 'Q', '2026-08-10', 1, 0),
+    (1, 'Ex', '2026-08-11', 5, 0),
+    (1, 'AA', '2026-08-11', 21, 0),
+    (1, 'A', '2026-08-11', 25, 0),
+    (1, 'B', '2026-08-11', 4, 0),
+    (1, 'Y', '2026-08-12', 1, 0),
+    (1, 'Ex', '2026-08-12', 6, 0),
+    (1, 'AA', '2026-08-12', 22, 0),
+    (1, 'A', '2026-08-12', 25, 0),
+    (1, 'B', '2026-08-12', 2, 0),
+    (1, 'Q', '2026-08-12', 1, 0),
+    (1, 'Ex', '2026-08-13', 7, 0),
+    (1, 'AA', '2026-08-13', 23, 0),
+    (1, 'A', '2026-08-13', 20, 0),
+    (1, 'B', '2026-08-13', 2, 0),
+    (1, 'Q', '2026-08-13', 1, 0),
+    (3, 'Ex', '2026-08-07', 3, 0),
+    (3, 'AA', '2026-08-07', 21, 0),
+    (3, 'A', '2026-08-07', 34, 0),
+    (3, 'B', '2026-08-07', 5, 0),
+    (3, 'Y', '2026-08-08', 1, 0),
+    (3, 'Ex', '2026-08-08', 2, 0),
+    (3, 'AA', '2026-08-08', 20, 0),
+    (3, 'A', '2026-08-08', 32, 0),
+    (3, 'B', '2026-08-08', 7, 0),
+    (3, 'Q', '2026-08-08', 1, 0),
+    (3, 'Ex', '2026-08-09', 2, 0),
+    (3, 'AA', '2026-08-09', 19, 0),
+    (3, 'A', '2026-08-09', 36, 0),
+    (3, 'B', '2026-08-09', 5, 0),
+    (3, 'Q', '2026-08-09', 1, 0),
+    (3, 'Ex', '2026-08-10', 3, 0),
+    (3, 'AA', '2026-08-10', 18, 0),
+    (3, 'A', '2026-08-10', 38, 0),
+    (3, 'B', '2026-08-10', 4, 0),
+    (3, 'Ex', '2026-08-11', 3, 0),
+    (3, 'AA', '2026-08-11', 20, 0),
+    (3, 'A', '2026-08-11', 36, 0),
+    (3, 'B', '2026-08-11', 4, 0),
+    (3, 'Q', '2026-08-11', 1, 0),
+    (3, 'Ex', '2026-08-12', 4, 0),
+    (3, 'AA', '2026-08-12', 21, 0),
+    (3, 'A', '2026-08-12', 35, 0),
+    (3, 'B', '2026-08-12', 3, 0),
+    (3, 'Ex', '2026-08-13', 3, 0),
+    (3, 'AA', '2026-08-13', 23, 0),
+    (3, 'A', '2026-08-13', 33, 0),
+    (3, 'B', '2026-08-13', 2, 0),
+    (3, 'Q', '2026-08-13', 1, 0),
+    (4, 'Ex', '2026-08-07', 7, 0),
+    (4, 'AA', '2026-08-07', 20, 0),
+    (4, 'A', '2026-08-07', 15, 0),
+    (4, 'B', '2026-08-07', 2, 0),
+    (4, 'Q', '2026-08-07', 1, 0),
+    (4, 'Ex', '2026-08-08', 7, 0),
+    (4, 'AA', '2026-08-08', 20, 0),
+    (4, 'A', '2026-08-08', 15, 0),
+    (4, 'B', '2026-08-08', 2, 0),
+    (4, 'Ex', '2026-08-09', 6, 0),
+    (4, 'AA', '2026-08-09', 19, 0),
+    (4, 'A', '2026-08-09', 17, 0),
+    (4, 'B', '2026-08-09', 2, 0),
+    (4, 'Q', '2026-08-09', 1, 0),
+    (4, 'Y', '2026-08-10', 1, 0),
+    (4, 'Ex', '2026-08-10', 6, 0),
+    (4, 'AA', '2026-08-10', 18, 0),
+    (4, 'A', '2026-08-10', 19, 0),
+    (4, 'B', '2026-08-10', 2, 0),
+    (4, 'Q', '2026-08-10', 1, 0),
+    (4, 'Ex', '2026-08-11', 5, 0),
+    (4, 'AA', '2026-08-11', 19, 0),
+    (4, 'A', '2026-08-11', 18, 0),
+    (4, 'B', '2026-08-11', 2, 0),
+    (4, 'Q', '2026-08-11', 1, 0),
+    (4, 'Ex', '2026-08-12', 7, 0),
+    (4, 'AA', '2026-08-12', 19, 0),
+    (4, 'A', '2026-08-12', 15, 0),
+    (4, 'B', '2026-08-12', 2, 0),
+    (4, 'Q', '2026-08-12', 1, 0),
+    (4, 'Ex', '2026-08-13', 7, 0),
+    (4, 'AA', '2026-08-13', 19, 0),
+    (4, 'A', '2026-08-13', 15, 0),
+    (4, 'B', '2026-08-13', 2, 0),
+    (5, 'C', '2026-08-07', 2, 0),
+    (5, 'P', '2026-08-07', 1, 0),
+    (5, 'C', '2026-08-08', 2, 0),
+    (5, 'P', '2026-08-08', 2, 0),
+    (5, 'B', '2026-08-09', 1, 0),
+    (5, 'C', '2026-08-09', 3, 0),
+    (5, 'P', '2026-08-09', 2, 0),
+    (5, 'B', '2026-08-10', 1, 0),
+    (5, 'C', '2026-08-10', 3, 0),
+    (5, 'P', '2026-08-10', 2, 0),
+    (5, 'B', '2026-08-11', 2, 0),
+    (5, 'C', '2026-08-11', 3, 0),
+    (5, 'P', '2026-08-11', 1, 0),
+    (5, 'B', '2026-08-12', 3, 0),
+    (5, 'C', '2026-08-12', 3, 0),
+    (5, 'P', '2026-08-12', 1, 0),
+    (5, 'B', '2026-08-13', 3, 0),
+    (5, 'C', '2026-08-13', 3, 0),
+    (5, 'P', '2026-08-13', 1, 0);
+
+-- 2026-08-08 - Deyanira
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1001, '2026-08-08 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Deyanira';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1001, 'A', 10),
+    (1001, 'AA', 35);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1001, '2026-08-08 00:00:00', 1001);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1001, 'A', 10, 13000),
+    (1001, 'AA', 35, 14000);
+
+-- 2026-08-08 - Ferney
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1002, '2026-08-08 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Ferney';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1002, 'A', 10),
+    (1002, 'P', 6);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1002, '2026-08-08 00:00:00', 1002);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1002, 'A', 10, 11500),
+    (1002, 'P', 6, 6500);
+
+-- 2026-08-08 - Granja
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1003, '2026-08-08 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Granja';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1003, 'Q', 2);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1003, '2026-08-08 00:00:00', 1003);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1003, 'Q', 2, 10000);
+
+-- 2026-08-08 - Nidia
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1004, '2026-08-08 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Nidia';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1004, 'A', 50),
+    (1004, 'AA', 50),
+    (1004, 'B', 22),
+    (1004, 'C', 6),
+    (1004, 'Ex', 12);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1004, '2026-08-08 00:00:00', 1004);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1004, 'A', 50, 12000),
+    (1004, 'AA', 50, 13000),
+    (1004, 'B', 22, 11000),
+    (1004, 'C', 6, 7000),
+    (1004, 'Ex', 12, 15000);
+
+-- 2026-08-09 - C. Andrés
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1005, '2026-08-09 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'C. Andrés';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1005, 'A', 4),
+    (1005, 'AA', 12),
+    (1005, 'B', 2),
+    (1005, 'Ex', 40),
+    (1005, 'Y', 5);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1005, '2026-08-09 00:00:00', 1005);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1005, 'A', 4, 12000),
+    (1005, 'AA', 12, 13000),
+    (1005, 'B', 2, 11000),
+    (1005, 'Ex', 40, 14000),
+    (1005, 'Y', 5, 20000);
+
+-- 2026-08-09 - Jaime
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1006, '2026-08-09 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Jaime';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1006, 'A', 3),
+    (1006, 'AA', 3),
+    (1006, 'B', 2);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1006, '2026-08-09 00:00:00', 1006);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1006, 'A', 3, 13000),
+    (1006, 'AA', 3, 14000),
+    (1006, 'B', 2, 11000);
+
+-- 2026-08-11 - Carolina
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1007, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Carolina';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1007, 'AA', 100),
+    (1007, 'Ex', 10);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1007, '2026-08-11 00:00:00', 1007);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1007, 'AA', 100, 12000),
+    (1007, 'Ex', 10, 14000);
+
+-- 2026-08-11 - Deyanira
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1008, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Deyanira';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1008, 'AA', 20);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1008, '2026-08-11 00:00:00', 1008);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1008, 'AA', 20, 14000);
+
+-- 2026-08-11 - Ferney
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1009, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Ferney';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1009, 'A', 10),
+    (1009, 'P', 5);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1009, '2026-08-11 00:00:00', 1009);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1009, 'A', 10, 11500),
+    (1009, 'P', 5, 6500);
+
+-- 2026-08-11 - Granja
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1010, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Granja';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1010, 'A', 2),
+    (1010, 'Q', 1);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1010, '2026-08-11 00:00:00', 1010);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1010, 'A', 2, 13000),
+    (1010, 'Q', 1, 10000);
+
+-- 2026-08-11 - Humberto
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1011, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Humberto';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1011, 'Q', 1);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1011, '2026-08-11 00:00:00', 1011);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1011, 'Q', 1, 8000);
+
+-- 2026-08-11 - Jaime
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1012, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Jaime';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1012, 'Q', 2);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1012, '2026-08-11 00:00:00', 1012);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1012, 'Q', 2, 10000);
+
+-- 2026-08-11 - Nidia
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1013, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Nidia';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1013, 'A', 50),
+    (1013, 'AA', 50),
+    (1013, 'B', 30),
+    (1013, 'C', 7),
+    (1013, 'Ex', 9);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1013, '2026-08-11 00:00:00', 1013);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1013, 'A', 50, 12000),
+    (1013, 'AA', 50, 13000),
+    (1013, 'B', 30, 11000),
+    (1013, 'C', 7, 7000),
+    (1013, 'Ex', 9, 15000);
+
+-- 2026-08-11 - Orlando
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1014, '2026-08-11 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Orlando';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1014, 'Q', 1);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1014, '2026-08-11 00:00:00', 1014);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1014, 'Q', 1, 10000);
+
+-- 2026-08-12 - Granja
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1015, '2026-08-12 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Granja';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1015, 'Q', 4);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1015, '2026-08-12 00:00:00', 1015);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1015, 'Q', 4, 10000);
+
+-- 2026-08-12 - Jaime
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1016, '2026-08-12 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Jaime';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1016, 'AA', 1);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1016, '2026-08-12 00:00:00', 1016);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1016, 'AA', 1, 14000);
+
+-- 2026-08-13 - América
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1017, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'América';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1017, 'A', 10);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1017, '2026-08-13 00:00:00', 1017);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1017, 'A', 10, 14500);
+
+-- 2026-08-13 - Carolina
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1018, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Carolina';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1018, 'A', 148),
+    (1018, 'AA', 41),
+    (1018, 'Ex', 14);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1018, '2026-08-13 00:00:00', 1018);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1018, 'A', 148, 10500),
+    (1018, 'AA', 41, 12000),
+    (1018, 'Ex', 14, 14000);
+
+-- 2026-08-13 - Deyanira
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1019, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Deyanira';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1019, 'A', 10),
+    (1019, 'AA', 30);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1019, '2026-08-13 00:00:00', 1019);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1019, 'A', 10, 13000),
+    (1019, 'AA', 30, 14000);
+
+-- 2026-08-13 - Económico
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1020, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Económico';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1020, 'A', 10),
+    (1020, 'AA', 10),
+    (1020, 'Ex', 10);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1020, '2026-08-13 00:00:00', 1020);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1020, 'A', 10, 13000),
+    (1020, 'AA', 10, 14000),
+    (1020, 'Ex', 10, 15000);
+
+-- 2026-08-13 - Fabián
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1021, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Fabián';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1021, 'AA', 50);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1021, '2026-08-13 00:00:00', 1021);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1021, 'AA', 50, 12500);
+
+-- 2026-08-13 - Ferney
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1022, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Ferney';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1022, 'A', 10),
+    (1022, 'C', 6),
+    (1022, 'P', 1);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1022, '2026-08-13 00:00:00', 1022);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1022, 'A', 10, 11500),
+    (1022, 'C', 6, 7000),
+    (1022, 'P', 1, 6500);
+
+-- 2026-08-13 - Nidia
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1023, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Nidia';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1023, 'Ex', 10);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1023, '2026-08-13 00:00:00', 1023);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1023, 'Ex', 10, 15000);
+
+-- 2026-08-13 - Wilmer
+INSERT INTO pedido (id, fecha, estado, id_mayorista)
+SELECT 1024, '2026-08-13 00:00:00', 'entregado', id
+FROM mayorista WHERE nombre = 'Wilmer';
+INSERT INTO detalle_pedido (id_pedido, codigo_categoria_peso, cantidad_solicitada) VALUES
+    (1024, 'A', 185),
+    (1024, 'AA', 30);
+INSERT INTO venta (id, fecha_hora, id_pedido) VALUES (1024, '2026-08-13 00:00:00', 1024);
+INSERT INTO detalle_venta (id_venta, codigo_categoria_peso, cantidad_vendida, precio_aplicado) VALUES
+    (1024, 'A', 185, 11800),
+    (1024, 'AA', 30, 12700);
+    
+-- Los IDs 1001+ se usan para no colisionar con los registros iniciales del schema.
+-- Ajustar las secuencias de identidad para evitar una colisión posterior.
+SELECT setval(pg_get_serial_sequence('pedido', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM pedido), 1), 1001), true);
+SELECT setval(pg_get_serial_sequence('venta', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM venta), 1), 1001), true);
+
+INSERT INTO bodega (id_galpon, codigo_categoria_peso, fecha_corte, cantidad_bandejas) VALUES
+(1, 'Y', '2026-08-06', 1),
+(1, 'A', '2026-08-06', 14),
+(3, 'A', '2026-08-06', 21),
+(4, 'Y', '2026-08-06', 1),
+(4, 'A', '2026-08-06', 11),
+(1, 'Y', '2026-06-13', 1),
+(1, 'A', '2026-06-13', 21),
+(1, 'B', '2026-06-13', 5),
+(3, 'A', '2026-06-13', 28),
+(3, 'B', '2026-06-13', 7),
+(4, 'A', '2026-06-13', 16),
+(4, 'B', '2026-06-13', 4);
