@@ -7,6 +7,7 @@ build/
 !.env.example
 npm-debug.log*
 yarn-error.log*
+.vitest/
 
 # PlatformIO / Firmware
 firmware/.pio/
