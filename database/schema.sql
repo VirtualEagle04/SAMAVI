@@ -205,11 +205,16 @@ INSERT INTO socio (nombre, documento, contacto) VALUES
 ('Mauricio', '123456789', '{"telefono": "3001234567", "email": "mauricio@example.com"}'),
 ('J.C.V', '987654321', '{"telefono": "3008976481", "email": "jcv@example.com"}'),
 ('L.F.D', '456789123', '{"telefono": "3004567891", "email": "lfd@example.com"}'),
-('M.F.D', '321654987', '{"telefono": "3003216549", "email": "mfd@example.com"}');
+('M.F.D', '321654987', '{"telefono": "3003216549", "email": "mfd@example.com"}'),
+('Oscar', '654987321', '{"telefono": "3116549873", "email": "oscar@example.com"}'),
+('Paty', '789123456', '{"telefono": "3117891234", "email": "paty@example.com"}'),
+('L. Marina', '159753486', '{"telefono": "3111597534", "email": "lmarina@example.com"}'),
+('Magolita', '753159486', '{"telefono": "3117531594", "email": "magolita@example.com"}'),
+('Marthica', '951357486', '{"telefono": "3119513574", "email": "marthica@example.com"}');
 
 INSERT INTO galpon (nombre, gallinas_actuales, estado) VALUES
 ('Galpón 1', 2260, 'activo'),
-('Galpón 2', 2350, 'inactivo'),
+('Galpón 2', 0, 'inactivo'),
 ('Galpón 3', 2300, 'activo'),
 ('Galpón 4', 2240, 'activo'),
 ('Galpón 5', 2350, 'activo');
@@ -221,13 +226,21 @@ INSERT INTO categoria_peso (codigo, nombre, peso_min_g, peso_max_g) VALUES
 ('A', 'A', 53, 59),
 ('B', 'B', 46, 52),
 ('C', 'C', 45, 45),
-('P', 'Pipo', null, 45);
+('P', 'Pipo', null, 45),
+('Q', 'Quebrado', null, null);
 
 INSERT INTO mayorista (nombre, ubicacion, contacto) VALUES
 ('Deyanira', 'Calle 123, La Plata, Huila', '{"telefono": "3196487561"}'),
 ('Ferney', 'Carrera 45, Neiva, Huila', '{"telefono": "3109876543"}'),
 ('Nidia', 'Avenida 78, Garzón, Huila', '{"telefono": "3151234567"}'),
-('C. Andrés', 'Calle 56, Pitalito, Huila', '{"telefono": "3204567891"}');
+('C. Andrés', 'Calle 56, Pitalito, Huila', '{"telefono": "3204567891"}'),
+('Jaime', 'Calle 34, La Plata, Huila', '{"telefono": "3119876543"}'),
+('Carolina', 'Carrera 12, Neiva, Huila', '{"telefono": "3123456789"}'),
+('Humberto', 'Avenida 90, Garzón, Huila', '{"telefono": "3134567890"}'),
+('Orlando', 'Calle 78, Pitalito, Huila', '{"telefono": "3145678901"}'),
+('América', 'Carrera 34, La Plata, Huila', '{"telefono": "3156789012"}'),
+('Económico', 'Avenida 56, Neiva, Huila', '{"telefono": "3167890123"}'),
+('Wilmer', 'Calle 90, Garzón, Huila', '{"telefono": "3178901234"}');
 
 INSERT INTO rol (nombre) VALUES
 ('Administrador'),
@@ -238,37 +251,61 @@ INSERT INTO permiso (codigo, descripcion) VALUES
 ('VER_PRODUCCION', 'Ver registros de producción diaria por galpón'),
 ('INGRESAR_PEDIDO', 'Registrar el pedido de un mayorista'),
 ('REGISTRAR_VENTA', 'Registrar la venta de un pedido'),
-('EDITAR_PRECIOS', 'Modificar los precios de venta por categoría de peso por mayorista'),
+('EDITAR_PRECIOS', 'Modificar los precios de venta por peso y por mayorista'),
 ('GESTIONAR_USUARIOS', 'Gestionar usuarios y roles del sistema'),
-('EDITAR_INVENTARIO', 'Modificar el inventario de insumos'),
+('GESTIONAR_INVENTARIO', 'Modificar el inventario de insumos'),
 ('INGRESAR_GASTO', 'Registrar un gasto de operación'),
-('VER_CIERRE_DIARIO', 'Ver el cierre diario de producción y ventas'),
-('VER_CIERRE', 'Ver el cierre semanal de producción, ventas, gastos y saldo');
+('VER_CIERRE', 'Ver el cierre semanal de producción, ventas, gastos y saldo'),
+('INGRESAR_CONTEO', 'Registrar unidades de huevos o bandejas en el conteo diario de manera manual'),
+('REGISTRAR_CIERRE_DIARIO', 'Registrar el cierre diario de producción por galpón'),
+('GESTIONAR_SOCIOS', 'Gestionar socios y sus inversiones en galpones'),
+('GESTIONAR_MAYORISTAS', 'Gestionar mayoristas y sus datos de contacto'),
+('GESTIONAR_GALPONES', 'Gestionar galpones y su estado de operación');
 
 INSERT INTO rol_permiso (id_rol, id_permiso) VALUES
-(1, 1),
-(1, 2),
-(1, 3),
-(1, 4),
-(1, 5),
-(1, 6),
-(1, 7),
-(1, 8),
-(1, 9),
-(2, 1),
-(2, 6),
-(2, 7),
-(2, 8),
-(2, 9),
-(3, 2),
-(3, 3),
-(3, 4);
+-- Administrador (id=1)
+(1,  1),  -- VER_PRODUCCION
+(1,  2),  -- INGRESAR_PEDIDO
+(1,  3),  -- REGISTRAR_VENTA
+(1,  4),  -- EDITAR_PRECIOS
+(1,  5),  -- GESTIONAR_USUARIOS
+(1,  6),  -- GESTIONAR_INVENTARIO
+(1,  7),  -- INGRESAR_GASTO
+(1,  8),  -- VER_CIERRE
+(1,  9),  -- INGRESAR_CONTEO
+(1, 10),  -- REGISTRAR_CIERRE_DIARIO
+(1, 11),  -- GESTIONAR_SOCIOS
+(1, 12),  -- GESTIONAR_MAYORISTAS
+(1, 13),  -- GESTIONAR_GALPONES
+-- Galponero (id=2)
+(2,  1),  -- VER_PRODUCCION
+(2,  6),  -- GESTIONAR_INVENTARIO
+(2,  7),  -- INGRESAR_GASTO
+(2,  8),  -- VER_CIERRE
+(2,  9),  -- INGRESAR_CONTEO
+(2, 10),  -- REGISTRAR_CIERRE_DIARIO
+-- Vendedor (id=3)
+(3,  1),  -- VER_PRODUCCION
+(3,  2),  -- INGRESAR_PEDIDO
+(3,  3),  -- REGISTRAR_VENTA
+(3,  7),  -- INGRESAR_GASTO
+(3,  8),  -- VER_CIERRE
+(3, 12);  -- GESTIONAR_MAYORISTAS
 
 INSERT INTO inversion_socio (id_socio, id_galpon, porcentaje_inversion) VALUES
 (1, 1, 25),
 (2, 1, 25),
 (3, 1, 25),
-(4, 1, 25);
+(4, 1, 25),
+(5, 3, 50),
+(6, 3, 25),
+(7, 3, 25),
+(5, 4, 50),
+(8, 4, 25),
+(3, 4, 25),
+(1, 5, 50),
+(9, 5, 25),
+(4, 5, 25);
 
 INSERT INTO precio (id_mayorista, codigo_categoria_peso, valor_unitario) VALUES
 (1, 'AA', 14000),
@@ -295,4 +332,6 @@ INSERT INTO gasto (concepto, valor) VALUES
 ('Salario Carlos Andrés', 799998);
 
 INSERT INTO usuario (nombre, login, password_hash, contacto, id_rol) VALUES
-('Admin', 'admin', '$2a$12$5hafiSCE.98sXCRkMvXMU.FxWUjb1FpNgl6Dh5CUrU73U7ZZk2YqS', '{"telefono": "3007778861"}', 1);
+('Administrador', 'admin', '$2a$12$5hafiSCE.98sXCRkMvXMU.FxWUjb1FpNgl6Dh5CUrU73U7ZZk2YqS', '{"telefono": "3007778861"}', 1), -- pass: 123
+('Galponero', 'galponero', '$2a$12$FHHY8hDo6xxu6mYC8..AJ.NxtwfkD9.HZqxz4xXPLcbESFAIsT04q', '{"telefono": "3007778862"}', 2), -- pass: galponero
+('Vendedor', 'vendedor', '$2a$12$tNcG4PWFfUuHT3vj5affx.v2S1osWBtTgE.oYqvDLoVd3fPWtLJfm', '{"telefono": "3007778863"}', 3); -- pass: vendedor
