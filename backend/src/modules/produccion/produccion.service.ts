@@ -43,7 +43,7 @@ export async function listGalpones() {
   });
 }
 
-const CATEGORY_ORDER = ["Y", "Ex", "AA", "A", "B", "C", "P"];
+const CATEGORY_ORDER = ["Y", "Ex", "AA", "A", "B", "C", "P", "Q"];
 
 export async function listCategorias() {
   const categorias = await prisma.categoriaPeso.findMany();

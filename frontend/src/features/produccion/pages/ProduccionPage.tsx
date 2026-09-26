@@ -46,6 +46,7 @@ const DEFAULT_CATEGORIES: CategoriaPeso[] = [
   { codigo: "B", nombre: "B", pesoMinG: 46, pesoMaxG: 52 },
   { codigo: "C", nombre: "C", pesoMinG: 45, pesoMaxG: 45 },
   { codigo: "P", nombre: "Pipo", pesoMinG: null, pesoMaxG: 45 },
+  { codigo: "Q", nombre: "Quebrado", pesoMinG: null, pesoMaxG: null },
 ]
 
 export default function ProduccionPage() {
@@ -107,7 +108,7 @@ export default function ProduccionPage() {
       setCounts(countsData)
       setGalpones(galponesData)
       if (categoriasData.length > 0) {
-        const order = ["Y", "Ex", "AA", "A", "B", "C", "P"]
+        const order = ["Y", "Ex", "AA", "A", "B", "C", "P", "Q"]
         const sortedCats = [...categoriasData].sort((a, b) => {
           const idxA = order.indexOf(a.codigo)
           const idxB = order.indexOf(b.codigo)
