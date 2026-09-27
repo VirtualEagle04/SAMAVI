@@ -1,4 +1,5 @@
 import { prisma } from "../../database/prisma.js";
+import type { Prisma } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 import type {
   DistribucionInput,
@@ -11,7 +12,7 @@ import type {
 const pedidoInclude = {
   mayorista: true,
   detalles: { include: { categoriaPeso: true } },
-  venta: { include: { detalles: true } },
+  venta: { include: { detalles: { include: { distribuciones: { include: { galpon: true } } } } } },
 } as const;
 
 export async function listMayoristas() {
@@ -171,6 +172,97 @@ export async function changePedidoStatus(id: number, estado: "cargado" | "entreg
   return prisma.pedido.update({ where: { id }, data: { estado }, include: pedidoInclude });
 }
 
+type StockReader = Pick<Prisma.TransactionClient, "bodega" | "cierreDiario" | "cierreProduccionDia" | "detalleVentaGalpon" | "galpon">;
+
+async function getStockByBarnAndCategory(reader: StockReader, fecha: Date, galponIds?: number[]) {
+  const day = new Date(`${fecha.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const tomorrow = new Date(day);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const closedBarns = await reader.cierreProduccionDia.findMany({
+    where: { fecha: day, ...(galponIds ? { idGalpon: { in: galponIds } } : {}) },
+    include: { galpon: true },
+  });
+  const barns = closedBarns.map(({ idGalpon, galpon }) => ({ id: idGalpon, nombre: galpon.nombre }));
+  if (!barns.length) return { barns, stock: new Map<string, number>() };
+
+  const ids = barns.map((barn) => barn.id);
+  const [snapshots, closes, dispatches] = await Promise.all([
+    reader.bodega.findMany({ where: { idGalpon: { in: ids }, fechaCorte: { lte: day } }, orderBy: { fechaCorte: "desc" } }),
+    reader.cierreDiario.findMany({
+      where: { idGalpon: { in: ids }, fecha: { lte: day } },
+      orderBy: { fecha: "asc" },
+    }),
+    reader.detalleVentaGalpon.findMany({
+      where: { idGalpon: { in: ids }, detalleVenta: { venta: { fechaHora: { lt: tomorrow } } } },
+      include: { detalleVenta: { include: { venta: true } } },
+    }),
+  ]);
+  const closedToday = new Set(closedBarns.map((barn) => barn.idGalpon));
+  const latestSnapshot = new Map<string, { fecha: Date; cantidad: number }>();
+  for (const row of snapshots) {
+    const key = `${row.idGalpon}:${row.codigoCategoriaPeso}`;
+    if (!latestSnapshot.has(key)) latestSnapshot.set(key, { fecha: row.fechaCorte, cantidad: row.cantidadBandejas });
+  }
+  const stock = new Map<string, number>();
+  const keyFor = (barn: number, category: string) => `${barn}:${category}`;
+  for (const [key, snapshot] of latestSnapshot) stock.set(key, snapshot.cantidad);
+  for (const close of closes) {
+    if (!closedToday.has(close.idGalpon)) continue;
+    const key = keyFor(close.idGalpon, close.codigoCategoriaPeso);
+    const snapshot = latestSnapshot.get(key);
+    if (!snapshot || close.fecha > snapshot.fecha) {
+      stock.set(key, (stock.get(key) ?? 0) + close.cantidadBandejas);
+    }
+  }
+  for (const dispatch of dispatches) {
+    const key = keyFor(dispatch.idGalpon, dispatch.codigoCategoriaPeso);
+    const snapshot = latestSnapshot.get(key);
+    const soldDate = dispatch.detalleVenta.venta.fechaHora;
+    if (!snapshot || soldDate > snapshot.fecha) stock.set(key, (stock.get(key) ?? 0) - dispatch.cantidad);
+  }
+  return { barns, stock };
+}
+
+function recommendAllocation(capacities: { id: number; available: number }[], requested: number) {
+  const total = capacities.reduce((sum, barn) => sum + barn.available, 0);
+  const target = Math.min(requested, total);
+  if (target === 0 || total === 0) return capacities.map(({ id, available }) => ({ id, available, recommended: 0 }));
+  const allocations = capacities.map(({ id, available }) => {
+    const exact = target * available / total;
+    const amount = Math.min(available, Math.floor(exact));
+    return { id, available, recommended: amount, remainder: exact - Math.floor(exact) };
+  });
+  let remaining = target - allocations.reduce((sum, barn) => sum + barn.recommended, 0);
+  allocations.sort((a, b) => b.remainder - a.remainder || a.id - b.id);
+  for (const barn of allocations) {
+    if (!remaining) break;
+    if (barn.recommended < barn.available) { barn.recommended += 1; remaining -= 1; }
+  }
+  return allocations.sort((a, b) => a.id - b.id).map(({ id, available, recommended }) => ({ id, available, recommended }));
+}
+
+export async function getPedidoDisponibilidad(pedidoId: number) {
+  const pedido = await prisma.pedido.findUnique({ where: { id: pedidoId }, include: { detalles: { include: { categoriaPeso: true } } } });
+  if (!pedido) throw new AppError(404, "Pedido no encontrado");
+  const today = new Date();
+  const { barns, stock } = await prisma.$transaction((transaction) => getStockByBarnAndCategory(transaction, today));
+  const items = pedido.detalles.map((detail) => {
+    const capacities = barns.map((barn) => ({ id: barn.id, available: Math.max(0, stock.get(`${barn.id}:${detail.codigoCategoriaPeso}`) ?? 0) }));
+    const allocation = recommendAllocation(capacities, detail.cantidadSolicitada);
+    const available = capacities.reduce((sum, barn) => sum + barn.available, 0);
+    return {
+      categoriaPeso: detail.codigoCategoriaPeso,
+      nombre: detail.categoriaPeso.nombre,
+      cantidadSolicitada: detail.cantidadSolicitada,
+      cantidadDisponible: available,
+      cantidadRecomendada: Math.min(detail.cantidadSolicitada, available),
+      cantidadNoEntregada: Math.max(0, detail.cantidadSolicitada - available),
+      galpones: allocation.map((barn) => ({ galponId: barn.id, nombre: barns.find((candidate) => candidate.id === barn.id)!.nombre, disponible: barn.available, recomendada: barn.recommended })),
+    };
+  });
+  return { fecha: today.toISOString().slice(0, 10), cierreRealizado: barns.length > 0, categorias: items };
+}
+
 function groupDistribution(distribution: DistribucionInput[]) {
   const grouped = new Map<string, DistribucionInput[]>();
   for (const item of distribution) {
@@ -183,6 +275,7 @@ function groupDistribution(distribution: DistribucionInput[]) {
 
 export async function createVenta(pedidoId: number, input: VentaInput) {
   return prisma.$transaction(async (transaction) => {
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(74129031)`;
     const pedido = await transaction.pedido.findUnique({
       where: { id: pedidoId },
       include: { detalles: true, venta: true },
@@ -190,8 +283,8 @@ export async function createVenta(pedidoId: number, input: VentaInput) {
     if (!pedido) {
       throw new AppError(404, "Pedido no encontrado");
     }
-    if (pedido.estado !== "cargado") {
-      throw new AppError(409, "El pedido debe estar cargado para registrar la venta");
+    if (pedido.estado !== "pendiente" && pedido.estado !== "cargado") {
+      throw new AppError(409, "El pedido no está disponible para cargar");
     }
     if (pedido.venta) {
       throw new AppError(409, "El pedido ya tiene una venta registrada");
@@ -236,29 +329,34 @@ export async function createVenta(pedidoId: number, input: VentaInput) {
       }
     }
 
+    const stockResult = await getStockByBarnAndCategory(transaction, new Date(), [...new Set(input.distribucion.map((row) => row.galponId))]);
+    if (!stockResult.barns.length) {
+      throw new AppError(409, "Primero se debe cerrar la producción diaria de al menos un galpón");
+    }
+    const todayBarns = new Set(stockResult.barns.map((barn) => barn.id));
     for (const item of input.distribucion) {
-      const latestStock = await transaction.bodega.findFirst({
-        where: { idGalpon: item.galponId, codigoCategoriaPeso: item.categoriaPeso },
-        orderBy: { fechaCorte: "desc" },
-      });
-      if (!latestStock) {
-        throw new AppError(409, `No existe inventario para ${item.categoriaPeso} en el galpón ${item.galponId}`);
+      if (!todayBarns.has(item.galponId)) {
+        throw new AppError(409, `El galpón ${item.galponId} no tiene cierre diario registrado para hoy`);
       }
-      const updated = await transaction.bodega.updateMany({
-        where: {
-          idGalpon: item.galponId,
-          codigoCategoriaPeso: item.categoriaPeso,
-          fechaCorte: latestStock.fechaCorte,
-          cantidadBandejas: { gte: item.cantidad },
-        },
-        data: { cantidadBandejas: { decrement: item.cantidad } },
-      });
-      if (updated.count !== 1) {
-        throw new AppError(409, `Inventario insuficiente para ${item.categoriaPeso} en el galpón ${item.galponId}`);
+      const available = stockResult.stock.get(`${item.galponId}:${item.categoriaPeso}`) ?? 0;
+      if (item.cantidad > available) {
+        throw new AppError(409, `Solo hay ${Math.max(0, available)} bandejas de ${item.categoriaPeso} disponibles en el galpón ${item.galponId}`);
+      }
+    }
+    const totalAvailableByCategory = new Map<string, number>();
+    for (const category of requested.keys()) {
+      totalAvailableByCategory.set(category, stockResult.barns.reduce((sum, barn) => sum + Math.max(0, stockResult.stock.get(`${barn.id}:${category}`) ?? 0), 0));
+    }
+    for (const [category, quantity] of sold) {
+      const available = totalAvailableByCategory.get(category) ?? 0;
+      if (quantity > available) throw new AppError(409, `Solo hay ${available} bandejas de ${category} disponibles para este pedido`);
+      if (quantity !== Math.min(requested.get(category)!, available)) {
+        throw new AppError(409, `La cantidad cargada de ${category} debe ser ${Math.min(requested.get(category)!, available)} según la existencia disponible`);
       }
     }
 
-    return transaction.venta.create({
+    const missingByCategory = new Map([...requested].map(([category, quantity]) => [category, quantity - (sold.get(category) ?? 0)]));
+    const venta = await transaction.venta.create({
       data: {
         fechaHora: new Date(),
         idPedido: pedidoId,
@@ -266,20 +364,25 @@ export async function createVenta(pedidoId: number, input: VentaInput) {
           create: [...sold.entries()].map(([codigoCategoriaPeso, cantidadVendida]) => ({
             codigoCategoriaPeso,
             cantidadVendida,
+            cantidadNoEntregada: missingByCategory.get(codigoCategoriaPeso) ?? 0,
+            motivoNoEntrega: (missingByCategory.get(codigoCategoriaPeso) ?? 0) > 0 ? "sin_existencia" : null,
             precioAplicado: priceByCategory.get(codigoCategoriaPeso)!,
+            distribuciones: {
+              create: input.distribucion.filter((row) => row.categoriaPeso === codigoCategoriaPeso).map((row) => ({ idGalpon: row.galponId, cantidad: row.cantidad })),
+            },
           })),
         },
       },
-      include: { detalles: true },
-    }).then(async (venta) => {
-      await transaction.pedido.update({ where: { id: pedidoId }, data: { estado: "entregado" } });
-      return venta;
+      include: { detalles: { include: { distribuciones: { include: { galpon: true } } } } },
     });
+    const partial = [...missingByCategory.values()].some((quantity) => quantity > 0);
+    await transaction.pedido.update({ where: { id: pedidoId }, data: { estado: partial ? "entregado_parcial" : "entregado" } });
+    return venta;
   });
 }
 
 export async function getVentaByPedido(pedidoId: number) {
-  const venta = await prisma.venta.findUnique({ where: { idPedido: pedidoId }, include: { detalles: true } });
+  const venta = await prisma.venta.findUnique({ where: { idPedido: pedidoId }, include: { detalles: { include: { distribuciones: { include: { galpon: true } } } } } });
   if (!venta) {
     throw new AppError(404, "Venta no encontrada");
   }

@@ -70,10 +70,18 @@ export async function closeDailyProduction(input: DailyCloseInput) {
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
 
+  const galpones = input.galponId === undefined
+    ? await prisma.galpon.findMany({ where: { estado: "activo" }, select: { id: true } })
+    : await prisma.galpon.findMany({ where: { id: input.galponId }, select: { id: true } });
+  if (input.galponId !== undefined && galpones.length === 0) {
+    throw new AppError(404, "Galpón no encontrado");
+  }
+  const galponIds = galpones.map((galpon) => galpon.id);
+
   const counts = await prisma.logConteo.findMany({
     where: {
       timestamp: { gte: start, lt: end },
-      ...(input.galponId === undefined ? {} : { idGalpon: input.galponId }),
+      idGalpon: { in: galponIds },
     },
     select: { idGalpon: true, codigoCategoriaPeso: true, cantidad: true },
   });
@@ -90,35 +98,84 @@ export async function closeDailyProduction(input: DailyCloseInput) {
     totals.set(key, current);
   }
 
-  const results = [];
-  for (const total of totals.values()) {
-    if (total.cantidad < 0) {
-      throw new AppError(
-        409,
-        `No se puede cerrar ${total.codigoCategoriaPeso} del galpón ${total.idGalpon}: el total es negativo`,
-      );
-    }
-
-    const cantidadBandejas = Math.floor(total.cantidad / 30);
-    const cantidadSobrante = total.cantidad % 30;
-    results.push(await prisma.cierreDiario.upsert({
-      where: {
-        idGalpon_codigoCategoriaPeso_fecha: {
+  const results = await prisma.$transaction(async (transaction) => {
+    const saved = [];
+    for (const total of totals.values()) {
+      if (total.cantidad < 0) {
+        throw new AppError(
+          409,
+          `No se puede cerrar ${total.codigoCategoriaPeso} del galpón ${total.idGalpon}: el total es negativo`,
+        );
+      }
+      const cantidadBandejas = Math.floor(total.cantidad / 30);
+      const cantidadSobrante = total.cantidad % 30;
+      saved.push(await transaction.cierreDiario.upsert({
+        where: {
+          idGalpon_codigoCategoriaPeso_fecha: {
+            idGalpon: total.idGalpon,
+            codigoCategoriaPeso: total.codigoCategoriaPeso,
+            fecha: start,
+          },
+        },
+        create: {
           idGalpon: total.idGalpon,
           codigoCategoriaPeso: total.codigoCategoriaPeso,
           fecha: start,
+          cantidadBandejas,
+          cantidadSobrante,
         },
-      },
-      create: {
-        idGalpon: total.idGalpon,
-        codigoCategoriaPeso: total.codigoCategoriaPeso,
-        fecha: start,
-        cantidadBandejas,
-        cantidadSobrante,
-      },
-      update: { cantidadBandejas, cantidadSobrante },
-    }));
-  }
+        update: { cantidadBandejas, cantidadSobrante },
+      }));
+    }
+    for (const galponId of galponIds) {
+      await transaction.cierreProduccionDia.upsert({
+        where: { idGalpon_fecha: { idGalpon: galponId, fecha: start } },
+        create: { idGalpon: galponId, fecha: start },
+        update: { cerradoEn: new Date() },
+      });
+    }
+    return saved;
+  });
 
   return results;
+}
+
+export async function listDailyCountSummary(fecha = new Date().toISOString().slice(0, 10)) {
+  const start = new Date(`${fecha}T00:00:00.000Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  const totals = await prisma.logConteo.groupBy({
+    by: ["idGalpon", "codigoCategoriaPeso"],
+    where: { timestamp: { gte: start, lt: end } },
+    _sum: { cantidad: true },
+  });
+
+  return totals.map((total) => ({
+    idGalpon: total.idGalpon,
+    codigoCategoriaPeso: total.codigoCategoriaPeso,
+    cantidad: total._sum.cantidad ?? 0,
+  }));
+}
+
+export async function listCierresProduccion(galponId?: number, fecha?: string) {
+  return prisma.cierreProduccionDia.findMany({
+    where: {
+      ...(galponId ? { idGalpon: galponId } : {}),
+      ...(fecha ? { fecha: new Date(`${fecha}T00:00:00.000Z`) } : {}),
+    },
+    orderBy: [{ fecha: "desc" }, { idGalpon: "asc" }],
+    include: { galpon: true },
+  });
+}
+
+export async function listBodega(galponId?: number, fechaCorte?: string) {
+  return prisma.bodega.findMany({
+    where: {
+      ...(galponId ? { idGalpon: galponId } : {}),
+      ...(fechaCorte ? { fechaCorte: new Date(`${fechaCorte}T00:00:00.000Z`) } : {}),
+    },
+    orderBy: [{ fechaCorte: "desc" }, { idGalpon: "asc" }, { codigoCategoriaPeso: "asc" }],
+    include: { galpon: true, categoriaPeso: true },
+  });
 }

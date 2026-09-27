@@ -5,7 +5,10 @@ import {
   closeDailyProduction,
   listCategorias,
   listCierres,
+  listCierresProduccion,
+  listBodega,
   listCounts,
+  listDailyCountSummary,
   listGalpones,
   registerCount,
 } from "./produccion.service.js";
@@ -52,4 +55,20 @@ export async function closeDailyProductionController(request: Request, response:
 
 export async function getDeviceStatusController(_request: Request, response: Response): Promise<void> {
   response.status(200).json(deviceTracker.getStatus());
+}
+
+export async function listDailyCountSummaryController(_request: Request, response: Response): Promise<void> {
+  response.status(200).json(await listDailyCountSummary());
+}
+
+export async function listCierresProduccionController(request: Request, response: Response): Promise<void> {
+  const galponId = request.query.galponId ? Number(request.query.galponId) : undefined;
+  const fecha = typeof request.query.fecha === "string" ? request.query.fecha : undefined;
+  response.status(200).json(await listCierresProduccion(galponId, fecha));
+}
+
+export async function listBodegaController(request: Request, response: Response): Promise<void> {
+  const galponId = request.query.galponId ? Number(request.query.galponId) : undefined;
+  const fechaCorte = typeof request.query.fechaCorte === "string" ? request.query.fechaCorte : undefined;
+  response.status(200).json(await listBodega(galponId, fechaCorte));
 }

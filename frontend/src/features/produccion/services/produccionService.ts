@@ -2,11 +2,14 @@ import { useAuthStore } from "../../../stores/authStore"
 import type {
   CategoriaPeso,
   CierreDiario,
+  CierreProduccionDia,
+  BodegaStock,
   DailyClosePayload,
   DeviceStatus,
   Galpon,
   LogConteo,
   RegisterCountPayload,
+  ResumenConteoDiario,
 } from "../types/produccion.types"
 
 const API_URL = import.meta.env.VITE_API_URL ?? ""
@@ -71,6 +74,29 @@ export async function getCierres(galponId?: number, fecha?: string): Promise<Cie
     }
   )
   return handleResponse<CierreDiario[]>(response)
+}
+
+export async function getDailyCountSummary(): Promise<ResumenConteoDiario[]> {
+  const response = await fetch(`${API_URL}/api/v1/produccion/conteos/resumen-diario`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<ResumenConteoDiario[]>(response);
+}
+
+export async function getCierresProduccion(galponId?: number, fecha?: string): Promise<CierreProduccionDia[]> {
+  const params = new URLSearchParams()
+  if (galponId) params.append("galponId", galponId.toString())
+  if (fecha) params.append("fecha", fecha)
+  const response = await fetch(`${API_URL}/api/v1/produccion/cierres-realizados${params.toString() ? `?${params}` : ""}`, { headers: getAuthHeaders() })
+  return handleResponse<CierreProduccionDia[]>(response)
+}
+
+export async function getBodega(galponId?: number, fechaCorte?: string): Promise<BodegaStock[]> {
+  const params = new URLSearchParams()
+  if (galponId) params.append("galponId", galponId.toString())
+  if (fechaCorte) params.append("fechaCorte", fechaCorte)
+  const response = await fetch(`${API_URL}/api/v1/produccion/bodega${params.toString() ? `?${params}` : ""}`, { headers: getAuthHeaders() })
+  return handleResponse<BodegaStock[]>(response)
 }
 
 export async function registerCount(payload: RegisterCountPayload): Promise<LogConteo> {

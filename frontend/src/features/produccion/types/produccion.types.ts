@@ -32,6 +32,28 @@ export interface CierreDiario {
   categoriaPeso?: CategoriaPeso
 }
 
+export interface ResumenConteoDiario {
+  idGalpon: number
+  codigoCategoriaPeso: string
+  cantidad: number
+}
+
+export interface CierreProduccionDia {
+  idGalpon: number
+  fecha: string
+  cerradoEn: string
+  galpon?: Galpon
+}
+
+export interface BodegaStock {
+  idGalpon: number
+  codigoCategoriaPeso: string
+  fechaCorte: string
+  cantidadBandejas: number
+  galpon?: Galpon
+  categoriaPeso?: CategoriaPeso
+}
+
 export interface RegisterCountPayload {
   galponId: number
   categoriaPeso: string
