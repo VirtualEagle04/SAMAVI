@@ -1,39 +1,47 @@
-import Box from "@mui/material/Box"
-import Button from "@mui/material/Button"
-import Card from "@mui/material/Card"
-import CardContent from "@mui/material/CardContent"
-import Chip from "@mui/material/Chip"
-import FormControl from "@mui/material/FormControl"
-import Grid from "@mui/material/Grid"
-import IconButton from "@mui/material/IconButton"
-import MenuItem from "@mui/material/MenuItem"
-import Select from "@mui/material/Select"
-import Typography from "@mui/material/Typography"
-import Tooltip from "@mui/material/Tooltip"
-import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded"
-import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded"
-import RadioButtonCheckedRoundedIcon from "@mui/icons-material/RadioButtonCheckedRounded"
-import WifiRoundedIcon from "@mui/icons-material/WifiRounded"
-import WifiOffRoundedIcon from "@mui/icons-material/WifiOffRounded"
-import AddRoundedIcon from "@mui/icons-material/AddRounded"
-import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded"
-import type { CategoriaPeso, DeviceStatus, Galpon, LogConteo } from "../types/produccion.types"
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import FormControl from "@mui/material/FormControl";
+import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
+import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
+import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import RadioButtonCheckedRoundedIcon from "@mui/icons-material/RadioButtonCheckedRounded";
+import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
+import WifiOffRoundedIcon from "@mui/icons-material/WifiOffRounded";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
+import type {
+  CategoriaPeso,
+  DeviceStatus,
+  Galpon,
+  ResumenConteoDiario,
+} from "../types/produccion.types";
 
 interface LiveMonitoringCardProps {
-  counts: LogConteo[]
-  galpones: Galpon[]
-  categorias: CategoriaPeso[]
-  selectedGalponId: number | "all"
-  onSelectGalpon: (id: number | "all") => void
-  onRefresh: () => void
-  onOpenRegisterModal: (preselectedCategory?: string) => void
-  onQuickCount: (categoriaCodigo: string, cantidad: 1 | -1) => void
-  isLoading?: boolean
-  lastUpdated: Date
-  deviceStatus?: DeviceStatus | null
+  dailyCounts: ResumenConteoDiario[];
+  galpones: Galpon[];
+  categorias: CategoriaPeso[];
+  selectedGalponId: number | "all";
+  onSelectGalpon: (id: number | "all") => void;
+  onRefresh: () => void;
+  onOpenRegisterModal: (preselectedCategory?: string) => void;
+  onQuickCount: (categoriaCodigo: string, cantidad: 1 | -1) => void;
+  isLoading?: boolean;
+  lastUpdated: Date;
+  deviceStatus?: DeviceStatus | null;
 }
 
-const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+const CATEGORY_COLORS: Record<
+  string,
+  { bg: string; text: string; border: string }
+> = {
   Y: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
   Ex: { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8" },
   AA: { bg: "#e0f2fe", text: "#075985", border: "#bae6fd" },
@@ -41,10 +49,10 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
   B: { bg: "#ffedd5", text: "#9a3412", border: "#fed7aa" },
   C: { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" },
   P: { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1" },
-}
+};
 
 export default function LiveMonitoringCard({
-  counts,
+  dailyCounts,
   galpones,
   categorias,
   selectedGalponId,
@@ -56,39 +64,21 @@ export default function LiveMonitoringCard({
   lastUpdated,
   deviceStatus,
 }: LiveMonitoringCardProps) {
-  // Filter counts by today and selected galpon
-  const todayDateStr = new Date().toISOString().slice(0, 10)
-  const currentCounts = counts.filter((c) => {
-    const isToday = c.timestamp.slice(0, 10) === todayDateStr
-    const matchGalpon = selectedGalponId === "all" || c.idGalpon === selectedGalponId
-    return isToday && matchGalpon
-  })
+  const currentCounts = dailyCounts.filter(
+    (count) => selectedGalponId === "all" || count.idGalpon === selectedGalponId,
+  );
+  const totalCount = currentCounts.reduce((sum, count) => sum + count.cantidad, 0);
 
-  // Calculate totals
-  const totalCount = currentCounts.reduce((sum, c) => sum + c.cantidad, 0)
-  const totalBandejas = Math.floor(Math.max(0, totalCount) / 30)
-  const totalSobrante = Math.max(0, totalCount) % 30
-
-  // Selected galpon active hens
-  const selectedGalponObj = galpones.find((g) => g.id === selectedGalponId)
-  const totalHens =
-    selectedGalponId === "all"
-      ? galpones.reduce((acc, g) => acc + (g.estado === "activo" ? g.gallinasActuales : 0), 0)
-      : selectedGalponObj?.gallinasActuales ?? 0
-
-  const posturaPercentage = totalHens > 0 ? ((totalCount / totalHens) * 100).toFixed(1) : "0.0"
-
-  // Counts by category
-  const categoryCounts: Record<string, number> = {}
+  const categoryCounts: Record<string, number> = {};
   categorias.forEach((cat) => {
-    categoryCounts[cat.codigo] = 0
-  })
+    categoryCounts[cat.codigo] = 0;
+  });
 
-  currentCounts.forEach((c) => {
-    categoryCounts[c.codigoCategoriaPeso] = (categoryCounts[c.codigoCategoriaPeso] || 0) + c.cantidad
-  })
+  currentCounts.forEach((count) => {
+    categoryCounts[count.codigoCategoriaPeso] = count.cantidad;
+  });
 
-  const isEsp32Connected = deviceStatus?.connected ?? false
+  const isEsp32Connected = deviceStatus?.connected ?? false;
 
   return (
     <Card
@@ -120,7 +110,14 @@ export default function LiveMonitoringCard({
           backgroundColor: isEsp32Connected ? "#f0fdf4" : "#faf7f2",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.5 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 1.5,
+          }}
+        >
           {/* Live indicator badge */}
           <Box
             sx={{
@@ -171,9 +168,19 @@ export default function LiveMonitoringCard({
             <Chip
               icon={
                 isEsp32Connected ? (
-                  <WifiRoundedIcon sx={{ fontSize: "14px !important", color: "#16a34a !important" }} />
+                  <WifiRoundedIcon
+                    sx={{
+                      fontSize: "14px !important",
+                      color: "#16a34a !important",
+                    }}
+                  />
                 ) : (
-                  <WifiOffRoundedIcon sx={{ fontSize: "14px !important", color: "#94a3b8 !important" }} />
+                  <WifiOffRoundedIcon
+                    sx={{
+                      fontSize: "14px !important",
+                      color: "#94a3b8 !important",
+                    }}
+                  />
                 )
               }
               label={isEsp32Connected ? "ESP32 En Línea" : "ESP32 Desconectado"}
@@ -198,7 +205,9 @@ export default function LiveMonitoringCard({
             <Select
               value={selectedGalponId}
               onChange={(e) =>
-                onSelectGalpon(e.target.value === "all" ? "all" : Number(e.target.value))
+                onSelectGalpon(
+                  e.target.value === "all" ? "all" : Number(e.target.value),
+                )
               }
               sx={{
                 borderRadius: 1,
@@ -225,7 +234,9 @@ export default function LiveMonitoringCard({
             </Select>
           </FormControl>
 
-          <Tooltip title={`Última actualización: ${lastUpdated.toLocaleTimeString()}`}>
+          <Tooltip
+            title={`Última actualización: ${lastUpdated.toLocaleTimeString()}`}
+          >
             <IconButton
               size="small"
               onClick={onRefresh}
@@ -236,7 +247,9 @@ export default function LiveMonitoringCard({
                 border: "1px solid",
                 borderColor: isEsp32Connected ? "#86efac" : "divider",
                 color: isEsp32Connected ? "#16a34a" : "text.secondary",
-                "&:hover": { bgcolor: isEsp32Connected ? "#dcfce7" : "#f1f5f9" },
+                "&:hover": {
+                  bgcolor: isEsp32Connected ? "#dcfce7" : "#f1f5f9",
+                },
               }}
             >
               <RefreshRoundedIcon
@@ -276,182 +289,82 @@ export default function LiveMonitoringCard({
       {/* Main Content Area */}
       <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
         <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
-          {/* Hero Total Card */}
           <Grid size={{ xs: 12, md: 4 }}>
-            <Box
-              sx={{
-                height: "100%",
-                minHeight: 200,
-                p: 2,
-                borderRadius: 1.25,
-                border: "1.5px solid",
-                borderColor: isEsp32Connected ? "#22c55e" : "#cbd5e1",
-                backgroundColor: "#ffffff",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-                position: "relative",
-              }}
-            >
-              <Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 1,
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontWeight: 800,
-                      letterSpacing: 0.8,
-                      textTransform: "uppercase",
-                      color: "text.secondary",
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Total del Lote (Hoy)
-                  </Typography>
-                  <Chip
-                    label={
-                      selectedGalponId === "all"
-                        ? "General"
-                        : galpones.find((g) => g.id === selectedGalponId)?.nombre ?? "Galpón"
-                    }
-                    size="small"
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: "0.75rem",
-                      borderRadius: 1,
-                      bgcolor: isEsp32Connected ? "#f0fdf4" : "#f1f5f9",
-                      color: isEsp32Connected ? "#166534" : "#475569",
-                      border: "1px solid",
-                      borderColor: isEsp32Connected ? "#86efac" : "#cbd5e1",
-                    }}
-                  />
-                </Box>
+            <Box sx={{ p: { xs: 1.5, sm: 2.5 }, border: "1px solid", borderColor: "divider", borderRadius: 1.25, bgcolor: "#ffffff" }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                Bandejas por categoría de peso
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Producción de hoy · 30 huevos por bandeja
+              </Typography>
+              {(() => {
+                const values = categorias.map((cat) => ({
+                  codigo: cat.codigo,
+                  nombre: cat.nombre,
+                  bandejas: Math.floor(Math.max(0, categoryCounts[cat.codigo] || 0) / 30),
+                  color: CATEGORY_COLORS[cat.codigo]?.bg ?? "#e2e8f0",
+                }));
+                const maxBandejas = Math.max(1, ...values.map((item) => item.bandejas));
+                const tickStep = Math.max(1, Math.ceil(maxBandejas / 4));
+                const maxY = Math.ceil(maxBandejas / tickStep) * tickStep;
+                const chart = { width: 520, height: 300, left: 44, right: 12, top: 18, bottom: 64 };
+                const plotWidth = chart.width - chart.left - chart.right;
+                const plotHeight = chart.height - chart.top - chart.bottom;
+                const ticks = Array.from({ length: maxY / tickStep + 1 }, (_, i) => i * tickStep);
+                const slotWidth = plotWidth / Math.max(values.length, 1);
+                const barWidth = Math.min(42, slotWidth * 0.58);
 
-                {/* Big Two Totals for Batch: Bandejas and Huevos */}
-                <Box sx={{ display: "flex", alignItems: "baseline", gap: 2, my: 1 }}>
-                  <Box>
-                    <Typography
-                      variant="h2"
-                      sx={{
-                        fontWeight: 900,
-                        color: "primary.dark",
-                        letterSpacing: "-1px",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {totalBandejas.toLocaleString()}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 800,
-                        color: "primary.main",
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      Bandejas
-                    </Typography>
+                return (
+                  <Box sx={{ mt: 1, width: "100%", overflowX: "auto" }}>
+                    <svg role="img" aria-label="Gráfica de bandejas por categoría de peso" viewBox={`0 0 ${chart.width} ${chart.height}`} style={{ display: "block", width: "100%", minWidth: 380, height: "auto" }}>
+                      {ticks.map((tick) => {
+                        const y = chart.top + plotHeight - (tick / maxY) * plotHeight;
+                        return (
+                          <g key={tick}>
+                            <line x1={chart.left} x2={chart.width - chart.right} y1={y} y2={y} stroke="#e2e8f0" strokeDasharray={tick === 0 ? undefined : "4 4"} />
+                            <text x={chart.left - 10} y={y + 4} textAnchor="end" fill="#64748b" fontSize="12">{tick}</text>
+                          </g>
+                        );
+                      })}
+                      <text transform={`translate(14 ${chart.top + plotHeight / 2}) rotate(-90)`} textAnchor="middle" fill="#475569" fontSize="12" fontWeight="600">Bandejas</text>
+                      {values.map((item, index) => {
+                        const height = (item.bandejas / maxY) * plotHeight;
+                        const x = chart.left + slotWidth * index + (slotWidth - barWidth) / 2;
+                        const y = chart.top + plotHeight - height;
+                        const centerX = chart.left + slotWidth * index + slotWidth / 2;
+                        return (
+                          <g key={item.codigo}>
+                            <title>{`${item.nombre}: ${item.bandejas} bandejas`}</title>
+                            <rect x={x} y={y} width={barWidth} height={Math.max(height, 1)} rx="5" fill={item.color} opacity="0.85" />
+                            <text x={centerX} y={Math.max(chart.top + 12, y - 6)} textAnchor="middle" fill="#334155" fontSize="12" fontWeight="700">{item.bandejas}</text>
+                            <text x={centerX} y={chart.height - 25} textAnchor="middle" fill="#475569" fontSize="12">{item.codigo}</text>
+                          </g>
+                        );
+                      })}
+                      <text x={chart.left + plotWidth / 2} y={chart.height - 5} textAnchor="middle" fill="#475569" fontSize="12" fontWeight="600">Categoría de peso</text>
+                    </svg>
                   </Box>
-
-                  <Typography variant="h4" sx={{ fontWeight: 400, color: "divider", lineHeight: 1 }}>
-                    /
-                  </Typography>
-
-                  <Box>
-                    <Typography
-                      variant="h3"
-                      sx={{
-                        fontWeight: 800,
-                        color: "text.primary",
-                        letterSpacing: "-0.5px",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {totalSobrante}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 700,
-                        color: "text.secondary",
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      Huevos sueltos
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Typography variant="body2" sx={{ fontWeight: 600, color: "text.secondary", fontSize: "0.825rem" }}>
-                  {totalCount.toLocaleString()} unidades totales recolectadas
-                </Typography>
-              </Box>
-
-              {/* Postura Ratio and Aves */}
-              <Box
-                sx={{
-                  pt: 1.5,
-                  mt: 1.5,
-                  borderTop: "1px dashed #e2e8f0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
-                    Unidad Estándar
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>
-                    30 huevos / bandeja
-                  </Typography>
-                </Box>
-
-                {totalHens > 0 && (
-                  <Box sx={{ textAlign: "right" }}>
-                    <Typography
-                      variant="caption"
-                      sx={{ color: "text.secondary", display: "block" }}
-                    >
-                      Postura Estimada
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 800, color: "#16a34a" }}
-                    >
-                      {posturaPercentage}% ({totalHens.toLocaleString()} aves)
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
+                );
+              })()}
             </Box>
           </Grid>
-
           {/* Categories Grid Sub-cards */}
           <Grid size={{ xs: 12, md: 8 }}>
             <Grid container spacing={1.5} sx={{ height: "100%" }}>
               {categorias.map((cat) => {
-                const count = categoryCounts[cat.codigo] || 0
+                const count = categoryCounts[cat.codigo] || 0;
                 // Bandejas (unidad principal) y Huevos (0-29)
-                const bandejas = Math.floor(Math.max(0, count) / 30)
-                const huevos = Math.max(0, count) % 30
-                const percent = totalCount > 0 ? ((count / totalCount) * 100).toFixed(0) : "0"
+                const bandejas = Math.floor(Math.max(0, count) / 30);
+                const huevos = Math.max(0, count) % 30;
+                const percent =
+                  totalCount > 0
+                    ? ((count / totalCount) * 100).toFixed(0)
+                    : "0";
                 const colorInfo = CATEGORY_COLORS[cat.codigo] || {
                   bg: "#f8fafc",
                   text: "#334155",
                   border: "#e2e8f0",
-                }
+                };
 
                 return (
                   <Grid key={cat.codigo} size={{ xs: 6, sm: 4, md: 4, lg: 3 }}>
@@ -549,7 +462,9 @@ export default function LiveMonitoringCard({
                           </Typography>
                         </Box>
 
-                        <Box sx={{ width: "1px", height: 26, bgcolor: "#e2d7ce" }} />
+                        <Box
+                          sx={{ width: "1px", height: 26, bgcolor: "#e2d7ce" }}
+                        />
 
                         {/* 2. Huevos */}
                         <Box sx={{ textAlign: "center" }}>
@@ -557,7 +472,8 @@ export default function LiveMonitoringCard({
                             variant="h5"
                             sx={{
                               fontWeight: 900,
-                              color: huevos > 0 ? "text.primary" : "text.disabled",
+                              color:
+                                huevos > 0 ? "text.primary" : "text.disabled",
                               lineHeight: 1,
                             }}
                           >
@@ -602,8 +518,8 @@ export default function LiveMonitoringCard({
                           {cat.pesoMinG
                             ? `${cat.pesoMinG}g+`
                             : cat.pesoMaxG
-                            ? `<${cat.pesoMaxG}g`
-                            : ""}
+                              ? `<${cat.pesoMaxG}g`
+                              : ""}
                         </Typography>
 
                         <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -612,7 +528,8 @@ export default function LiveMonitoringCard({
                               size="small"
                               onClick={() => onQuickCount(cat.codigo, -1)}
                               disabled={
-                                selectedGalponId === "all" && galpones.length > 1
+                                selectedGalponId === "all" &&
+                                galpones.length > 1
                               }
                               sx={{
                                 width: 22,
@@ -635,7 +552,8 @@ export default function LiveMonitoringCard({
                               size="small"
                               onClick={() => onQuickCount(cat.codigo, 1)}
                               disabled={
-                                selectedGalponId === "all" && galpones.length > 1
+                                selectedGalponId === "all" &&
+                                galpones.length > 1
                               }
                               sx={{
                                 width: 22,
@@ -656,12 +574,12 @@ export default function LiveMonitoringCard({
                       </Box>
                     </Box>
                   </Grid>
-                )
+                );
               })}
             </Grid>
           </Grid>
         </Grid>
       </CardContent>
     </Card>
-  )
+  );
 }

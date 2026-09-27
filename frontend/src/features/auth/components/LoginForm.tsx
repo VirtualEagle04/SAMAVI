@@ -5,9 +5,9 @@ import Stack from "@mui/material/Stack"
 import Button from "@mui/material/Button"
 import Alert from "@mui/material/Alert"
 import CircularProgress from "@mui/material/CircularProgress"
-import LoginFormFields from "../molecules/LoginFormFields"
-import { useAuthStore } from "../../stores/authStore"
-import type { Role } from "../../services/authService"
+import LoginFormFields from "./LoginFormFields"
+import { useAuthStore } from "../../../stores/authStore"
+import type { Role } from "../../../services/authService"
 
 function validate(username: string, password: string) {
   const errors = { username: "", password: "" }

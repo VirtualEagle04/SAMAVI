@@ -8,6 +8,7 @@ import {
   deleteMayorista,
   getMayorista,
   getPedido,
+  getPedidoDisponibilidad,
   getVentaByPedido,
   listMayoristas,
   listPedidos,
@@ -87,6 +88,10 @@ export async function createPedidoController(request: Request, response: Respons
 
 export async function getPedidoController(request: Request, response: Response): Promise<void> {
   response.json(await getPedido(parseId(request.params.id, "id")));
+}
+
+export async function getPedidoDisponibilidadController(request: Request, response: Response): Promise<void> {
+  response.json(await getPedidoDisponibilidad(parseId(request.params.id, "id")));
 }
 
 export async function updatePedidoController(request: Request, response: Response): Promise<void> {

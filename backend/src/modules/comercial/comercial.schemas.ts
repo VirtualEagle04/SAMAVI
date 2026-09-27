@@ -49,6 +49,13 @@ function positiveInteger(value: unknown, field: string): number {
   return value;
 }
 
+function nonNegativeInteger(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new AppError(400, `${field} debe ser un entero mayor o igual a cero`);
+  }
+  return value;
+}
+
 function requiredText(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim() === "") {
     throw new AppError(400, `${field} es obligatorio`);
@@ -132,7 +139,7 @@ function parseVentaDetails(value: unknown): VentaDetailInput[] {
     seen.add(categoriaPeso);
     return {
       categoriaPeso,
-      cantidadVendida: positiveInteger(detail.cantidadVendida, `detalles[${index}].cantidadVendida`),
+      cantidadVendida: nonNegativeInteger(detail.cantidadVendida, `detalles[${index}].cantidadVendida`),
     };
   });
 }
@@ -153,8 +160,8 @@ export function parseVentaInput(body: unknown): VentaInput {
   }
   const detalles = parseVentaDetails(body.detalles);
 
-  if (!Array.isArray(body.distribucion) || body.distribucion.length === 0) {
-    throw new AppError(400, "distribucion debe contener al menos una línea");
+  if (!Array.isArray(body.distribucion)) {
+    throw new AppError(400, "distribucion debe ser una lista");
   }
   const distribucion = body.distribucion.map((item, index) => {
     if (!isRecord(item)) {

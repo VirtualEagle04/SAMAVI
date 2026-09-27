@@ -8,6 +8,7 @@ import {
   deleteMayoristaController,
   getMayoristaController,
   getPedidoController,
+  getPedidoDisponibilidadController,
   getVentaController,
   listMayoristasController,
   listPedidosController,
@@ -31,6 +32,7 @@ comercialRoutes.put("/mayoristas/:mayoristaId/precios", requirePermission("EDITA
 
 comercialRoutes.get("/pedidos", requirePermission("INGRESAR_PEDIDO"), listPedidosController);
 comercialRoutes.post("/pedidos", requirePermission("INGRESAR_PEDIDO"), createPedidoController);
+comercialRoutes.get("/pedidos/:id/disponibilidad", requirePermission("REGISTRAR_VENTA"), getPedidoDisponibilidadController);
 comercialRoutes.get("/pedidos/:id", requirePermission("INGRESAR_PEDIDO"), getPedidoController);
 comercialRoutes.patch("/pedidos/:id", requirePermission("INGRESAR_PEDIDO"), updatePedidoController);
 comercialRoutes.post("/pedidos/:id/estado", requirePermission("INGRESAR_PEDIDO"), changePedidoStatusController);

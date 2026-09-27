@@ -11,10 +11,11 @@ import ListItemText from "@mui/material/ListItemText"
 import Typography from "@mui/material/Typography"
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
-import PrecisionManufacturingRoundedIcon from "@mui/icons-material/PrecisionManufacturingRounded"
+import EggIcon from '@mui/icons-material/Egg';
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./stores/authStore"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
+import ComercialPage from "./features/comercial/pages/ComercialPage"
 import samanLogo from "./assets/saman_logo.png"
 
 const drawerWidth = 260
@@ -66,7 +67,7 @@ export default function App() {
           {
             id: "produccion",
             label: "Producción",
-            icon: <PrecisionManufacturingRoundedIcon fontSize="small" />,
+            icon: <EggIcon fontSize="small" />,
           },
         ]
       : []),
@@ -74,7 +75,7 @@ export default function App() {
       ? [
           {
             id: "comercial",
-            label: "Comercial / Ventas",
+            label: "Comercial",
             icon: <StorefrontRoundedIcon fontSize="small" />,
           },
         ]
@@ -349,16 +350,7 @@ export default function App() {
           }}
         >
           {activeModule === "produccion" && <ProduccionPage />}
-          {activeModule === "comercial" && (
-            <Box sx={{ p: 4, textAlign: "center", bgcolor: "background.paper", borderRadius: 1.5, border: "1px solid", borderColor: "divider" }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Módulo Comercial en Preparación
-              </Typography>
-              <Typography variant="body2" sx={{ color: "text.secondary", mt: 1 }}>
-                Selecciona el módulo de producción en el menú lateral.
-              </Typography>
-            </Box>
-          )}
+          {activeModule === "comercial" && <ComercialPage />}
         </Box>
       </Box>
     </Box>

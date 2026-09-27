@@ -54,7 +54,9 @@ model Galpon {
   estado           String          @db.VarChar(20)
   conteos          LogConteo[]
   cierres          CierreDiario[]
+  cierresProduccion CierreProduccionDia[]
   bodegas          Bodega[]
+  despachos        DetalleVentaGalpon[]
 
   @@map("galpon")
 }
@@ -99,6 +101,17 @@ model CierreDiario {
   @@id([idGalpon, codigoCategoriaPeso, fecha])
   @@index([fecha])
   @@map("cierre_diario")
+}
+
+model CierreProduccionDia {
+  idGalpon  Int      @map("id_galpon")
+  fecha     DateTime @db.Date
+  cerradoEn DateTime @default(now()) @map("cerrado_en")
+  galpon    Galpon   @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+
+  @@id([idGalpon, fecha])
+  @@index([fecha])
+  @@map("cierre_produccion_dia")
 }
 
 model Bodega {
@@ -176,10 +189,27 @@ model DetalleVenta {
   idVenta             Int           @map("id_venta")
   codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
   cantidadVendida     Int           @map("cantidad_vendida")
+  cantidadNoEntregada Int           @default(0) @map("cantidad_no_entregada")
+  motivoNoEntrega     String?       @map("motivo_no_entrega") @db.VarChar(30)
   precioAplicado      Decimal       @map("precio_aplicado") @db.Decimal(10, 2)
   venta               Venta         @relation(fields: [idVenta], references: [id], onDelete: Cascade)
   categoriaPeso       CategoriaPeso @relation(fields: [codigoCategoriaPeso], references: [codigo], onDelete: Restrict)
+  distribuciones      DetalleVentaGalpon[]
 
   @@id([idVenta, codigoCategoriaPeso])
   @@map("detalle_venta")
 }
+
+model DetalleVentaGalpon {
+  idVenta             Int           @map("id_venta")
+  codigoCategoriaPeso String        @map("codigo_categoria_peso") @db.VarChar(10)
+  idGalpon            Int           @map("id_galpon")
+  cantidad            Int
+  detalleVenta        DetalleVenta  @relation(fields: [idVenta, codigoCategoriaPeso], references: [idVenta, codigoCategoriaPeso], onDelete: Cascade)
+  galpon              Galpon        @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+
+  @@id([idVenta, codigoCategoriaPeso, idGalpon])
+  @@index([idGalpon, codigoCategoriaPeso])
+  @@map("detalle_venta_galpon")
+}
+

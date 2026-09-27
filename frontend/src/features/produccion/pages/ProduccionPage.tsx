@@ -1,41 +1,49 @@
-import { useState, useEffect, useCallback } from "react"
-import Alert from "@mui/material/Alert"
-import Box from "@mui/material/Box"
-import CircularProgress from "@mui/material/CircularProgress"
-import Container from "@mui/material/Container"
-import Snackbar from "@mui/material/Snackbar"
-import Tab from "@mui/material/Tab"
-import Tabs from "@mui/material/Tabs"
-import Typography from "@mui/material/Typography"
-import LockRoundedIcon from "@mui/icons-material/LockRounded"
-import FormatListNumberedRoundedIcon from "@mui/icons-material/FormatListNumberedRounded"
-import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded"
-import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded"
-import { useAuthStore } from "../../../stores/authStore"
-import LiveMonitoringCard from "../components/LiveMonitoringCard"
-import ProductionKpiCards from "../components/ProductionKpiCards"
-import CountsTable from "../components/CountsTable"
-import ClosuresTable from "../components/ClosuresTable"
-import RegisterCountDialog from "../components/RegisterCountDialog"
-import DailyCloseDialog from "../components/DailyCloseDialog"
+import { useState, useEffect, useCallback } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
+import Container from "@mui/material/Container";
+import Snackbar from "@mui/material/Snackbar";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
+import Typography from "@mui/material/Typography";
+import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import FormatListNumberedRoundedIcon from "@mui/icons-material/FormatListNumberedRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
+import { useAuthStore } from "../../../stores/authStore";
+import LiveMonitoringCard from "../components/LiveMonitoringCard";
+import ProductionKpiCards from "../components/ProductionKpiCards";
+import CountsTable from "../components/CountsTable";
+import ClosuresTable from "../components/ClosuresTable";
+import RegisterCountDialog from "../components/RegisterCountDialog";
+import DailyCloseDialog from "../components/DailyCloseDialog";
+import { BodegaTable } from "../components/ProductionTables";
 import {
   closeDailyProduction,
   getCategorias,
+  getCierresProduccion,
   getCierres,
+  getBodega,
   getCounts,
+  getDailyCountSummary,
   getDeviceStatus,
   getGalpones,
   registerCount,
-} from "../services/produccionService"
+} from "../services/produccionService";
 import type {
   CategoriaPeso,
   CierreDiario,
+  CierreProduccionDia,
+  BodegaStock,
   DailyClosePayload,
   DeviceStatus,
   Galpon,
   LogConteo,
+  ResumenConteoDiario,
   RegisterCountPayload,
-} from "../types/produccion.types"
+} from "../types/produccion.types";
 
 // Default fallback categories in case DB is initially empty
 const DEFAULT_CATEGORIES: CategoriaPeso[] = [
@@ -47,103 +55,136 @@ const DEFAULT_CATEGORIES: CategoriaPeso[] = [
   { codigo: "C", nombre: "C", pesoMinG: 45, pesoMaxG: 45 },
   { codigo: "P", nombre: "Pipo", pesoMinG: null, pesoMaxG: 45 },
   { codigo: "Q", nombre: "Quebrado", pesoMinG: null, pesoMaxG: null },
-]
+];
 
 export default function ProduccionPage() {
-  const { role, permissions } = useAuthStore()
+  const { role, permissions } = useAuthStore();
 
   // RBAC Permission Check
   const hasAccess =
     role === "Administrador" ||
     role === "Galponero" ||
-    permissions.includes("VER_PRODUCCION")
+    permissions.includes("VER_PRODUCCION");
 
   const canPerformActions =
     role === "Administrador" ||
     role === "Galponero" ||
-    permissions.includes("VER_PRODUCCION")
+    permissions.includes("VER_PRODUCCION");
 
   // State
-  const [counts, setCounts] = useState<LogConteo[]>([])
-  const [galpones, setGalpones] = useState<Galpon[]>([])
-  const [categorias, setCategorias] = useState<CategoriaPeso[]>(DEFAULT_CATEGORIES)
-  const [cierres, setCierres] = useState<CierreDiario[]>([])
-  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null)
+  const [counts, setCounts] = useState<LogConteo[]>([]);
+  const [dailyCounts, setDailyCounts] = useState<ResumenConteoDiario[]>([]);
+  const [galpones, setGalpones] = useState<Galpon[]>([]);
+  const [categorias, setCategorias] =
+    useState<CategoriaPeso[]>(DEFAULT_CATEGORIES);
+  const [cierresProduccion, setCierresProduccion] = useState<
+    CierreProduccionDia[]
+  >([]);
+  const [cierresDiarios, setCierresDiarios] = useState<CierreDiario[]>([]);
+  const [bodega, setBodega] = useState<BodegaStock[]>([]);
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
 
-  const [selectedGalponId, setSelectedGalponId] = useState<number | "all">("all")
-  const [activeTab, setActiveTab] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [selectedGalponId, setSelectedGalponId] = useState<number | "all">(
+    "all",
+  );
+  const [activeTab, setActiveTab] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // Modal dialog states
-  const [registerModalOpen, setRegisterModalOpen] = useState(false)
-  const [preselectedCategory, setPreselectedCategory] = useState<string | undefined>()
-  const [dailyCloseModalOpen, setDailyCloseModalOpen] = useState(false)
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [preselectedCategory, setPreselectedCategory] = useState<
+    string | undefined
+  >();
+  const [dailyCloseModalOpen, setDailyCloseModalOpen] = useState(false);
 
   // Notification Toast
   const [toast, setToast] = useState<{
-    open: boolean
-    message: string
-    severity: "success" | "error" | "info"
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "info";
   }>({
     open: false,
     message: "",
     severity: "success",
-  })
+  });
 
   // Data fetching
-  const loadData = useCallback(async (showLoading = false) => {
-    if (!hasAccess) return
-    if (showLoading) setIsLoading(true)
+  const loadData = useCallback(
+    async (showLoading = false) => {
+      if (!hasAccess) return;
+      if (showLoading) setIsLoading(true);
 
-    try {
-      const [countsData, galponesData, categoriasData, cierresData, devStatus] = await Promise.all([
-        getCounts(undefined, 200).catch(() => []),
-        getGalpones().catch(() => []),
-        getCategorias().catch(() => DEFAULT_CATEGORIES),
-        getCierres().catch(() => []),
-        getDeviceStatus().catch(() => null),
-      ])
+      try {
+        const [
+          countsData,
+          dailyCountsData,
+          galponesData,
+          categoriasData,
+          closuresData,
+          dailyCloseData,
+          bodegaData,
+          devStatus,
+        ] = await Promise.all([
+          getCounts(undefined, 200).catch(() => []),
+          getDailyCountSummary().catch(() => []),
+          getGalpones().catch(() => []),
+          getCategorias().catch(() => DEFAULT_CATEGORIES),
+          getCierres().catch(() => []),
+          getCierresProduccion().catch(() => []),
+          getBodega().catch(() => []),
+          getDeviceStatus().catch(() => null),
+        ]);
 
-      setCounts(countsData)
-      setGalpones(galponesData)
-      if (categoriasData.length > 0) {
-        const order = ["Y", "Ex", "AA", "A", "B", "C", "P", "Q"]
-        const sortedCats = [...categoriasData].sort((a, b) => {
-          const idxA = order.indexOf(a.codigo)
-          const idxB = order.indexOf(b.codigo)
-          return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB)
-        })
-        setCategorias(sortedCats)
+        setCounts(countsData);
+        setDailyCounts(dailyCountsData);
+        setGalpones(galponesData);
+        if (categoriasData.length > 0) {
+          const order = ["Y", "Ex", "AA", "A", "B", "C", "P", "Q"];
+          const sortedCats = [...categoriasData].sort((a, b) => {
+            const idxA = order.indexOf(a.codigo);
+            const idxB = order.indexOf(b.codigo);
+            return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+          });
+          setCategorias(sortedCats);
+        }
+        setCierresProduccion(dailyCloseData);
+        setCierresDiarios(closuresData);
+        setBodega(bodegaData);
+        setDeviceStatus(devStatus);
+        setLastUpdated(new Date());
+      } catch (err) {
+        console.error("Error al cargar datos de producción:", err);
+      } finally {
+        if (showLoading) setIsLoading(false);
       }
-      setCierres(cierresData)
-      setDeviceStatus(devStatus)
-      setLastUpdated(new Date())
-    } catch (err) {
-      console.error("Error al cargar datos de producción:", err)
-    } finally {
-      if (showLoading) setIsLoading(false)
-    }
-  }, [hasAccess])
+    },
+    [hasAccess],
+  );
 
   useEffect(() => {
-    loadData(true)
+    loadData(true);
 
     // Auto-polling interval for real-time live monitoring (every 10 seconds)
     const interval = setInterval(() => {
-      loadData(false)
-    }, 10000)
+      loadData(false);
+    }, 10000);
 
-    return () => clearInterval(interval)
-  }, [loadData])
+    return () => clearInterval(interval);
+  }, [loadData]);
 
   // Handle Quick count (+1 / -1) from the Live card
-  const handleQuickCount = async (categoriaCodigo: string, cantidad: 1 | -1) => {
+  const handleQuickCount = async (
+    categoriaCodigo: string,
+    cantidad: 1 | -1,
+  ) => {
     // If "all" is selected, determine the first active galpon
     const targetGalponId =
       selectedGalponId === "all"
-        ? galpones.find((g) => g.estado === "activo")?.id || galpones[0]?.id || 1
-        : selectedGalponId
+        ? galpones.find((g) => g.estado === "activo")?.id ||
+          galpones[0]?.id ||
+          1
+        : selectedGalponId;
 
     try {
       await registerCount({
@@ -151,44 +192,45 @@ export default function ProduccionPage() {
         categoriaPeso: categoriaCodigo,
         cantidad,
         timestamp: new Date().toISOString(),
-      })
+      });
 
       setToast({
         open: true,
         message: `Conteo registrado: ${cantidad > 0 ? "+1" : "-1"} ${categoriaCodigo} en Galpón ${targetGalponId}`,
         severity: "success",
-      })
+      });
 
       // Refresh data
-      loadData(false)
+      loadData(false);
     } catch (err) {
       setToast({
         open: true,
-        message: err instanceof Error ? err.message : "Error al registrar el conteo",
+        message:
+          err instanceof Error ? err.message : "Error al registrar el conteo",
         severity: "error",
-      })
+      });
     }
-  }
+  };
 
   const handleRegisterCount = async (payload: RegisterCountPayload) => {
-    await registerCount(payload)
+    await registerCount(payload);
     setToast({
       open: true,
       message: `Conteo de producción guardado con éxito (${payload.cantidad > 0 ? "+1" : "-1"} ${payload.categoriaPeso})`,
       severity: "success",
-    })
-    loadData(false)
-  }
+    });
+    loadData(false);
+  };
 
   const handleDailyClose = async (payload: DailyClosePayload) => {
-    const res = await closeDailyProduction(payload)
+    const res = await closeDailyProduction(payload);
     setToast({
       open: true,
       message: `Cierre diario completado exitosamente (${res.length} categorías consolidadas)`,
       severity: "success",
-    })
-    loadData(false)
-  }
+    });
+    loadData(false);
+  };
 
   // Unauthorized state
   if (!hasAccess) {
@@ -216,52 +258,69 @@ export default function ProduccionPage() {
           >
             <LockRoundedIcon sx={{ fontSize: 40 }} />
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: "text.primary" }}>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 800, mb: 1, color: "text.primary" }}
+          >
             Acceso Restringido a Producción
           </Typography>
-          <Typography variant="body1" sx={{ color: "text.secondary", maxWidth: 460, mx: "auto", mb: 3 }}>
-            Tu rol actual (<strong>{role ?? "Usuario"}</strong>) no cuenta con los permisos requeridos (<code>VER_PRODUCCION</code>) para visualizar o registrar datos de producción avícola.
+          <Typography
+            variant="body1"
+            sx={{ color: "text.secondary", maxWidth: 460, mx: "auto", mb: 3 }}
+          >
+            Tu rol actual (<strong>{role ?? "Usuario"}</strong>) no cuenta con
+            los permisos requeridos (<code>VER_PRODUCCION</code>) para
+            visualizar o registrar datos de producción avícola.
           </Typography>
         </Box>
       </Container>
-    )
+    );
   }
 
   if (isLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 350, py: 6 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 350,
+          py: 6,
+        }}
+      >
         <CircularProgress color="primary" />
       </Box>
-    )
+    );
   }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      {/* 1. HERO CARD: LIVE MONITORING & ONGOING COUNT (MOSTRAR PRIMERO) */}
-      <LiveMonitoringCard
-        counts={counts}
-        galpones={galpones}
-        categorias={categorias}
-        selectedGalponId={selectedGalponId}
-        onSelectGalpon={setSelectedGalponId}
-        onRefresh={() => loadData(false)}
-        onOpenRegisterModal={(cat) => {
-          setPreselectedCategory(cat)
-          setRegisterModalOpen(true)
-        }}
-        onQuickCount={handleQuickCount}
-        lastUpdated={lastUpdated}
-        deviceStatus={deviceStatus}
-      />
-
+      {!deviceStatus?.connected ? (
+        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+          El ESP32 está desconectado.
+        </Alert>
+      ) : (
+        <LiveMonitoringCard
+          dailyCounts={dailyCounts}
+          galpones={galpones}
+          categorias={categorias}
+          selectedGalponId={selectedGalponId}
+          onSelectGalpon={setSelectedGalponId}
+          onRefresh={() => loadData(false)}
+          onOpenRegisterModal={(cat) => {
+            setPreselectedCategory(cat);
+            setRegisterModalOpen(true);
+          }}
+          onQuickCount={handleQuickCount}
+          lastUpdated={lastUpdated}
+          deviceStatus={deviceStatus}
+        />
+      )}
       {/* 2. CONCISE EXECUTIVE KPIS (POCAS TARJETAS RELEVANTES) */}
       <ProductionKpiCards
-        counts={counts}
-        cierres={cierres}
+        dailyCounts={dailyCounts}
         galpones={galpones}
         selectedGalponId={selectedGalponId}
-        onOpenDailyCloseModal={() => setDailyCloseModalOpen(true)}
-        canPerformClose={canPerformActions}
       />
 
       {/* 3. SERIOUS DATA TABLES & ANALYTICS SECTION */}
@@ -285,7 +344,7 @@ export default function ProduccionPage() {
             <Tab
               icon={<FormatListNumberedRoundedIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
-              label="Registro de Conteos en Vivo"
+              label="Conteos en Vivo"
             />
             <Tab
               icon={<HistoryRoundedIcon sx={{ fontSize: 18 }} />}
@@ -293,9 +352,14 @@ export default function ProduccionPage() {
               label="Historial de Cierres Diarios"
             />
             <Tab
+              icon={<Inventory2RoundedIcon sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label="Bodega"
+            />
+            <Tab
               icon={<AssessmentRoundedIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
-              label="Capacidad y Galpones"
+              label="Galpones"
             />
           </Tabs>
         </Box>
@@ -312,7 +376,8 @@ export default function ProduccionPage() {
         {/* Tab 1: Cierres Diarios */}
         {activeTab === 1 && (
           <ClosuresTable
-            cierres={cierres}
+            cierres={cierresDiarios}
+            cierresRealizados={cierresProduccion}
             galpones={galpones}
             categorias={categorias}
             onOpenDailyCloseModal={() => setDailyCloseModalOpen(true)}
@@ -320,25 +385,31 @@ export default function ProduccionPage() {
           />
         )}
 
-        {/* Tab 2: Galpones Overview */}
-        {activeTab === 2 && (
+        {/* Tab 2: Bodega */}
+        {activeTab === 2 && <BodegaTable rows={bodega} galpones={galpones} />}
+
+        {/* Tab 3: Galpones Overview */}
+        {activeTab === 3 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)" },
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "1fr 1fr",
+                  md: "repeat(3, 1fr)",
+                },
                 gap: 2,
               }}
             >
               {galpones.map((g) => {
-                const galponCounts = counts.filter(
-                  (c) =>
-                    c.idGalpon === g.id &&
-                    c.timestamp.slice(0, 10) === new Date().toISOString().slice(0, 10)
-                )
-                const eggsToday = galponCounts.reduce((acc, c) => acc + c.cantidad, 0)
+                const eggsToday = dailyCounts
+                  .filter((count) => count.idGalpon === g.id)
+                  .reduce((total, count) => total + count.cantidad, 0);
                 const posturaPct =
-                  g.gallinasActuales > 0 ? ((eggsToday / g.gallinasActuales) * 100).toFixed(1) : "0"
+                  g.gallinasActuales > 0
+                    ? ((eggsToday / g.gallinasActuales) * 100).toFixed(1)
+                    : "0";
 
                 return (
                   <Box
@@ -351,7 +422,13 @@ export default function ProduccionPage() {
                       bgcolor: "background.paper",
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1.2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1.2,
+                      }}
+                    >
                       <Typography variant="h6" sx={{ fontWeight: 800 }}>
                         {g.nombre}
                       </Typography>
@@ -362,7 +439,8 @@ export default function ProduccionPage() {
                           py: 0.2,
                           borderRadius: 0.8,
                           fontWeight: 700,
-                          bgcolor: g.estado === "activo" ? "#dcfce7" : "#fee2e2",
+                          bgcolor:
+                            g.estado === "activo" ? "#dcfce7" : "#fee2e2",
                           color: g.estado === "activo" ? "#166534" : "#991b1b",
                         }}
                       >
@@ -370,32 +448,66 @@ export default function ProduccionPage() {
                       </Typography>
                     </Box>
 
-                    <Typography variant="body2" sx={{ color: "text.secondary", mb: 1.2 }}>
-                      Capacidad actual: <strong>{g.gallinasActuales.toLocaleString()}</strong> gallinas
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.secondary", mb: 1.2 }}
+                    >
+                      Capacidad actual:{" "}
+                      <strong>{g.gallinasActuales.toLocaleString()}</strong>{" "}
+                      gallinas
                     </Typography>
 
-                    <Box sx={{ p: 1.2, borderRadius: 1, bgcolor: "#faf7f2", mb: 1.2 }}>
-                      <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
+                    <Box
+                      sx={{
+                        p: 1.2,
+                        borderRadius: 1,
+                        bgcolor: "#faf7f2",
+                        mb: 1.2,
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "text.secondary", display: "block" }}
+                      >
                         Producción de Hoy
                       </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 800, color: "text.primary" }}>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: 800, color: "text.primary" }}
+                      >
                         {eggsToday.toLocaleString()} uds{" "}
-                        <Typography component="span" variant="caption" sx={{ color: "text.secondary" }}>
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          sx={{ color: "text.secondary" }}
+                        >
                           ({Math.floor(eggsToday / 30)} bandejas)
                         </Typography>
                       </Typography>
                     </Box>
 
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "text.secondary" }}
+                      >
                         Postura estimada:
                       </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: "#16a34a" }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 800, color: "#16a34a" }}
+                      >
                         {posturaPct}%
                       </Typography>
                     </Box>
                   </Box>
-                )
+                );
               })}
             </Box>
           </Box>
@@ -409,7 +521,9 @@ export default function ProduccionPage() {
         onRegister={handleRegisterCount}
         galpones={galpones}
         categorias={categorias}
-        initialGalponId={typeof selectedGalponId === "number" ? selectedGalponId : undefined}
+        initialGalponId={
+          typeof selectedGalponId === "number" ? selectedGalponId : undefined
+        }
         initialCategory={preselectedCategory}
       />
 
@@ -438,5 +552,5 @@ export default function ProduccionPage() {
         </Alert>
       </Snackbar>
     </Box>
-  )
+  );
 }
