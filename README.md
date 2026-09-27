@@ -74,45 +74,52 @@ npm --prefix frontend run dev    # Frontend con Vite
 
 ## 6. Cómo ejecutar las pruebas
 
-> No hay una suite de pruebas automatizadas formalizada en el repositorio **por ahora.** Actualmente se están generando de forma automática, a partir del código, una colección de Postman con los requests de todos los endpoints del backend para probarlos manualmente. Esta colección aún no ha sido compartida ni incorporada al repositorio.
+```bash
+# Ejecutar toda la suite de pruebas
+npm --prefix backend run test:once
 
-- **Framework de pruebas:** Pendiente de definir (en construcción: colección de Postman).
-- **Cobertura actual:** No aplica todavía.
-- **Qué se está probando:** Por ahora, validación manual de los endpoints REST del módulo disponibles mediante Postman.
+# Ejecutar un subconjunto o un archivo
+npm --prefix backend run test:once -- tests/unit/auth/auth.schemas.test.ts
 
+# Reporte de cobertura
+npm --prefix backend run test:report
+```
+
+- **Framework de pruebas:** Vitest para pruebas unitarias del backend.
+- **Cobertura actual:** Pendiente de cálculo.
+- **Qué se está probando:** Pruebas unitarias de autenticación, producción y validaciones comerciales. Sin pruebas de integración, frontend ni firmware.
 ## 7. Estructura del repositorio
 
 ```text
 SAMAVI/
-├── backend/                   # API y lógica del servidor (Node.js, Express 5, TypeScript, Prisma)
-│   ├── prisma/                # schema.prisma
+├── backend/                   # API REST y lógica de servidor (Express, TypeScript, Prisma)
+│   ├── prisma/                # Esquema de base de datos para Prisma
+│   ├── src/
+│   │   ├── config/            # Configuración y variables de entorno
+│   │   ├── database/          # Cliente Prisma
+│   │   ├── middleware/        # Autenticación y manejo de errores
+│   │   ├── modules/           # auth, comercial y producción
+│   │   ├── mqtt/              # Recepción de datos y estado del dispositivo
+│   │   └── shared/            # Errores compartidos
+│   └── tests/unit/            # Pruebas unitarias de auth, comercial y producción
+├── database/                  # Esquema SQL inicial
+├── firmware/                  # Firmware ESP32 para PlatformIO
+│   ├── include/               # Configuración de ejemplo
+│   ├── src/                   # Firmware principal y programas de prueba
+│   └── test/                  # Recursos de pruebas del firmware
+├── frontend/                  # Aplicación web React, TypeScript y Material UI
 │   └── src/
-│       ├── config/            # Variables de entorno
-│       ├── database/          # Cliente Prisma
-│       ├── middleware/        # Auth y manejo de errores
-│       ├── modules/           # auth, produccion, comercial
-│       ├── mqtt/              # Handler de mensajes MQTT
-│       └── shared/            # Errores compartidos
-├── frontend/                  # Aplicación web (React 19, TypeScript, Vite, Material UI)
-│   └── src/
-│       ├── components/        # Átomos, moléculas, organismos, templates
-│       ├── features/          # Flujos por rol (auth, admin, bodega, galpon, clasificacion)
-│       ├── services/          # Cliente de autenticación
-│       ├── stores/            # Estado global (Zustand)
+│       ├── assets/            # Imágenes e iconos
+│       ├── components/        # Componentes compartidos
+│       ├── features/          # Flujos de autenticación, comercial y producción
+│       ├── services/          # Servicios de comunicación con la API
+│       ├── stores/            # Estado global
 │       └── theme/             # Tema de Material UI
-├── firmware/                  # Proyecto PlatformIO para el ESP32
-│   ├── include/               # config.h (excluido de git)
-│   └── src/                   # main.cpp y variantes de prueba de sensores
 ├── infra/                     # Docker Compose y configuración de Mosquitto
-│   └── mosquitto/
-├── database/                  # schema.sql (esquema relacional inicial, 19 tablas)
-├── .github/                   # Instrucciones de Copilot, informe de levantamiento, modelo de datos
-├── .env.example
-├── .gitignore
-├── package.json               # Scripts raíz (infra, dev, build:all, install:all)
+├── .env.example               # Plantilla de variables de entorno
+├── package.json               # Scripts del monorepo
 └── README.md
 ```
-
 ## 8. Flujo de trabajo con Git
 
 - Rama `main`: siempre estable. **No se hace push directo.**
@@ -130,7 +137,8 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
 | Fase | Fecha | Alcance comprometido | Estado |
 |---|---|---|---|
 | Sprint 1 | Agosto 24 - Septiembre 6 | Creación del repositorio oficial por parte del docente Andrés Rey | Completado |
-| Sprint 2 | Septiembre 7 - Septiembre 27 | - | Pendiente |
+| Sprint 2 | Septiembre 7 - Septiembre 27 | - | Completado |
+| Sprint 3 | Septiembre 28 - Octubre 18 | - | Pendiente |
 
 ## 10. Decisiones técnicas relevantes
 
