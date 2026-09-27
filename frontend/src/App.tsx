@@ -11,7 +11,7 @@ import ListItemText from "@mui/material/ListItemText"
 import Typography from "@mui/material/Typography"
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
-import PrecisionManufacturingRoundedIcon from "@mui/icons-material/PrecisionManufacturingRounded"
+import EggIcon from '@mui/icons-material/Egg';
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./stores/authStore"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
@@ -67,7 +67,7 @@ export default function App() {
           {
             id: "produccion",
             label: "Producción",
-            icon: <PrecisionManufacturingRoundedIcon fontSize="small" />,
+            icon: <EggIcon fontSize="small" />,
           },
         ]
       : []),
@@ -75,7 +75,7 @@ export default function App() {
       ? [
           {
             id: "comercial",
-            label: "Comercial / Ventas",
+            label: "Comercial",
             icon: <StorefrontRoundedIcon fontSize="small" />,
           },
         ]

@@ -19,9 +19,7 @@ import CountsTable from "../components/CountsTable";
 import ClosuresTable from "../components/ClosuresTable";
 import RegisterCountDialog from "../components/RegisterCountDialog";
 import DailyCloseDialog from "../components/DailyCloseDialog";
-import {
-  BodegaTable,
-} from "../components/ProductionTables";
+import { BodegaTable } from "../components/ProductionTables";
 import {
   closeDailyProduction,
   getCategorias,
@@ -299,7 +297,7 @@ export default function ProduccionPage() {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {!deviceStatus?.connected ? (
         <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
-          El ESP32 est� desconectado. Puedes seguir registrando conteos manualmente.
+          El ESP32 está desconectado.
         </Alert>
       ) : (
         <LiveMonitoringCard
@@ -354,14 +352,14 @@ export default function ProduccionPage() {
               label="Historial de Cierres Diarios"
             />
             <Tab
-              icon={<AssessmentRoundedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Galpones"
-            />
-            <Tab
               icon={<Inventory2RoundedIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
               label="Bodega"
+            />
+            <Tab
+              icon={<AssessmentRoundedIcon sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label="Galpones"
             />
           </Tabs>
         </Box>
@@ -387,8 +385,11 @@ export default function ProduccionPage() {
           />
         )}
 
-        {/* Tab 2: Galpones Overview */}
-        {activeTab === 2 && (
+        {/* Tab 2: Bodega */}
+        {activeTab === 2 && <BodegaTable rows={bodega} galpones={galpones} />}
+
+        {/* Tab 3: Galpones Overview */}
+        {activeTab === 3 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Box
               sx={{
@@ -511,8 +512,6 @@ export default function ProduccionPage() {
             </Box>
           </Box>
         )}
-
-        {activeTab === 3 && <BodegaTable rows={bodega} galpones={galpones} />}
       </Box>
 
       {/* Modals */}

@@ -1,6 +1,6 @@
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
-import samanLogo from "../../assets/saman_logo.png"
+import samanLogo from "../../../assets/saman_logo.png"
 
 interface Props {
   children: React.ReactNode

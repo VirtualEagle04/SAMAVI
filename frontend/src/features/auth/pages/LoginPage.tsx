@@ -1,8 +1,8 @@
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Typography from "@mui/material/Typography"
-import AuthLayout from "../../../components/templates/AuthLayout"
-import LoginForm from "../../../components/organisms/LoginForm"
+import AuthLayout from "../components/AuthLayout"
+import LoginForm from "../components/LoginForm"
 import { useAuthStore } from "../../../stores/authStore"
 import type { Role } from "../../../services/authService"
 

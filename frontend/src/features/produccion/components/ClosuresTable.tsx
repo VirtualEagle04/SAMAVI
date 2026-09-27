@@ -122,13 +122,13 @@ export default function ClosuresTable({
             variant="h6"
             sx={{ fontWeight: 800, color: "text.primary", fontSize: "1.1rem" }}
           >
-            Cierres Diarios y Consolidado de Empaque
+            Cierres Diarios
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", fontSize: "0.825rem" }}
           >
-            Liquidaci�n de producci�n consolidada en bandejas de 30 unidades y
+            Liquidación de producción consolidada en bandejas de 30 unidades y
             sobrantes
           </Typography>
         </Box>
@@ -235,7 +235,7 @@ export default function ClosuresTable({
                   py: 1.2,
                 }}
               >
-                GALP�N
+                GALPÓN
               </TableCell>
               <TableCell
                 sx={{
@@ -245,7 +245,7 @@ export default function ClosuresTable({
                   py: 1.2,
                 }}
               >
-                CATEGOR�A
+                CATEGORÍA
               </TableCell>
               <TableCell
                 align="center"
