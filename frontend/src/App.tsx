@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
 import Avatar from "@mui/material/Avatar"
 import Box from "@mui/material/Box"
 import Drawer from "@mui/material/Drawer"
@@ -12,10 +12,13 @@ import Typography from "@mui/material/Typography"
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
 import EggIcon from '@mui/icons-material/Egg';
+import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./stores/authStore"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
 import ComercialPage from "./features/comercial/pages/ComercialPage"
+import GalponesPage from "./features/galpones/pages/GalponesPage"
+import GalponDetallePage from "./features/galpones/pages/GalponDetallePage"
 import samanLogo from "./assets/saman_logo.png"
 
 const drawerWidth = 260
@@ -27,6 +30,7 @@ function initials(user: string | null): string {
 export default function App() {
   const { user, role, permissions, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Module RBAC checks
@@ -41,10 +45,16 @@ export default function App() {
     permissions.includes("INGRESAR_PEDIDO") ||
     permissions.includes("REGISTRAR_VENTA")
 
+  const canAccessGalpones =
+    role === "Administrador" || permissions.includes("GESTIONAR_GALPONES")
+
   // Active module state based on permissions
-  const [activeModule, setActiveModule] = useState<string>(
+  const [selectedModule, setSelectedModule] = useState<string>(
     canAccessProduccion ? "produccion" : canAccessComercial ? "comercial" : "overview"
   )
+  // Galpones is routed by URL, the other modules keep using the local state
+  const inGalpones = pathname.startsWith("/galpones")
+  const activeModule = inGalpones ? "galpones" : selectedModule
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -77,6 +87,15 @@ export default function App() {
             id: "comercial",
             label: "Comercial",
             icon: <StorefrontRoundedIcon fontSize="small" />,
+          },
+        ]
+      : []),
+    ...(canAccessGalpones
+      ? [
+          {
+            id: "galpones",
+            label: "Galpones",
+            icon: <HomeWorkRoundedIcon fontSize="small" />,
           },
         ]
       : []),
@@ -147,7 +166,12 @@ export default function App() {
                 key={item.id}
                 selected={isSelected}
                 onClick={() => {
-                  setActiveModule(item.id)
+                  if (item.id === "galpones") {
+                    navigate("/galpones")
+                  } else {
+                    setSelectedModule(item.id)
+                    if (inGalpones) navigate("/dashboard")
+                  }
                   setMobileOpen(false)
                 }}
                 sx={{
@@ -309,6 +333,8 @@ export default function App() {
                 ? "Módulo de Producción"
                 : activeModule === "comercial"
                 ? "Módulo Comercial"
+                : activeModule === "galpones"
+                ? "Módulo de Galpones"
                 : "Panel Principal"}
             </Typography>
           </Box>
@@ -351,6 +377,16 @@ export default function App() {
         >
           {activeModule === "produccion" && <ProduccionPage />}
           {activeModule === "comercial" && <ComercialPage />}
+          {activeModule === "galpones" &&
+            (canAccessGalpones ? (
+              <Routes>
+                <Route index element={<GalponesPage />} />
+                <Route path=":id" element={<GalponDetallePage />} />
+                <Route path="*" element={<Navigate to="/galpones" replace />} />
+              </Routes>
+            ) : (
+              <Navigate to="/dashboard" replace />
+            ))}
         </Box>
       </Box>
     </Box>
