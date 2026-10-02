@@ -43,8 +43,41 @@ model Usuario {
   contacto     Json?
   idRol        Int    @map("id_rol")
   rol          Rol    @relation(fields: [idRol], references: [id])
+  alimentaciones RegistroAlimentacion[]
+  auditorias   Auditoria[]
 
   @@map("usuario")
+}
+
+model RegistroAlimentacion {
+  idGalpon     Int      @map("id_galpon")
+  fecha        DateTime @db.Date
+  registradoEn DateTime @default(now()) @map("registrado_en")
+  idUsuario    Int      @map("id_usuario")
+  galpon       Galpon   @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+  usuario      Usuario  @relation(fields: [idUsuario], references: [id], onDelete: Restrict)
+
+  @@id([idGalpon, fecha])
+  @@index([fecha])
+  @@map("registro_alimentacion")
+}
+
+model Auditoria {
+  id                 BigInt   @id @default(autoincrement())
+  idUsuario          Int      @map("id_usuario")
+  tablaAfectada      String   @map("tabla_afectada") @db.VarChar(50)
+  idRegistroAfectado String   @map("id_registro_afectado") @db.VarChar(50)
+  accion             String   @db.VarChar(20)
+  datosAnteriores    Json?    @map("datos_anteriores")
+  datosNuevos        Json?    @map("datos_nuevos")
+  fechaHora          DateTime @default(now()) @map("fecha_hora")
+  ipOrigen           String?  @map("ip_origen") @db.VarChar(45)
+  resultado          String   @db.VarChar(20)
+  usuario            Usuario  @relation(fields: [idUsuario], references: [id], onDelete: Restrict)
+
+  @@index([tablaAfectada, idRegistroAfectado])
+  @@index([fechaHora])
+  @@map("auditoria")
 }
 
 model Galpon {
@@ -57,6 +90,7 @@ model Galpon {
   cierresProduccion CierreProduccionDia[]
   bodegas          Bodega[]
   despachos        DetalleVentaGalpon[]
+  alimentaciones   RegistroAlimentacion[]
 
   @@map("galpon")
 }
