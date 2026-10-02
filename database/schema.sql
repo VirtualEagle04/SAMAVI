@@ -198,6 +198,17 @@ CREATE TABLE auditoria (
     resultado varchar(20) NOT NULL CHECK (resultado IN ('EXITOSO', 'FALLIDO')),
     CONSTRAINT fk_auditoria_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id) ON DELETE RESTRICT
 );
+-- Registra la alimentación diaria de cada galpón (una vez por día).
+CREATE TABLE registro_alimentacion (
+    id_galpon integer NOT NULL,
+    fecha date NOT NULL,
+    registrado_en timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id_usuario integer NOT NULL,
+    PRIMARY KEY (id_galpon, fecha),
+    CONSTRAINT fk_registro_alimentacion_galpon FOREIGN KEY (id_galpon) REFERENCES galpon (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_registro_alimentacion_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id) ON DELETE RESTRICT
+);
+CREATE INDEX idx_registro_alimentacion_fecha ON registro_alimentacion (fecha);
 CREATE INDEX idx_log_conteo_galpon_categoria_timestamp ON log_conteo (id_galpon, codigo_categoria_peso, timestamp);
 CREATE INDEX idx_cierre_diario_fecha ON cierre_diario (fecha);
 CREATE INDEX idx_bodega_fecha_corte ON bodega (fecha_corte);
@@ -432,6 +443,8 @@ VALUES -- Administrador (id=1)
     -- INGRESAR_CONTEO
     (2, 10),
     -- REGISTRAR_CIERRE_DIARIO
+    (2, 13),
+    -- GESTIONAR_GALPONES
     -- Vendedor (id=3)
     (3, 1),
     -- VER_PRODUCCION

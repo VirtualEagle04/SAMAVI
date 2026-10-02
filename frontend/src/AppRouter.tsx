@@ -7,6 +7,7 @@ export default function AppRouter() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<App />} />
+      <Route path="/galpones/*" element={<App />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
