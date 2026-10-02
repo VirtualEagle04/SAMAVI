@@ -161,6 +161,98 @@ model Bodega {
   @@map("bodega")
 }
 
+model Insumo {
+  id            Int       @id @default(autoincrement())
+  codigo        String    @unique @db.VarChar(30)
+  nombre        String    @db.VarChar(150)
+  descripcion   String?   @db.Text
+  unidadMedida  String    @db.VarChar(20) @map("unidad_medida")
+  stockMinimo   Decimal   @default(0) @db.Decimal(10, 2) @map("stock_minimo")
+  costo         Decimal   @default(0) @db.Decimal(12, 2)
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+  detallesCompra DetalleCompraInsumo[]
+  movimientos   MovimientoInsumo[]
+
+  @@map("insumo")
+}
+
+model Proveedor {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @db.VarChar(150)
+  contacto  Json?
+  activo    Boolean   @default(true)
+  creadoEn  DateTime  @default(now()) @map("creado_en")
+  compras   CompraInsumo[]
+
+  @@map("proveedor")
+}
+
+model CompraInsumo {
+  id               Int       @id @default(autoincrement())
+  fecha            DateTime
+  idProveedor      Int       @map("id_proveedor")
+  numeroFactura    String?   @db.VarChar(50) @map("numero_factura")
+  reciboImagen     Bytes?    @map("recibo_imagen")
+  reciboMimeType   String?   @db.VarChar(50) @map("recibo_mime_type")
+  reciboNombreArchivo String? @db.VarChar(200) @map("recibo_nombre_archivo")
+  observaciones    String?   @db.Text
+  total            Decimal   @db.Decimal(12, 2)
+  creadoEn         DateTime  @default(now()) @map("creado_en")
+  proveedor        Proveedor @relation(fields: [idProveedor], references: [id], onDelete: Restrict)
+  detalles         DetalleCompraInsumo[]
+  movimientos      MovimientoInsumo[]
+
+  @@map("compra_insumo")
+}
+
+model DetalleCompraInsumo {
+  idCompra           Int       @map("id_compra")
+  idInsumo           Int       @map("id_insumo")
+  cantidad           Decimal   @db.Decimal(10, 2)
+  costoUnitario      Decimal   @db.Decimal(12, 2) @map("costo_unitario")
+  subtotal           Decimal   @db.Decimal(12, 2)
+  lote               String?   @db.VarChar(50)
+  fechaVencimiento   DateTime? @db.Date @map("fecha_vencimiento")
+  compra             CompraInsumo @relation(fields: [idCompra], references: [id], onDelete: Cascade)
+  insumo             Insumo    @relation(fields: [idInsumo], references: [id], onDelete: Restrict)
+
+  @@id([idCompra, idInsumo])
+  @@map("detalle_compra_insumo")
+}
+
+model TipoMovimientoInsumo {
+  codigo      String   @id @db.VarChar(20)
+  nombre      String   @db.VarChar(50)
+  efecto      String   @db.VarChar(10)
+  descripcion String?  @db.VarChar(200)
+  movimientos MovimientoInsumo[]
+
+  @@map("tipo_movimiento_insumo")
+}
+
+model MovimientoInsumo {
+  id                   BigInt   @id @default(autoincrement())
+  fecha                DateTime @default(now())
+  idInsumo             Int      @map("id_insumo")
+  codigoTipoMovimiento String   @db.VarChar(20) @map("codigo_tipo_movimiento")
+  idGalpon             Int?     @map("id_galpon")
+  cantidad             Decimal  @db.Decimal(10, 2)
+  costoUnitario        Decimal? @db.Decimal(12, 2) @map("costo_unitario")
+  idCompra             Int?     @map("id_compra")
+  idCierreDiario       Int?     @map("id_cierre_diario")
+  observaciones        String?  @db.Text
+  idUsuario            Int      @map("id_usuario")
+  insumo               Insumo   @relation(fields: [idInsumo], references: [id], onDelete: Restrict)
+  tipoMovimiento       TipoMovimientoInsumo @relation(fields: [codigoTipoMovimiento], references: [codigo], onDelete: Restrict)
+  compra               CompraInsumo? @relation(fields: [idCompra], references: [id], onDelete: SetNull)
+
+  @@index([fecha])
+  @@index([idGalpon, idInsumo])
+  @@map("movimiento_insumo")
+}
+
 model Mayorista {
   id        Int       @id @default(autoincrement())
   nombre    String    @db.VarChar(150)

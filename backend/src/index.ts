@@ -5,6 +5,7 @@ import { errorMiddleware } from "./middleware/error.middleware.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { produccionRoutes } from "./modules/produccion/produccion.routes.js";
 import { comercialRoutes } from "./modules/comercial/comercial.routes.js";
+import { inventarioRoutes } from "./modules/inventario/inventario.routes.js";
 import { galponesRoutes } from "./modules/galpones/galpones.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
@@ -18,6 +19,7 @@ app.get("/health", (_request, response) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/produccion", produccionRoutes);
 app.use("/api/v1/comercial", comercialRoutes);
+app.use("/api/v1/inventario", inventarioRoutes);
 app.use("/api/v1/galpones", galponesRoutes);
 app.use(errorMiddleware);
 
