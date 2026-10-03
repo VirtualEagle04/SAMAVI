@@ -116,6 +116,13 @@ function parseContact(value: unknown): Prisma.InputJsonObject | undefined {
 }
 
 function parseDetalles(value: unknown): CompraDetalleInput[] {
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      throw new AppError(400, "detalles debe ser un JSON válido");
+    }
+  }
   if (!Array.isArray(value) || value.length === 0) {
     throw new AppError(400, "detalles debe contener al menos una línea");
   }
@@ -162,12 +169,14 @@ export function parseProveedorInput(body: unknown): ProveedorInput {
 
 export function parseCompraInput(body: unknown): CompraInput {
   if (!isRecord(body)) throw new AppError(400, "El cuerpo de la compra es inválido");
+  const proveedorId = typeof body.proveedorId === "string" ? Number(body.proveedorId) : body.proveedorId;
+  const total = typeof body.total === "string" ? Number(body.total) : body.total;
   return {
     fecha: parseDate(body.fecha, "fecha"),
-    proveedorId: positiveInteger(body.proveedorId, "proveedorId"),
+    proveedorId: positiveInteger(proveedorId, "proveedorId"),
     ...(optionalText(body.numeroFactura, "numeroFactura") === undefined ? {} : { numeroFactura: optionalText(body.numeroFactura, "numeroFactura") }),
     ...(optionalText(body.observaciones, "observaciones") === undefined ? {} : { observaciones: optionalText(body.observaciones, "observaciones") }),
-    total: nonNegativeNumber(body.total, "total"),
+    total: nonNegativeNumber(total, "total"),
     detalles: parseDetalles(body.detalles),
   };
 }
@@ -188,6 +197,13 @@ export function parseMovimientoInput(body: unknown): MovimientoInput {
 export function parseId(value: unknown, field: string): number {
   if (typeof value !== "string" || value.trim() === "") throw new AppError(400, `${field} es obligatorio`);
   return positiveInteger(Number(value), field);
+}
+
+export function parseActivoInput(body: unknown): boolean {
+  if (typeof body !== "object" || body === null || Array.isArray(body) || typeof (body as { activo?: unknown }).activo !== "boolean") {
+    throw new AppError(400, "activo debe ser booleano");
+  }
+  return (body as { activo: boolean }).activo;
 }
 
 export function parseInventarioFilters(query: Record<string, unknown>): InventarioFilters {

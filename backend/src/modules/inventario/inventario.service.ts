@@ -122,9 +122,18 @@ export async function updateInsumo(id: number, input: InsumoInput) {
   }
 }
 
-export async function deactivateInsumo(id: number) {
+export async function setInsumoActive(id: number, activo: boolean) {
   await getInsumo(id);
-  await prisma.insumo.update({ where: { id }, data: { activo: false } });
+  return prisma.insumo.update({ where: { id }, data: { activo } });
+}
+
+export async function deleteInsumo(id: number) {
+  await getInsumo(id);
+  try {
+    await prisma.insumo.delete({ where: { id } });
+  } catch {
+    throw new AppError(409, "No se puede eliminar un insumo con compras o movimientos asociados");
+  }
 }
 
 export async function listStock(filters: Pick<InventarioFilters, "insumoId"> = {}) {
@@ -167,7 +176,7 @@ export async function listMovimientos(insumoId: number, filters: InventarioFilte
 }
 
 export async function listProveedores() {
-  return prisma.proveedor.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } });
+  return prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
 }
 
 export async function createProveedor(input: ProveedorInput) {
@@ -191,10 +200,20 @@ export async function updateProveedor(id: number, input: ProveedorInput) {
   });
 }
 
-export async function deactivateProveedor(id: number) {
+export async function setProveedorActive(id: number, activo: boolean) {
   const provider = await prisma.proveedor.findUnique({ where: { id } });
   if (!provider) throw new AppError(404, "Proveedor no encontrado");
-  await prisma.proveedor.update({ where: { id }, data: { activo: false } });
+  return prisma.proveedor.update({ where: { id }, data: { activo } });
+}
+
+export async function deleteProveedor(id: number) {
+  const provider = await prisma.proveedor.findUnique({ where: { id } });
+  if (!provider) throw new AppError(404, "Proveedor no encontrado");
+  try {
+    await prisma.proveedor.delete({ where: { id } });
+  } catch {
+    throw new AppError(409, "No se puede eliminar un proveedor con compras asociadas");
+  }
 }
 
 export async function listCompras(filters: InventarioFilters) {
