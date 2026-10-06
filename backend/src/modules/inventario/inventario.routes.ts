@@ -7,8 +7,8 @@ import {
   createInsumoController,
   createMovimientoController,
   createProveedorController,
-  deactivateInsumoController,
-  deactivateProveedorController,
+  deleteInsumoController,
+  deleteProveedorController,
   getCompraReceiptController,
   getInsumoController,
   getStockController,
@@ -17,6 +17,8 @@ import {
   listMovimientosController,
   listProveedoresController,
   listStockController,
+  setInsumoActiveController,
+  setProveedorActiveController,
   updateInsumoController,
   updateProveedorController,
 } from "./inventario.controller.js";
@@ -56,7 +58,8 @@ inventarioRoutes.get("/insumos", listInsumosController);
 inventarioRoutes.post("/insumos", createInsumoController);
 inventarioRoutes.get("/insumos/:id", getInsumoController);
 inventarioRoutes.put("/insumos/:id", updateInsumoController);
-inventarioRoutes.delete("/insumos/:id", deactivateInsumoController);
+inventarioRoutes.patch("/insumos/:id/activo", setInsumoActiveController);
+inventarioRoutes.delete("/insumos/:id", deleteInsumoController);
 
 inventarioRoutes.get("/stock", listStockController);
 inventarioRoutes.get("/stock/:id", getStockController);
@@ -71,4 +74,5 @@ inventarioRoutes.post("/movimientos", createMovimientoController);
 inventarioRoutes.get("/proveedores", listProveedoresController);
 inventarioRoutes.post("/proveedores", createProveedorController);
 inventarioRoutes.put("/proveedores/:id", updateProveedorController);
-inventarioRoutes.delete("/proveedores/:id", deactivateProveedorController);
+inventarioRoutes.patch("/proveedores/:id/activo", setProveedorActiveController);
+inventarioRoutes.delete("/proveedores/:id", deleteProveedorController);

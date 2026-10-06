@@ -14,11 +14,13 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
 import EggIcon from '@mui/icons-material/Egg';
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded"
 import { useAuthStore } from "./stores/authStore"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
 import ComercialPage from "./features/comercial/pages/ComercialPage"
 import GalponesPage from "./features/galpones/pages/GalponesPage"
 import GalponDetallePage from "./features/galpones/pages/GalponDetallePage"
+import InventarioPage from "./features/inventario/pages/InventarioPage"
 import samanLogo from "./assets/saman_logo.png"
 
 const drawerWidth = 260
@@ -47,6 +49,9 @@ export default function App() {
 
   const canAccessGalpones =
     role === "Administrador" || permissions.includes("GESTIONAR_GALPONES")
+
+  const canAccessInventario =
+    role === "Administrador" || permissions.includes("GESTIONAR_INVENTARIO")
 
   // Active module state based on permissions
   const [selectedModule, setSelectedModule] = useState<string>(
@@ -96,6 +101,15 @@ export default function App() {
             id: "galpones",
             label: "Galpones",
             icon: <HomeWorkRoundedIcon fontSize="small" />,
+          },
+        ]
+      : []),
+    ...(canAccessInventario
+      ? [
+          {
+            id: "inventario",
+            label: "Inventario",
+            icon: <Inventory2RoundedIcon fontSize="small" />,
           },
         ]
       : []),
@@ -335,6 +349,8 @@ export default function App() {
                 ? "Módulo Comercial"
                 : activeModule === "galpones"
                 ? "Módulo de Galpones"
+                : activeModule === "inventario"
+                ? "Módulo de Inventario"
                 : "Panel Principal"}
             </Typography>
           </Box>
@@ -377,6 +393,7 @@ export default function App() {
         >
           {activeModule === "produccion" && <ProduccionPage />}
           {activeModule === "comercial" && <ComercialPage />}
+          {activeModule === "inventario" && canAccessInventario && <InventarioPage />}
           {activeModule === "galpones" &&
             (canAccessGalpones ? (
               <Routes>

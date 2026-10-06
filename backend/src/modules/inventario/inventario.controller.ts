@@ -5,8 +5,8 @@ import {
   createInsumo,
   createMovimiento,
   createProveedor,
-  deactivateInsumo,
-  deactivateProveedor,
+  deleteInsumo,
+  deleteProveedor,
   getCompraReceipt,
   getInsumo,
   getStock,
@@ -15,11 +15,14 @@ import {
   listMovimientos,
   listProveedores,
   listStock,
+  setInsumoActive,
+  setProveedorActive,
   updateInsumo,
   updateProveedor,
 } from "./inventario.service.js";
 import {
   parseCompraInput,
+  parseActivoInput,
   parseId,
   parseInsumoInput,
   parseInventarioFilters,
@@ -30,6 +33,10 @@ import {
 function authUserId(request: Request): number {
   if (!request.auth) throw new AppError(401, "Token requerido");
   return request.auth.id;
+}
+
+function serializeMovement<T extends { id: bigint }>(movement: T) {
+  return { ...movement, id: movement.id.toString() };
 }
 
 export async function listInsumosController(_request: Request, response: Response): Promise<void> {
@@ -48,8 +55,12 @@ export async function updateInsumoController(request: Request, response: Respons
   response.json(await updateInsumo(parseId(request.params.id, "id"), parseInsumoInput(request.body)));
 }
 
-export async function deactivateInsumoController(request: Request, response: Response): Promise<void> {
-  await deactivateInsumo(parseId(request.params.id, "id"));
+export async function setInsumoActiveController(request: Request, response: Response): Promise<void> {
+  response.json(await setInsumoActive(parseId(request.params.id, "id"), parseActivoInput(request.body)));
+}
+
+export async function deleteInsumoController(request: Request, response: Response): Promise<void> {
+  await deleteInsumo(parseId(request.params.id, "id"));
   response.status(204).send();
 }
 
@@ -64,7 +75,8 @@ export async function getStockController(request: Request, response: Response): 
 
 export async function listMovimientosController(request: Request, response: Response): Promise<void> {
   const filters = parseInventarioFilters(request.query);
-  response.json(await listMovimientos(parseId(request.params.id, "id"), filters));
+  const result = await listMovimientos(parseId(request.params.id, "id"), filters);
+  response.json({ ...result, items: result.items.map(serializeMovement) });
 }
 
 export async function listComprasController(request: Request, response: Response): Promise<void> {
@@ -83,7 +95,8 @@ export async function getCompraReceiptController(request: Request, response: Res
 }
 
 export async function createMovimientoController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createMovimiento(parseMovimientoInput(request.body), authUserId(request)));
+  const movement = await createMovimiento(parseMovimientoInput(request.body), authUserId(request));
+  response.status(201).json(serializeMovement(movement));
 }
 
 export async function listProveedoresController(_request: Request, response: Response): Promise<void> {
@@ -98,8 +111,12 @@ export async function updateProveedorController(request: Request, response: Resp
   response.json(await updateProveedor(parseId(request.params.id, "id"), parseProveedorInput(request.body)));
 }
 
-export async function deactivateProveedorController(request: Request, response: Response): Promise<void> {
-  await deactivateProveedor(parseId(request.params.id, "id"));
+export async function setProveedorActiveController(request: Request, response: Response): Promise<void> {
+  response.json(await setProveedorActive(parseId(request.params.id, "id"), parseActivoInput(request.body)));
+}
+
+export async function deleteProveedorController(request: Request, response: Response): Promise<void> {
+  await deleteProveedor(parseId(request.params.id, "id"));
   response.status(204).send();
 }
 

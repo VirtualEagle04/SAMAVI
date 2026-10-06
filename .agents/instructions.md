@@ -31,3 +31,11 @@
     ```
 - De ser necesario, las ramas deben seguir la nomenclatura `<tipo>/<backend o frontend>-<modulo>-[integration si es frontend]`.
     - e.g. `feat/frontend-produccion-integration`, `docs/README`, `tests/unit-produccion`, `feat/backend-produccion`.
+
+## 4. Comandos
+
+- Desde la raiz del projecto:
+    - `npm run install:all` Para instalar las dependencias de todos los `package.json` (raiz, back, front).
+    - `npm run build:all` Para compilar/generar todo: Prisma y TypeScript a JavaScript.
+    - `npm run infra:reset` Para borrar todos los contenedores, volumenes y redes.
+    - `npm run dev` Para correr todo: Iniciar contenedores PostgreSQL y Mosquitto, iniciar backend y frontend.
