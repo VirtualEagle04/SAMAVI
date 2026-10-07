@@ -26,7 +26,7 @@ El proyecto está dirigido a María Fernanda Durán Rozo, propietaria y benefici
 | npm | Incluido con Node.js | Gestor de paquetes del monorepo |
 | Docker Desktop | Última estable | Para levantar Mosquitto y PostgreSQL localmente |
 | PlatformIO | Última estable | Compilación y carga del firmware al ESP32 |
-| PostgreSQL | 16 (vía imagen `postgres:16-alpine`) | Docker Compose, BDR, puerto `5432` |
+| PostgreSQL | 16 (vía imagen `postgres:16-alpine`) | Docker Compose, puerto `5432` |
 | Mosquitto | 2.x (vía imagen `eclipse-mosquitto:2`) | Docker Compose, Broker MQTT, puerto `1883` |
 
 ## 4. Instalación
@@ -75,7 +75,7 @@ npm --prefix frontend run dev    # Frontend con Vite
 ## 6. Cómo ejecutar las pruebas
 
 ```bash
-# Ejecutar toda la suite de pruebas
+# Ejecutar toda la suite de pruebas del backend
 npm --prefix backend run test:once
 
 # Ejecutar un subconjunto o un archivo
@@ -87,11 +87,23 @@ npm --prefix backend run test:report
 
 - **Framework de pruebas:** Vitest para pruebas unitarias del backend.
 - **Cobertura actual:** Pendiente de cálculo.
-- **Qué se está probando:** Pruebas unitarias de autenticación, producción y validaciones comerciales. Sin pruebas de integración, frontend ni firmware.
+- **Estado:** Existen pruebas unitarias de autenticación, comercial y producción. No hay pruebas de integración, frontend ni firmware automatizadas.
 ## 7. Estructura del repositorio
 
 ```text
 SAMAVI/
+├── .github/                   # Instrucciones para GitHub Copilot
+│   └── copilot-instructions.md
+├── .agents/                   # Recursos para integración de agentes
+│   └── README.md
+├── docs/                      # Documentación técnica del proyecto
+│   ├── architecture.md
+│   ├── domain.md
+│   ├── hardware.md
+│   ├── overview.md
+│   ├── protocols/
+│   │   └── mqtt.md
+│   └── requirements.md
 ├── backend/                   # API REST y lógica de servidor (Express, TypeScript, Prisma)
 │   ├── prisma/                # Esquema de base de datos para Prisma
 │   ├── src/
@@ -116,6 +128,8 @@ SAMAVI/
 │       ├── stores/            # Estado global
 │       └── theme/             # Tema de Material UI
 ├── infra/                     # Docker Compose y configuración de Mosquitto
+├── AGENTS.md                  # Contrato principal para agentes de IA
+├── CONTRIBUTING.md            # Guía de contribución y flujo Git
 ├── .env.example               # Plantilla de variables de entorno
 ├── package.json               # Scripts del monorepo
 └── README.md
@@ -147,7 +161,7 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
 - **MQTT sobre TLS** como protocolo de comunicación entre el ESP32 y el backend, tolerante a intermitencias de red gracias a reconexión explícita de WiFi y MQTT en el firmware.
 - **Express.js + PostgreSQL + Prisma ORM + TypeScript** para el backend, elegidos por dominio del equipo, bajo costo de licenciamiento y adecuación a una API REST de baja concurrencia.
 - **React + Vite + Material UI + TypeScript** para el frontend, priorizando reactividad y facilidad de uso para usuarios con poca experiencia tecnológica.
-- **Despliegue en AWS Lightsail sobre Docker Compose** (nginx, backend, Mosquitto, PostgreSQL), preferido frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática.
+- **Despliegue en AWS Lightsail sobre Docker Compose** (backend, Mosquitto, PostgreSQL), preferido frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática. El frontend se servirá mediante nginx en el despliegue definido, pero esa configuración debe tratarse como pendiente mientras no exista en el código de infraestructura.
 - **Autenticación basada en JWT** con control de acceso por roles (RBAC), validando firma, expiración y permisos en cada solicitud a un recurso protegido.
 
 ## 11. Limitaciones conocidas y trabajo futuro
@@ -155,7 +169,7 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
 - La fórmula matemática exacta del prorrateo de ganancias y gastos usada actualmente por Carlos Andrés todavía no está completamente documentada ni confirmada.
 - El módulo de prorrateo semanal (cálculo automático de ganancias, gastos y saldo por socio según porcentaje de inversión) todavía no está implementado en el backend.
 - El frontend cuenta con un dashboard de monitoreo en vivo conectado a la API de producción, pero aún no cubre los flujos completos de inventario, pedidos, ventas, cierre semanal y prorrateo para los distintos roles.
-- No existe todavía una suite de pruebas automatizadas, solo una colección de Postman en construcción para pruebas manuales de endpoints.
+- Existen pruebas unitarias del backend (Vitest) para autenticación, comercial y producción. No hay pruebas de integración, frontend ni firmware automatizadas.
 - Queda pendiente definir con precisión qué determina la cantidad de bultos de alimento por pedido, la base del cálculo de transporte, y por qué las categorías Yumbo y B no reconcilian exactamente en el prorrateo.
 - Mecanismos de doble factor de autenticación y protección contra ataques de fuerza bruta fueron solicitados por el director de proyecto y siguen pendientes de implementación.
 - Migración de registros históricos físicos (cuadernos y agenda de contabilidad) al sistema, con apoyo de inteligencia artificial, sigue en fase de diseño.
@@ -166,7 +180,8 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
     - Apoyo en la digitalización de registros físicos.
     - Generación automatizada de una colección de Postman a partir del código para pruebas de endpoints REST.
     - CodeRabbit en el repositorio para comprobar calidad, mejoras y riesgos a la hora de realizar Pull Request.
-    
+    - Generación puntual de código y documentación.
+
 ## 13. Licencia
 
 MIT — ver archivo [LICENSE](LICENSE).
