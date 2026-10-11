@@ -1,131 +1,82 @@
 import { createTheme } from "@mui/material/styles"
-
-const BRAND = "#e77978"
-const BRAND_DARK = "#c96768"
-const BRAND_LIGHT = "#f9d9d0"
+import { designTokens } from "./tokens"
 
 export const theme = createTheme({
   palette: {
     mode: "light",
-    primary: {
-      main: BRAND,
-      dark: BRAND_DARK,
-      light: BRAND_LIGHT,
-      contrastText: "#FFFFFF",
-    },
-    background: {
-      default: "#fff8ed",
-      paper: "#fffdf9",
-    },
-    text: {
-      primary: "#432b24",
-      secondary: "#795e55",
-      disabled: "#a58b82",
-    },
-    error: {
-      main: "#D32F2F",
-      light: "#FFCDD2",
-    },
-    success: {
-      main: "#34C759",
-    },
-    divider: "#eadbd2",
+    primary: designTokens.color.primary,
+    secondary: designTokens.color.secondary,
+    background: designTokens.color.background,
+    text: designTokens.color.text,
+    divider: designTokens.color.divider,
+    warning: designTokens.color.warning,
+    info: designTokens.color.info,
+    success: designTokens.color.success,
+    error: designTokens.color.error,
   },
+  spacing: 8,
+  shape: { borderRadius: designTokens.shape.borderRadius },
   typography: {
-    fontFamily: "'Inter', -apple-system, 'SF Pro Text', system-ui, sans-serif",
-    h4: { fontWeight: 800, letterSpacing: "-0.5px" },
-    h5: { fontWeight: 700, letterSpacing: "-0.3px" },
-    h6: { fontWeight: 700 },
+    fontFamily: designTokens.typography.interface,
+    subtitle1: { fontSize: "1.125rem", lineHeight: 1.5 },
     body1: { fontSize: "1rem", lineHeight: 1.5 },
-    body2: { fontSize: "0.9rem", lineHeight: 1.5, color: "#3A3A3C" },
-    button: { textTransform: "none", fontWeight: 700, letterSpacing: "0.2px" },
-  },
-  shape: {
-    borderRadius: 8,
+    body2: { fontSize: "0.875rem", lineHeight: 1.4 },
+    button: { fontSize: "0.875rem", fontWeight: 500, textTransform: "none" },
+    caption: { fontSize: "0.75rem", lineHeight: 1.3 },
+    h1: { fontFamily: designTokens.typography.heading, fontSize: "3rem", fontWeight: 700, lineHeight: 1.15 },
+    h2: { fontFamily: designTokens.typography.heading, fontSize: "2.375rem", fontWeight: 700, lineHeight: 1.2 },
+    h3: { fontFamily: designTokens.typography.heading, fontSize: "1.875rem", fontWeight: 600, lineHeight: 1.25 },
+    h4: { fontFamily: designTokens.typography.heading, fontSize: "1.5rem", fontWeight: 600, lineHeight: 1.3 },
+    h5: { fontFamily: designTokens.typography.heading, fontSize: "1.25rem", fontWeight: 700, lineHeight: 1.3 },
+    h6: { fontFamily: designTokens.typography.heading, fontSize: "1.125rem", fontWeight: 700, lineHeight: 1.35 },
   },
   components: {
+    MuiTypography: {
+      styleOverrides: {
+        h1: { color: `${designTokens.color.heading} !important` },
+        h2: { color: `${designTokens.color.heading} !important` },
+        h3: { color: `${designTokens.color.heading} !important` },
+        h4: { color: `${designTokens.color.heading} !important` },
+        h5: { color: `${designTokens.color.heading} !important` },
+        h6: { color: `${designTokens.color.heading} !important` },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: { root: { color: `${designTokens.color.heading} !important` } },
+    },
+    MuiTableHead: {
+      styleOverrides: { root: { backgroundColor: designTokens.color.background.default } },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        head: { color: designTokens.color.text.secondary, fontWeight: 700, borderColor: designTokens.color.divider },
+        root: { borderColor: designTokens.color.divider },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: { paper: { borderRadius: designTokens.shape.cardRadius } },
+    },
     MuiButton: {
-      styleOverrides: {
-        root: {
-          minHeight: 48,
-          borderRadius: 8,
-          fontSize: "0.95rem",
-          fontWeight: 700,
-          boxShadow: "none",
-          "&:hover": { boxShadow: "none" },
-          "&:active": { boxShadow: "none", transform: "scale(0.99)" },
-        },
-        contained: {
-          background: BRAND,
-          "&:hover": { background: BRAND_DARK },
-        },
-        outlined: {
-          borderWidth: 1.5,
-          "&:hover": { borderWidth: 1.5 },
-        },
-        text: {
-          minHeight: 40,
-        },
-      },
-    },
-    MuiTextField: {
-      defaultProps: {
-        variant: "outlined",
-        fullWidth: true,
-      },
-      styleOverrides: {
-        root: {
-          "& .MuiInputBase-root": {
-            fontSize: "1rem",
-            borderRadius: 8,
-            minHeight: 48,
-          },
-          "& .MuiInputLabel-root": {
-            fontSize: "0.95rem",
-            fontWeight: 500,
-          },
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderWidth: 1.5,
-          },
-          "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-            borderWidth: 1.5,
-          },
-        },
-      },
-    },
-    MuiAlert: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          fontSize: "0.95rem",
-          fontWeight: 600,
-          alignItems: "center",
-        },
-        message: { padding: "4px 0" },
-      },
+      defaultProps: { disableElevation: true },
+      styleOverrides: { root: { minHeight: 40, padding: "10px 20px", borderRadius: designTokens.shape.buttonRadius } },
     },
     MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 10,
-          boxShadow:
-            "0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.04)",
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: 6,
-        },
-      },
+      defaultProps: { elevation: 0 },
+      styleOverrides: { root: { borderRadius: designTokens.shape.cardRadius, border: `1px solid ${designTokens.color.divider}`, boxShadow: "none" } },
     },
     MuiPaper: {
-      styleOverrides: {
-        rounded: {
-          borderRadius: 10,
-        },
-      },
+      defaultProps: { elevation: 0 },
+      styleOverrides: { root: { boxShadow: "none" }, rounded: { borderRadius: designTokens.shape.cardRadius }, outlined: { borderColor: designTokens.color.divider } },
     },
+    MuiTextField: {
+      defaultProps: { variant: "outlined", fullWidth: true },
+      styleOverrides: { root: { "& .MuiOutlinedInput-root": { borderRadius: designTokens.shape.inputRadius, "& fieldset": { borderColor: designTokens.color.divider }, "&:hover fieldset": { borderColor: designTokens.color.secondary.main } } } },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: { root: { borderRadius: designTokens.shape.inputRadius, "& .MuiOutlinedInput-notchedOutline": { borderColor: designTokens.color.divider }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: designTokens.color.secondary.main } } },
+    },
+    MuiChip: { styleOverrides: { root: { borderRadius: designTokens.shape.chipRadius } } },
   },
 })
+
+export default theme

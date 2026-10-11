@@ -1,4 +1,4 @@
-import { useAuthStore } from "../../../stores/authStore"
+import { useAuthStore } from "../../auth/stores/authStore"
 import type { CategoriaComercial, DisponibilidadPedido, Mayorista, Pedido, PrecioMayorista } from "../types/comercial.types"
 
 const API_URL = import.meta.env.VITE_API_URL ?? ""

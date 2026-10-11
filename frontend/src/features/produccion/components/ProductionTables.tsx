@@ -20,19 +20,21 @@ import type {
   CierreProduccionDia,
   Galpon,
 } from "../types/produccion.types";
-
-const dateLabel = (value: string) =>
-  new Date(value).toLocaleDateString("es-CO", {
-    timeZone: "UTC",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-const stampLabel = (value: string) =>
-  new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+import {
+  productionTableActionsSx,
+  productionTableCardSx,
+  productionTableFiltersSx,
+  productionTableMobileCardSx,
+  productionTableMobilePrimaryTextSx,
+  productionTablePaginationSx,
+  productionTableSx,
+  productionTableTitleSx,
+  productionTableToolbarSx,
+} from "./productionTableStyles";
+import {
+  formatProductionDate,
+  formatProductionDateTime,
+} from "./productionDateFormatters";
 
 export function BodegaTable({
   rows,
@@ -77,35 +79,17 @@ export function BodegaTable({
   return (
     <Card
       elevation={0}
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1.5,
-        overflow: "hidden",
-      }}
+      sx={productionTableCardSx}
     >
       <Box
-        sx={{
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 1.5,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-        }}
+        sx={productionTableToolbarSx}
       >
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Bodega y Remanentes
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Saldo guardado en cada corte semanal. Las ventas actuales se
-            calculan sumando cierres diarios y despachos.
+          <Typography variant="h6" sx={productionTableTitleSx}>
+            Historial de Bodegas y Remanentes
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+        <Box sx={productionTableActionsSx}>
           <TextField
             type="date"
             size="small"
@@ -116,8 +100,9 @@ export function BodegaTable({
               setPage(0);
             }}
             slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ ...productionTableFiltersSx, width: { xs: "calc(50% - 4px)", sm: 150 }, minWidth: 0 }}
           />
-          <FormControl size="small" sx={{ minWidth: 170 }}>
+          <FormControl size="small" sx={{ ...productionTableFiltersSx, width: { xs: "calc(50% - 4px)", sm: 170 }, minWidth: 0 }}>
             <Select
               value={filter}
               onChange={(event) => {
@@ -139,9 +124,38 @@ export function BodegaTable({
           </FormControl>
         </Box>
       </Box>
-      <TableContainer>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: "#faf7f2" }}>
+      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+        {grouped.length === 0 ? (
+          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+            No hay remanentes para los filtros seleccionados.
+          </Box>
+        ) : grouped.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((group) => {
+          const total = group.categorias.reduce((sum, row) => sum + row.cantidadBandejas, 0);
+          return (
+            <Box key={`${group.idGalpon}-${group.fechaCorte}`} sx={productionTableMobileCardSx}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+                <Box>
+                  <Typography sx={productionTableMobilePrimaryTextSx}>{group.galpon?.nombre ?? `Galpón ${group.idGalpon}`}</Typography>
+                  <Typography variant="caption" color="text.secondary">{formatProductionDate(group.fechaCorte)}</Typography>
+                </Box>
+                <Chip size="small" color="info" label="Saldo de corte" />
+              </Box>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.25 }}>
+                {group.categorias.map((row) => (
+                  <CategoryBadge key={row.codigoCategoriaPeso} codigo={row.codigoCategoriaPeso} nombre={row.categoriaPeso?.nombre ?? row.codigoCategoriaPeso} cantidad={row.cantidadBandejas} />
+                ))}
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1.25, pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
+                <Typography variant="caption" color="text.secondary">Total de bandejas</Typography>
+                <Typography sx={{ fontWeight: 700 }}>{total.toLocaleString("es-CO")}</Typography>
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+        <Table sx={productionTableSx}>
+        <TableHead>
             <TableRow>
               {[
                 "FECHA DE CORTE",
@@ -165,7 +179,7 @@ export function BodegaTable({
               .slice(page * rowsPerPage, (page + 1) * rowsPerPage)
               .map((group) => (
                 <TableRow key={`${group.idGalpon}-${group.fechaCorte}`} hover>
-                  <TableCell>{dateLabel(group.fechaCorte)}</TableCell>
+                  <TableCell>{formatProductionDate(group.fechaCorte)}</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>
                     {group.galpon?.nombre ?? `Galpón ${group.idGalpon}`}
                   </TableCell>
@@ -222,6 +236,7 @@ export function BodegaTable({
         labelDisplayedRows={({ from, to, count }) =>
           `${from}-${to} de ${count}`
         }
+        sx={productionTablePaginationSx}
       />
     </Card>
   );
@@ -253,7 +268,6 @@ export function ProductionClosuresTable({
       sx={{
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: 1.5,
         overflow: "hidden",
       }}
     >
@@ -313,7 +327,7 @@ export function ProductionClosuresTable({
       </Box>
       <TableContainer>
         <Table sx={{ minWidth: 520 }}>
-          <TableHead sx={{ bgcolor: "#faf7f2" }}>
+        <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 800 }}>FECHA DEL CIERRE</TableCell>
               <TableCell sx={{ fontWeight: 800 }}>GALPÓN</TableCell>
@@ -326,11 +340,11 @@ export function ProductionClosuresTable({
               .slice(page * rowsPerPage, (page + 1) * rowsPerPage)
               .map((row) => (
                 <TableRow key={`${row.idGalpon}-${row.fecha}`} hover>
-                  <TableCell>{dateLabel(row.fecha)}</TableCell>
+                  <TableCell>{formatProductionDate(row.fecha)}</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>
                     {row.galpon?.nombre ?? `Galpón ${row.idGalpon}`}
                   </TableCell>
-                  <TableCell>{stampLabel(row.cerradoEn)}</TableCell>
+                  <TableCell>{formatProductionDateTime(row.cerradoEn)}</TableCell>
                   <TableCell>
                     <Chip size="small" color="success" label="Cerrado" />
                   </TableCell>

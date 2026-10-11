@@ -4,14 +4,14 @@ export const CATEGORY_COLORS: Record<
   string,
   { bg: string; text: string; border: string }
 > = {
-  Y: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  Ex: { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8" },
-  AA: { bg: "#e0f2fe", text: "#075985", border: "#bae6fd" },
-  A: { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" },
-  B: { bg: "#ffedd5", text: "#9a3412", border: "#fed7aa" },
-  C: { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" },
-  P: { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1" },
-  Q: { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1" },
+  Y: { bg: "#F7E5B5", text: "#5C4333", border: "#D99B26" },
+  Ex: { bg: "#F3DFD5", text: "#743F2A", border: "#C87A57" },
+  AA: { bg: "#EDE3D1", text: "#665331", border: "#A88C52" },
+  A: { bg: "#E6EBDD", text: "#40573A", border: "#6B8E62" },
+  B: { bg: "#EFE3D9", text: "#674433", border: "#A66B48" },
+  C: { bg: "#F3DEDA", text: "#753D39", border: "#C05C56" },
+  P: { bg: "#F0ECE7", text: "#51483F", border: "#9A8E80" },
+  Q: { bg: "#E9E1DC", text: "#4A3325", border: "#5C4333" },
 };
 
 type Props = {
@@ -28,9 +28,9 @@ export default function CategoryBadge({
   size = "small",
 }: Props) {
   const colors = CATEGORY_COLORS[codigo] ?? {
-    bg: "#f1f5f9",
-    text: "#334155",
-    border: "#cbd5e1",
+    bg: "#F0ECE7",
+    text: "#51483F",
+    border: "#9A8E80",
   };
   const label = [
     nombre ?? codigo,

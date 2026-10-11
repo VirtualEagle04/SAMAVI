@@ -17,6 +17,22 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CategoryBadge from "../../../components/atoms/CategoryBadge";
+import {
+  productionTableActionsSx,
+  productionTableCardSx,
+  productionTableFiltersSx,
+  productionTableMobileCardSx,
+  productionTableMobilePrimaryTextSx,
+  productionTablePaginationSx,
+  productionTableSx,
+  productionTableTitleSx,
+  productionTableToolbarSx,
+} from "./productionTableStyles";
+import {
+  formatProductionDate,
+  formatProductionDateTime,
+  formatProductionTime,
+} from "./productionDateFormatters";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import SensorsRoundedIcon from "@mui/icons-material/SensorsRounded";
 import type {
@@ -52,7 +68,7 @@ export default function CountsTable({
       c.categoriaPeso?.nombre ??
       categorias.find((cat) => cat.codigo === c.codigoCategoriaPeso)?.nombre ??
       c.codigoCategoriaPeso;
-    const formattedDate = new Date(c.timestamp).toLocaleString("es-CO");
+    const formattedDate = formatProductionDateTime(c.timestamp);
 
     const matchesSearch =
       search.trim() === "" ||
@@ -90,50 +106,23 @@ export default function CountsTable({
   return (
     <Card
       elevation={0}
-      sx={{
-        borderRadius: 1.5,
-        border: "1px solid",
-        borderColor: "divider",
-        backgroundColor: "background.paper",
-        overflow: "hidden",
-      }}
+      sx={productionTableCardSx}
     >
       {/* Table Filter Toolbar */}
       <Box
-        sx={{
-          p: 2,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1.5,
-        }}
+        sx={productionTableToolbarSx}
       >
         <Box>
           <Typography
             variant="h6"
-            sx={{ fontWeight: 800, color: "text.primary", fontSize: "1.1rem" }}
+            sx={productionTableTitleSx}
           >
-            Registro Detallado de Conteos
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", fontSize: "0.825rem" }}
-          >
-            Historial cronológico de eventos registrados por sensores y
-            operarios ({filteredCounts.length} registros)
+            Historial de Conteos en Vivo
           </Typography>
         </Box>
 
         <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 1.2,
-          }}
+          sx={productionTableActionsSx}
         >
           {/* Search bar */}
           <TextField
@@ -157,18 +146,17 @@ export default function CountsTable({
               },
             }}
             sx={{
-              minWidth: 200,
+              width: { xs: "100%", sm: 220 },
               "& .MuiInputBase-root": {
-                minHeight: 38,
-                borderRadius: 1,
-                bgcolor: "#ffffff",
-                fontSize: "0.85rem",
+                minHeight: 40,
+                bgcolor: "background.paper",
+                fontSize: "0.875rem",
               },
             }}
           />
 
           {/* Galpón Selector */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" sx={{ ...productionTableFiltersSx, minWidth: 0, width: { xs: "calc(50% - 4px)", sm: 140 } }}>
             <Select
               value={selectedGalpon}
               onChange={(e) => {
@@ -178,11 +166,9 @@ export default function CountsTable({
                 setPage(0);
               }}
               sx={{
-                borderRadius: 1,
-                minHeight: 38,
-                fontSize: "0.85rem",
+                minHeight: 40,
                 fontWeight: 600,
-                bgcolor: "#ffffff",
+                bgcolor: "background.paper",
               }}
             >
               <MenuItem value="all">Todos los galpones</MenuItem>
@@ -195,7 +181,7 @@ export default function CountsTable({
           </FormControl>
 
           {/* Category Selector */}
-          <FormControl size="small" sx={{ minWidth: 130 }}>
+          <FormControl size="small" sx={{ ...productionTableFiltersSx, minWidth: 0, width: { xs: "calc(50% - 4px)", sm: 150 } }}>
             <Select
               value={selectedCategory}
               onChange={(e) => {
@@ -203,11 +189,9 @@ export default function CountsTable({
                 setPage(0);
               }}
               sx={{
-                borderRadius: 1,
-                minHeight: 38,
-                fontSize: "0.85rem",
+                minHeight: 40,
                 fontWeight: 600,
-                bgcolor: "#ffffff",
+                bgcolor: "background.paper",
               }}
             >
               <MenuItem value="all">Todas las categ.</MenuItem>
@@ -220,7 +204,7 @@ export default function CountsTable({
           </FormControl>
 
           {/* Action (+ / -) Selector */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ ...productionTableFiltersSx, minWidth: 0, width: { xs: "calc(50% - 4px)", sm: 140 } }}>
             <Select
               value={selectedAction}
               onChange={(e) => {
@@ -228,11 +212,9 @@ export default function CountsTable({
                 setPage(0);
               }}
               sx={{
-                borderRadius: 1,
-                minHeight: 38,
-                fontSize: "0.85rem",
+                minHeight: 40,
                 fontWeight: 600,
-                bgcolor: "#ffffff",
+                bgcolor: "background.paper",
               }}
             >
               <MenuItem value="all">Todos los tipos</MenuItem>
@@ -243,13 +225,43 @@ export default function CountsTable({
         </Box>
       </Box>
 
-      {/* Table View */}
-      <TableContainer>
+      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+        {paginatedCounts.length === 0 ? (
+          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+            <Typography sx={{ fontWeight: 600 }}>No se encontraron registros de conteo</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>Cambia los filtros o registra un nuevo conteo.</Typography>
+          </Box>
+        ) : paginatedCounts.map((row) => {
+          const barn = row.galpon ?? galpones.find((g) => g.id === row.idGalpon)
+          const category = row.categoriaPeso ?? categorias.find((cat) => cat.codigo === row.codigoCategoriaPeso)
+          const positive = row.cantidad > 0
+          return (
+            <Box key={row.id} sx={productionTableMobileCardSx}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">{formatProductionDateTime(row.timestamp)}</Typography>
+                <Chip size="small" label={positive ? "+1 Conteo" : "−1 Descarte"} color={positive ? "success" : "error"} />
+              </Box>
+              <Typography sx={productionTableMobilePrimaryTextSx}>{barn?.nombre ?? `Galpón ${row.idGalpon}`}</Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                <CategoryBadge codigo={row.codigoCategoriaPeso} nombre={category?.nombre ?? row.codigoCategoriaPeso} />
+                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, color: "text.secondary" }}>
+                  <SensorsRoundedIcon sx={{ fontSize: 16 }} />
+                  <Typography variant="caption">Sensor IoT</Typography>
+                  <Typography variant="caption">#{row.id}</Typography>
+                </Box>
+              </Box>
+            </Box>
+          )
+        })}
+      </Box>
+
+      {/* Desktop table view */}
+      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
         <Table
-          sx={{ minWidth: 700 }}
+          sx={productionTableSx}
           aria-label="tabla de conteos de produccion"
         >
-          <TableHead sx={{ bgcolor: "#faf7f2" }}>
+        <TableHead>
             <TableRow>
               <TableCell
                 sx={{
@@ -338,17 +350,8 @@ export default function CountsTable({
               </TableRow>
             ) : (
               paginatedCounts.map((row) => {
-                const dateObj = new Date(row.timestamp);
-                const dateStr = dateObj.toLocaleDateString("es-CO", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                });
-                const timeStr = dateObj.toLocaleTimeString("es-CO", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                });
+                const dateStr = formatProductionDate(row.timestamp);
+                const timeStr = formatProductionTime(row.timestamp);
 
                 const galponObj =
                   row.galpon ?? galpones.find((g) => g.id === row.idGalpon);
@@ -382,13 +385,13 @@ export default function CountsTable({
                         variant="body2"
                         sx={{ fontWeight: 700, color: "text.primary" }}
                       >
-                        {timeStr}
+                        {dateStr}
                       </Typography>
                       <Typography
                         variant="caption"
                         sx={{ color: "text.secondary", fontSize: "0.75rem" }}
                       >
-                        {dateStr}
+                        {timeStr}
                       </Typography>
                     </TableCell>
 
@@ -397,16 +400,9 @@ export default function CountsTable({
                       <Typography
                         variant="body2"
                         sx={{ fontWeight: 700, color: "text.primary" }}
-                      >
-                        {galponObj?.nombre ?? `Galpón ${row.idGalpon}`}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{ color: "text.secondary", fontSize: "0.75rem" }}
-                      >
-                        {galponObj?.gallinasActuales?.toLocaleString() ?? 0}{" "}
-                        aves
-                      </Typography>
+                    >
+                      {galponObj?.nombre ?? `Galpón ${row.idGalpon}`}
+                    </Typography>
                     </TableCell>
 
                     {/* Categoria */}
@@ -494,7 +490,7 @@ export default function CountsTable({
 
       {/* Pagination */}
       <TablePagination
-        rowsPerPageOptions={[10, 25, 50, 100]}
+        rowsPerPageOptions={[10, 25, 50]}
         component="div"
         count={filteredCounts.length}
         rowsPerPage={rowsPerPage}
@@ -505,7 +501,7 @@ export default function CountsTable({
         labelDisplayedRows={({ from, to, count }) =>
           `${from}-${to} de ${count}`
         }
-        sx={{ borderTop: "1px solid", borderColor: "divider" }}
+        sx={productionTablePaginationSx}
       />
     </Card>
   );

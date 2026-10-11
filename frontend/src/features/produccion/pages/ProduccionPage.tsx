@@ -10,9 +10,8 @@ import Typography from "@mui/material/Typography";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import FormatListNumberedRoundedIcon from "@mui/icons-material/FormatListNumberedRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
-import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
-import { useAuthStore } from "../../../stores/authStore";
+import { useAuthStore } from "../../auth/stores/authStore";
 import LiveMonitoringCard from "../components/LiveMonitoringCard";
 import ProductionKpiCards from "../components/ProductionKpiCards";
 import CountsTable from "../components/CountsTable";
@@ -295,27 +294,29 @@ export default function ProduccionPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      {!deviceStatus?.connected ? (
-        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
-          El ESP32 está desconectado.
-        </Alert>
-      ) : (
-        <LiveMonitoringCard
-          dailyCounts={dailyCounts}
-          galpones={galpones}
-          categorias={categorias}
-          selectedGalponId={selectedGalponId}
-          onSelectGalpon={setSelectedGalponId}
-          onRefresh={() => loadData(false)}
-          onOpenRegisterModal={(cat) => {
-            setPreselectedCategory(cat);
-            setRegisterModalOpen(true);
-          }}
-          onQuickCount={handleQuickCount}
-          lastUpdated={lastUpdated}
-          deviceStatus={deviceStatus}
-        />
-      )}
+      <Box>
+        <Typography variant="h4" sx={{ fontSize: { xs: "1.7rem", sm: "2rem" }, mb: 0.5 }}>
+          Producción
+        </Typography>
+        <Typography color="text.secondary">
+          Monitoreo, conteos y cierres diarios.
+        </Typography>
+      </Box>
+      <LiveMonitoringCard
+        dailyCounts={dailyCounts}
+        galpones={galpones}
+        categorias={categorias}
+        selectedGalponId={selectedGalponId}
+        onSelectGalpon={setSelectedGalponId}
+        onRefresh={() => loadData(false)}
+        onOpenRegisterModal={(cat) => {
+          setPreselectedCategory(cat);
+          setRegisterModalOpen(true);
+        }}
+        onQuickCount={handleQuickCount}
+        lastUpdated={lastUpdated}
+        deviceStatus={deviceStatus}
+      />
       {/* 2. CONCISE EXECUTIVE KPIS (POCAS TARJETAS RELEVANTES) */}
       <ProductionKpiCards
         dailyCounts={dailyCounts}
@@ -325,10 +326,13 @@ export default function ProduccionPage() {
 
       {/* 3. SERIOUS DATA TABLES & ANALYTICS SECTION */}
       <Box sx={{ mt: 1 }}>
-        <Box sx={{ borderBottom: "1px solid", borderColor: "divider", mb: 2 }}>
+        <Box sx={{ borderBottom: "1px solid", borderColor: "divider", mb: 2, overflowX: "auto" }}>
           <Tabs
             value={activeTab}
             onChange={(_e, val) => setActiveTab(val)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             textColor="primary"
             indicatorColor="primary"
             sx={{
@@ -336,8 +340,10 @@ export default function ProduccionPage() {
                 textTransform: "none",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                minHeight: 44,
+                minHeight: 48,
                 px: 2,
+                borderRadius: 2,
+                whiteSpace: "nowrap",
               },
             }}
           >
@@ -349,17 +355,12 @@ export default function ProduccionPage() {
             <Tab
               icon={<HistoryRoundedIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
-              label="Historial de Cierres Diarios"
+              label="Cierres Diarios"
             />
             <Tab
               icon={<Inventory2RoundedIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
-              label="Bodega"
-            />
-            <Tab
-              icon={<AssessmentRoundedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Galpones"
+              label="Bodegas"
             />
           </Tabs>
         </Box>
@@ -388,130 +389,6 @@ export default function ProduccionPage() {
         {/* Tab 2: Bodega */}
         {activeTab === 2 && <BodegaTable rows={bodega} galpones={galpones} />}
 
-        {/* Tab 3: Galpones Overview */}
-        {activeTab === 3 && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "1fr 1fr",
-                  md: "repeat(3, 1fr)",
-                },
-                gap: 2,
-              }}
-            >
-              {galpones.map((g) => {
-                const eggsToday = dailyCounts
-                  .filter((count) => count.idGalpon === g.id)
-                  .reduce((total, count) => total + count.cantidad, 0);
-                const posturaPct =
-                  g.gallinasActuales > 0
-                    ? ((eggsToday / g.gallinasActuales) * 100).toFixed(1)
-                    : "0";
-
-                return (
-                  <Box
-                    key={g.id}
-                    sx={{
-                      p: 2,
-                      borderRadius: 1.25,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      bgcolor: "background.paper",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1.2,
-                      }}
-                    >
-                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                        {g.nombre}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          px: 1,
-                          py: 0.2,
-                          borderRadius: 0.8,
-                          fontWeight: 700,
-                          bgcolor:
-                            g.estado === "activo" ? "#dcfce7" : "#fee2e2",
-                          color: g.estado === "activo" ? "#166534" : "#991b1b",
-                        }}
-                      >
-                        {g.estado.toUpperCase()}
-                      </Typography>
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "text.secondary", mb: 1.2 }}
-                    >
-                      Capacidad actual:{" "}
-                      <strong>{g.gallinasActuales.toLocaleString()}</strong>{" "}
-                      gallinas
-                    </Typography>
-
-                    <Box
-                      sx={{
-                        p: 1.2,
-                        borderRadius: 1,
-                        bgcolor: "#faf7f2",
-                        mb: 1.2,
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        sx={{ color: "text.secondary", display: "block" }}
-                      >
-                        Producción de Hoy
-                      </Typography>
-                      <Typography
-                        variant="h5"
-                        sx={{ fontWeight: 800, color: "text.primary" }}
-                      >
-                        {eggsToday.toLocaleString()} uds{" "}
-                        <Typography
-                          component="span"
-                          variant="caption"
-                          sx={{ color: "text.secondary" }}
-                        >
-                          ({Math.floor(eggsToday / 30)} bandejas)
-                        </Typography>
-                      </Typography>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        sx={{ color: "text.secondary" }}
-                      >
-                        Postura estimada:
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: 800, color: "#16a34a" }}
-                      >
-                        {posturaPct}%
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Box>
-          </Box>
-        )}
       </Box>
 
       {/* Modals */}

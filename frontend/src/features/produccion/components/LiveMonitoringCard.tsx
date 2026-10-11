@@ -10,6 +10,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
+import { CATEGORY_COLORS } from "../../../components/atoms/CategoryBadge";
 import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import RadioButtonCheckedRoundedIcon from "@mui/icons-material/RadioButtonCheckedRounded";
@@ -37,19 +38,6 @@ interface LiveMonitoringCardProps {
   lastUpdated: Date;
   deviceStatus?: DeviceStatus | null;
 }
-
-const CATEGORY_COLORS: Record<
-  string,
-  { bg: string; text: string; border: string }
-> = {
-  Y: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  Ex: { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8" },
-  AA: { bg: "#e0f2fe", text: "#075985", border: "#bae6fd" },
-  A: { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" },
-  B: { bg: "#ffedd5", text: "#9a3412", border: "#fed7aa" },
-  C: { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" },
-  P: { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1" },
-};
 
 export default function LiveMonitoringCard({
   dailyCounts,
@@ -84,15 +72,11 @@ export default function LiveMonitoringCard({
     <Card
       elevation={0}
       sx={{
-        borderRadius: 1.5,
-        border: "1.5px solid",
-        borderColor: isEsp32Connected ? "#22c55e" : "#e2e8f0",
-        backgroundColor: "#fcfdfa",
+        border: "1px solid",
+        borderColor: isEsp32Connected ? "success.main" : "divider",
+        backgroundColor: "background.paper",
         position: "relative",
         overflow: "hidden",
-        boxShadow: isEsp32Connected
-          ? "0 2px 10px rgba(34, 197, 94, 0.08)"
-          : "0 1px 4px rgba(0,0,0,0.04)",
       }}
     >
       {/* Top Banner Header */}
@@ -106,8 +90,8 @@ export default function LiveMonitoringCard({
           justifyContent: "space-between",
           gap: 1.5,
           borderBottom: "1px solid",
-          borderColor: isEsp32Connected ? "#bbf7d0" : "divider",
-          backgroundColor: isEsp32Connected ? "#f0fdf4" : "#faf7f2",
+          borderColor: isEsp32Connected ? "success.light" : "divider",
+          backgroundColor: isEsp32Connected ? "rgba(107, 142, 98, 0.12)" : "background.default",
         }}
       >
         <Box
@@ -134,7 +118,7 @@ export default function LiveMonitoringCard({
           >
             <RadioButtonCheckedRoundedIcon
               sx={{
-                color: isEsp32Connected ? "#16a34a" : "#64748b",
+                color: isEsp32Connected ? "success.main" : "text.secondary",
                 fontSize: 16,
                 animation: isEsp32Connected ? "pulse 2s infinite" : "none",
                 "@keyframes pulse": {
@@ -161,7 +145,7 @@ export default function LiveMonitoringCard({
           <Tooltip
             title={
               isEsp32Connected
-                ? `ESP32 activo en broker MQTT. Última actividad: ${deviceStatus?.lastActivity ? new Date(deviceStatus.lastActivity).toLocaleTimeString() : "reciente"}`
+                ? `ESP32 activo en broker MQTT. Ãšltima actividad: ${deviceStatus?.lastActivity ? new Date(deviceStatus.lastActivity).toLocaleTimeString() : "reciente"}`
                 : "ESP32 no detectado en el broker MQTT. Puedes registrar conteos manualmente."
             }
           >
@@ -171,7 +155,7 @@ export default function LiveMonitoringCard({
                   <WifiRoundedIcon
                     sx={{
                       fontSize: "14px !important",
-                      color: "#16a34a !important",
+                      color: "success.main !important",
                     }}
                   />
                 ) : (
@@ -183,7 +167,7 @@ export default function LiveMonitoringCard({
                   />
                 )
               }
-              label={isEsp32Connected ? "ESP32 En Línea" : "ESP32 Desconectado"}
+              label={isEsp32Connected ? "ESP32 En LÃ­nea" : "ESP32 Desconectado"}
               size="small"
               sx={{
                 fontSize: "0.75rem",
@@ -200,8 +184,8 @@ export default function LiveMonitoringCard({
         </Box>
 
         {/* Controls: Galpon filter, Refresh, Register count button */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
+        <Box sx={{ display: "flex", width: { xs: "100%", sm: "auto" }, flexWrap: "wrap", alignItems: "center", gap: 1 }}>
+          <FormControl size="small" sx={{ minWidth: { xs: 0, sm: 160 }, flex: { xs: "1 1 0", sm: "0 0 auto" } }}>
             <Select
               value={selectedGalponId}
               onChange={(e) =>
@@ -235,7 +219,7 @@ export default function LiveMonitoringCard({
           </FormControl>
 
           <Tooltip
-            title={`Última actualización: ${lastUpdated.toLocaleTimeString()}`}
+            title={`Última Actualización: ${lastUpdated.toLocaleTimeString()}`}
           >
             <IconButton
               size="small"
@@ -246,7 +230,7 @@ export default function LiveMonitoringCard({
                 bgcolor: "#ffffff",
                 border: "1px solid",
                 borderColor: isEsp32Connected ? "#86efac" : "divider",
-                color: isEsp32Connected ? "#16a34a" : "text.secondary",
+                color: isEsp32Connected ? "success.main" : "text.secondary",
                 "&:hover": {
                   bgcolor: isEsp32Connected ? "#dcfce7" : "#f1f5f9",
                 },
@@ -270,6 +254,7 @@ export default function LiveMonitoringCard({
             startIcon={<AddCircleOutlineRoundedIcon />}
             onClick={() => onOpenRegisterModal()}
             sx={{
+              width: { xs: "100%", sm: "auto" },
               borderRadius: 1,
               backgroundColor: "primary.main",
               color: "#ffffff",
@@ -290,59 +275,39 @@ export default function LiveMonitoringCard({
       <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
         <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
           <Grid size={{ xs: 12, md: 4 }}>
-            <Box sx={{ p: { xs: 1.5, sm: 2.5 }, border: "1px solid", borderColor: "divider", borderRadius: 1.25, bgcolor: "#ffffff" }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                Bandejas por categoría de peso
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Producción de hoy · 30 huevos por bandeja
+            <Box sx={{ p: { xs: 1.5, sm: 2.5 }, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}>
+              <Typography variant="h5">
+                Bandejas por Categoría
               </Typography>
               {(() => {
                 const values = categorias.map((cat) => ({
-                  codigo: cat.codigo,
-                  nombre: cat.nombre,
+                  ...cat,
+                  huevos: Math.max(0, categoryCounts[cat.codigo] || 0),
                   bandejas: Math.floor(Math.max(0, categoryCounts[cat.codigo] || 0) / 30),
-                  color: CATEGORY_COLORS[cat.codigo]?.bg ?? "#e2e8f0",
-                }));
-                const maxBandejas = Math.max(1, ...values.map((item) => item.bandejas));
-                const tickStep = Math.max(1, Math.ceil(maxBandejas / 4));
-                const maxY = Math.ceil(maxBandejas / tickStep) * tickStep;
-                const chart = { width: 520, height: 300, left: 44, right: 12, top: 18, bottom: 64 };
-                const plotWidth = chart.width - chart.left - chart.right;
-                const plotHeight = chart.height - chart.top - chart.bottom;
-                const ticks = Array.from({ length: maxY / tickStep + 1 }, (_, i) => i * tickStep);
-                const slotWidth = plotWidth / Math.max(values.length, 1);
-                const barWidth = Math.min(42, slotWidth * 0.58);
+                })).sort((a, b) => b.huevos - a.huevos);
+                const maxHuevos = Math.max(1, ...values.map((item) => item.huevos));
 
                 return (
-                  <Box sx={{ mt: 1, width: "100%", overflowX: "auto" }}>
-                    <svg role="img" aria-label="Gráfica de bandejas por categoría de peso" viewBox={`0 0 ${chart.width} ${chart.height}`} style={{ display: "block", width: "100%", minWidth: 380, height: "auto" }}>
-                      {ticks.map((tick) => {
-                        const y = chart.top + plotHeight - (tick / maxY) * plotHeight;
-                        return (
-                          <g key={tick}>
-                            <line x1={chart.left} x2={chart.width - chart.right} y1={y} y2={y} stroke="#e2e8f0" strokeDasharray={tick === 0 ? undefined : "4 4"} />
-                            <text x={chart.left - 10} y={y + 4} textAnchor="end" fill="#64748b" fontSize="12">{tick}</text>
-                          </g>
-                        );
-                      })}
-                      <text transform={`translate(14 ${chart.top + plotHeight / 2}) rotate(-90)`} textAnchor="middle" fill="#475569" fontSize="12" fontWeight="600">Bandejas</text>
-                      {values.map((item, index) => {
-                        const height = (item.bandejas / maxY) * plotHeight;
-                        const x = chart.left + slotWidth * index + (slotWidth - barWidth) / 2;
-                        const y = chart.top + plotHeight - height;
-                        const centerX = chart.left + slotWidth * index + slotWidth / 2;
-                        return (
-                          <g key={item.codigo}>
-                            <title>{`${item.nombre}: ${item.bandejas} bandejas`}</title>
-                            <rect x={x} y={y} width={barWidth} height={Math.max(height, 1)} rx="5" fill={item.color} opacity="0.85" />
-                            <text x={centerX} y={Math.max(chart.top + 12, y - 6)} textAnchor="middle" fill="#334155" fontSize="12" fontWeight="700">{item.bandejas}</text>
-                            <text x={centerX} y={chart.height - 25} textAnchor="middle" fill="#475569" fontSize="12">{item.codigo}</text>
-                          </g>
-                        );
-                      })}
-                      <text x={chart.left + plotWidth / 2} y={chart.height - 5} textAnchor="middle" fill="#475569" fontSize="12" fontWeight="600">Categoría de peso</text>
-                    </svg>
+                  <Box role="list" aria-label="Produccion por categoria, de mayor a menor" sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1.25 }}>
+                    {values.map((item) => {
+                      const color = CATEGORY_COLORS[item.codigo]?.border ?? "#9A8E80";
+                      const share = totalCount > 0 ? Math.round((item.huevos / totalCount) * 100) : 0;
+                      const barWidth = (item.huevos / maxHuevos) * 100;
+                      return (
+                        <Box key={item.codigo} role="listitem">
+                          <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center", gap: 1, mb: 0.5 }}>
+                            <Box sx={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 0.75 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.nombre}</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{share}%</Typography>
+                            </Box>
+                            <Typography sx={{ color, fontWeight: 800, whiteSpace: "nowrap" }}>{item.bandejas} <Typography component="span" variant="caption" color="text.secondary">bandejas</Typography></Typography>
+                          </Box>
+                          <Box role="progressbar" aria-label={`${item.nombre}: ${share}% de la produccion`} aria-valuemin={0} aria-valuemax={maxHuevos} aria-valuenow={item.huevos} sx={{ height: 9, borderRadius: 5, bgcolor: "background.default", overflow: "hidden" }}>
+                            <Box sx={{ width: `${barWidth}%`, height: "100%", minWidth: item.huevos > 0 ? 4 : 0, borderRadius: 5, bgcolor: color, transition: "width 240ms ease" }} />
+                          </Box>
+                        </Box>
+                      );
+                    })}
                   </Box>
                 );
               })()}
@@ -361,13 +326,13 @@ export default function LiveMonitoringCard({
                     ? ((count / totalCount) * 100).toFixed(0)
                     : "0";
                 const colorInfo = CATEGORY_COLORS[cat.codigo] || {
-                  bg: "#f8fafc",
-                  text: "#334155",
-                  border: "#e2e8f0",
+                  bg: "#F0ECE7",
+                  text: "#51483F",
+                  border: "#9A8E80",
                 };
 
                 return (
-                  <Grid key={cat.codigo} size={{ xs: 6, sm: 4, md: 4, lg: 3 }}>
+                  <Grid key={cat.codigo} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                     <Box
                       sx={{
                         p: 1.5,
@@ -378,12 +343,6 @@ export default function LiveMonitoringCard({
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
-                        transition: "all 0.15s ease-in-out",
-                        "&:hover": {
-                          borderColor: "primary.main",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                          transform: "translateY(-1px)",
-                        },
                       }}
                     >
                       {/* Category Header */}
@@ -426,8 +385,9 @@ export default function LiveMonitoringCard({
                           my: 0.5,
                           p: 1,
                           borderRadius: 1,
-                          bgcolor: "#faf7f2",
-                          border: "1px solid #f0e6dc",
+                          bgcolor: "background.default",
+                          border: "1px solid",
+                          borderColor: "divider",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-around",
@@ -496,32 +456,17 @@ export default function LiveMonitoringCard({
                         </Box>
                       </Box>
 
-                      {/* Quick Adjust Buttons & Gram range */}
+                      {/* Quick adjustment controls */}
                       <Box
                         sx={{
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "space-between",
+                          justifyContent: "flex-end",
                           pt: 0.8,
                           mt: 0.5,
                           borderTop: "1px dashed #f1f5f9",
                         }}
                       >
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "text.disabled",
-                            fontSize: "0.65rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {cat.pesoMinG
-                            ? `${cat.pesoMinG}g+`
-                            : cat.pesoMaxG
-                              ? `<${cat.pesoMaxG}g`
-                              : ""}
-                        </Typography>
-
                         <Box sx={{ display: "flex", gap: 0.5 }}>
                           <Tooltip title="Descontar / Descarte (-1)">
                             <IconButton
@@ -560,8 +505,8 @@ export default function LiveMonitoringCard({
                                 height: 22,
                                 p: 0,
                                 borderRadius: 0.8,
-                                bgcolor: "#f0fdf4",
-                                color: "#16a34a",
+                                bgcolor: "rgba(107, 142, 98, 0.12)",
+                                color: "success.main",
                                 border: "1px solid #bbf7d0",
                                 "&:hover": { bgcolor: "#dcfce7" },
                                 "&.Mui-disabled": { opacity: 0.4 },

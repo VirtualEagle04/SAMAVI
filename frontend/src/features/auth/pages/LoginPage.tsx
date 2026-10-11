@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom"
 import Typography from "@mui/material/Typography"
 import AuthLayout from "../components/AuthLayout"
 import LoginForm from "../components/LoginForm"
-import { useAuthStore } from "../../../stores/authStore"
-import type { Role } from "../../../services/authService"
+import { useAuthStore } from "../stores/authStore"
+import type { Role } from "../services/authService"
 
 function roleToRoute(role: Role): string {
   return role ? "/dashboard" : "/login"
@@ -23,8 +23,8 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <Typography
-        variant="h5"
-        sx={{ mb: 0.5, color: "text.primary", textAlign: "center" }}
+        variant="h2"
+        sx={{ mb: 0.75, color: "text.primary", textAlign: "center", fontSize: { xs: "2rem", sm: "2.375rem" } }}
       >
         Bienvenido
       </Typography>

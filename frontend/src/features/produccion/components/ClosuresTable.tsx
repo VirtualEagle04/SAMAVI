@@ -25,6 +25,18 @@ import type {
   CierreProduccionDia,
   Galpon,
 } from "../types/produccion.types";
+import {
+  productionTableActionsSx,
+  productionTableCardSx,
+  productionTableFiltersSx,
+  productionTableMobileCardSx,
+  productionTableMobilePrimaryTextSx,
+  productionTablePaginationSx,
+  productionTableSx,
+  productionTableTitleSx,
+  productionTableToolbarSx,
+} from "./productionTableStyles";
+import { formatProductionDate } from "./productionDateFormatters";
 
 interface ClosuresTableProps {
   cierres: CierreDiario[];
@@ -57,27 +69,39 @@ export default function ClosuresTable({
   });
 
   const groupedMap = filteredCierres.reduce((groups, row) => {
-        const key = `${row.idGalpon}:${row.fecha.slice(0, 10)}`;
-        const group = groups.get(key) ?? {
-          idGalpon: row.idGalpon,
-          fecha: row.fecha,
-          galpon: row.galpon,
-          categorias: [] as CierreDiario[],
-          cerradoEn: undefined as string | undefined,
-        };
-        group.categorias.push(row);
-        groups.set(key, group);
-        return groups;
-      }, new Map<string, { idGalpon: number; fecha: string; galpon?: Galpon; categorias: CierreDiario[]; cerradoEn?: string }>());
+    const key = `${row.idGalpon}:${row.fecha.slice(0, 10)}`;
+    const group = groups.get(key) ?? {
+      idGalpon: row.idGalpon,
+      fecha: row.fecha,
+      galpon: row.galpon,
+      categorias: [] as CierreDiario[],
+      cerradoEn: undefined as string | undefined,
+    };
+    group.categorias.push(row);
+    groups.set(key, group);
+    return groups;
+  }, new Map<string, { idGalpon: number; fecha: string; galpon?: Galpon; categorias: CierreDiario[]; cerradoEn?: string }>());
   for (const marker of cierresRealizados) {
     const date = marker.fecha.slice(0, 10);
-    if ((selectedDate && date !== selectedDate) || (selectedGalpon !== "all" && marker.idGalpon !== selectedGalpon)) continue;
+    if (
+      (selectedDate && date !== selectedDate) ||
+      (selectedGalpon !== "all" && marker.idGalpon !== selectedGalpon)
+    )
+      continue;
     const key = `${marker.idGalpon}:${date}`;
-    const group = groupedMap.get(key) ?? { idGalpon: marker.idGalpon, fecha: marker.fecha, galpon: marker.galpon, categorias: [], cerradoEn: marker.cerradoEn };
+    const group = groupedMap.get(key) ?? {
+      idGalpon: marker.idGalpon,
+      fecha: marker.fecha,
+      galpon: marker.galpon,
+      categorias: [],
+      cerradoEn: marker.cerradoEn,
+    };
     group.cerradoEn = marker.cerradoEn;
     groupedMap.set(key, group);
   }
-  const groupedCierres = Array.from(groupedMap.values()).sort((a, b) => b.fecha.localeCompare(a.fecha) || a.idGalpon - b.idGalpon);
+  const groupedCierres = Array.from(groupedMap.values()).sort(
+    (a, b) => b.fecha.localeCompare(a.fecha) || a.idGalpon - b.idGalpon,
+  );
 
   const paginatedCierres = groupedCierres.slice(
     page * rowsPerPage,
@@ -94,53 +118,16 @@ export default function ClosuresTable({
   };
 
   return (
-    <Card
-      elevation={0}
-      sx={{
-        borderRadius: 1.5,
-        border: "1px solid",
-        borderColor: "divider",
-        backgroundColor: "background.paper",
-        overflow: "hidden",
-      }}
-    >
+    <Card elevation={0} sx={productionTableCardSx}>
       {/* Header Toolbar */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1.5,
-        }}
-      >
+      <Box sx={productionTableToolbarSx}>
         <Box>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 800, color: "text.primary", fontSize: "1.1rem" }}
-          >
-            Cierres Diarios
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", fontSize: "0.825rem" }}
-          >
-            Liquidación de producción consolidada en bandejas de 30 unidades y
-            sobrantes
+          <Typography variant="h6" sx={productionTableTitleSx}>
+            Historial de Cierres Diarios
           </Typography>
         </Box>
 
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 1.2,
-          }}
-        >
+        <Box sx={productionTableActionsSx}>
           {/* Date filter */}
           <TextField
             type="date"
@@ -151,18 +138,26 @@ export default function ClosuresTable({
               setPage(0);
             }}
             sx={{
-              minWidth: 150,
+              width: { xs: "calc(50% - 4px)", sm: 150 },
+              minWidth: 0,
               "& .MuiInputBase-root": {
-                minHeight: 38,
+                minHeight: 40,
                 borderRadius: 1,
-                bgcolor: "#ffffff",
-                fontSize: "0.85rem",
+                bgcolor: "background.paper",
+                fontSize: "0.875rem",
               },
             }}
           />
 
           {/* Galpon Filter */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl
+            size="small"
+            sx={{
+              ...productionTableFiltersSx,
+              width: { xs: "calc(50% - 4px)", sm: 140 },
+              minWidth: 0,
+            }}
+          >
             <Select
               value={selectedGalpon}
               onChange={(e) => {
@@ -173,10 +168,10 @@ export default function ClosuresTable({
               }}
               sx={{
                 borderRadius: 1,
-                minHeight: 38,
-                fontSize: "0.85rem",
+                minHeight: 40,
+                fontSize: "0.875rem",
                 fontWeight: 600,
-                bgcolor: "#ffffff",
+                bgcolor: "background.paper",
               }}
             >
               <MenuItem value="all">Todos los galpones</MenuItem>
@@ -198,10 +193,11 @@ export default function ClosuresTable({
                 borderRadius: 1,
                 backgroundColor: "primary.main",
                 color: "#ffffff",
-                fontSize: "0.85rem",
+                fontSize: "0.875rem",
                 fontWeight: 700,
                 px: 1.8,
-                minHeight: 38,
+                width: { xs: "100%", sm: "auto" },
+                minHeight: 40,
                 boxShadow: "none",
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
@@ -212,10 +208,137 @@ export default function ClosuresTable({
         </Box>
       </Box>
 
-      {/* Table */}
-      <TableContainer>
-        <Table sx={{ minWidth: 700 }} aria-label="tabla de cierres diarios">
-          <TableHead sx={{ bgcolor: "#faf7f2" }}>
+      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+        {paginatedCierres.length === 0 ? (
+          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+            <Typography sx={{ fontWeight: 600 }}>
+              No hay cierres para estos filtros
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              Realiza un cierre diario para consolidar la producción.
+            </Typography>
+          </Box>
+        ) : (
+          paginatedCierres.map((group) => {
+            const barn =
+              group.galpon ?? galpones.find((g) => g.id === group.idGalpon);
+            const trays = group.categorias.reduce(
+              (sum, row) => sum + row.cantidadBandejas,
+              0,
+            );
+            const units = group.categorias.reduce(
+              (sum, row) =>
+                sum + row.cantidadBandejas * 30 + row.cantidadSobrante,
+              0,
+            );
+            const leftovers = group.categorias.reduce(
+              (sum, row) => sum + row.cantidadSobrante,
+              0,
+            );
+            return (
+              <Box
+                key={`${group.idGalpon}-${group.fecha}`}
+                sx={productionTableMobileCardSx}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Box>
+                    <Typography sx={productionTableMobilePrimaryTextSx}>
+                      {barn?.nombre ?? `Galpón ${group.idGalpon}`}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatProductionDate(group.fecha)}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    size="small"
+                    label={group.cerradoEn ? "Cerrado" : "Consolidado"}
+                    color="success"
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 0.75,
+                    mt: 1.25,
+                  }}
+                >
+                  {group.categorias.length === 0 ? (
+                    <Chip
+                      size="small"
+                      label="Sin producción"
+                      variant="outlined"
+                    />
+                  ) : (
+                    group.categorias.map((row) => {
+                      const category =
+                        row.categoriaPeso ??
+                        categorias.find(
+                          (cat) => cat.codigo === row.codigoCategoriaPeso,
+                        );
+                      return (
+                        <CategoryBadge
+                          key={row.codigoCategoriaPeso}
+                          codigo={row.codigoCategoriaPeso}
+                          nombre={category?.nombre ?? row.codigoCategoriaPeso}
+                          cantidad={row.cantidadBandejas}
+                        />
+                      );
+                    })
+                  )}
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mt: 1.25,
+                    pt: 1,
+                    borderTop: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Bandejas
+                    </Typography>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      {trays.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: "center" }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Sobrantes
+                    </Typography>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      {leftovers} uds
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: "right" }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Total
+                    </Typography>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      {units.toLocaleString()} uds
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            );
+          })
+        )}
+      </Box>
+
+      {/* Desktop table */}
+      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+        <Table sx={productionTableSx} aria-label="tabla de cierres diarios">
+          <TableHead>
             <TableRow>
               <TableCell
                 sx={{
@@ -316,13 +439,7 @@ export default function ClosuresTable({
               </TableRow>
             ) : (
               paginatedCierres.map((group, idx) => {
-                const dateObj = new Date(group.fecha);
-                const dateStr = dateObj.toLocaleDateString("es-CO", {
-                  timeZone: "UTC",
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                });
+                const dateStr = formatProductionDate(group.fecha);
 
                 const galponObj =
                   group.galpon ?? galpones.find((g) => g.id === group.idGalpon);
@@ -362,21 +479,31 @@ export default function ClosuresTable({
                           maxWidth: 360,
                         }}
                       >
-                        {group.categorias.length === 0 ? <Chip size="small" label="Sin producción" variant="outlined" /> : group.categorias.map((row) => {
-                          const catObj =
-                            row.categoriaPeso ??
-                            categorias.find(
-                              (c) => c.codigo === row.codigoCategoriaPeso,
+                        {group.categorias.length === 0 ? (
+                          <Chip
+                            size="small"
+                            label="Sin producción"
+                            variant="outlined"
+                          />
+                        ) : (
+                          group.categorias.map((row) => {
+                            const catObj =
+                              row.categoriaPeso ??
+                              categorias.find(
+                                (c) => c.codigo === row.codigoCategoriaPeso,
+                              );
+                            return (
+                              <CategoryBadge
+                                key={row.codigoCategoriaPeso}
+                                codigo={row.codigoCategoriaPeso}
+                                nombre={
+                                  catObj?.nombre ?? row.codigoCategoriaPeso
+                                }
+                                cantidad={row.cantidadBandejas}
+                              />
                             );
-                          return (
-                            <CategoryBadge
-                              key={row.codigoCategoriaPeso}
-                              codigo={row.codigoCategoriaPeso}
-                              nombre={catObj?.nombre ?? row.codigoCategoriaPeso}
-                              cantidad={row.cantidadBandejas}
-                            />
-                          );
-                        })}
+                          })
+                        )}
                       </Box>
                     </TableCell>
 
@@ -419,9 +546,10 @@ export default function ClosuresTable({
                           fontWeight: 700,
                           fontSize: "0.75rem",
                           borderRadius: 0.8,
-                          bgcolor: "#f0fdf4",
-                          color: "#166534",
-                          border: "1px solid #86efac",
+                          bgcolor: "rgba(107, 142, 98, 0.12)",
+                          color: "success.dark",
+                          border: "1px solid",
+                          borderColor: "success.light",
                         }}
                       />
                     </TableCell>
@@ -446,7 +574,7 @@ export default function ClosuresTable({
         labelDisplayedRows={({ from, to, count }) =>
           `${from}-${to} de ${count}`
         }
-        sx={{ borderTop: "1px solid", borderColor: "divider" }}
+        sx={productionTablePaginationSx}
       />
     </Card>
   );
