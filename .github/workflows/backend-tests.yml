@@ -1,0 +1,53 @@
+name: Backend Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/backend-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      PORT: 3001
+      DATABASE_URL: postgresql://samavi:samavi@localhost:25432/samavi
+      JWT_SECRET: LZopXdJ2QsvUl6o1TY5AckxKctQPTGl7efHgNx0ktZn
+      JWT_EXPIRES_IN: 1h
+      MQTT_URL: mqtt://localhost:1883
+      MQTT_TOPIC: samavi/conteo
+      MQTT_CLIENT_ID: samavi-backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Setup environment file
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix backend ci
+
+      - name: Generate Prisma client
+        run: npm --prefix backend run prisma:generate
+
+      - name: Run unit tests
+        run: npm --prefix backend run test:once
+

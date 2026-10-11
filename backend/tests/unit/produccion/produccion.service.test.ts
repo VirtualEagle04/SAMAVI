@@ -3,14 +3,17 @@ import { registerCount, listCategorias, closeDailyProduction } from "../../../sr
 import { prisma } from "../../../src/database/prisma.js";
 import { AppError } from "../../../src/shared/errors/app-error.js";
 
-vi.mock("../../../src/database/prisma.js", () => ({
-  prisma: {
-    galpon: { findUnique: vi.fn() },
+vi.mock("../../../src/database/prisma.js", () => {
+  const mockPrisma = {
+    galpon: { findUnique: vi.fn(), findMany: vi.fn() },
     categoriaPeso: { findUnique: vi.fn(), findMany: vi.fn() },
     logConteo: { create: vi.fn(), findMany: vi.fn() },
     cierreDiario: { upsert: vi.fn() },
-  },
-}));
+    cierreProduccionDia: { upsert: vi.fn() },
+    $transaction: vi.fn(async (callback: (tx: typeof mockPrisma) => Promise<unknown>) => callback(mockPrisma)),
+  };
+  return { prisma: mockPrisma };
+});
 
 vi.mock("../../../src/config/env.js", () => ({
   env: {
@@ -23,11 +26,13 @@ vi.mock("../../../src/config/env.js", () => ({
 }));
 
 const mockFindUniqueGalpon = prisma.galpon.findUnique as ReturnType<typeof vi.fn>;
+const mockFindManyGalpon = prisma.galpon.findMany as ReturnType<typeof vi.fn>;
 const mockFindUniqueCategoria = prisma.categoriaPeso.findUnique as ReturnType<typeof vi.fn>;
 const mockFindManyCategoria = prisma.categoriaPeso.findMany as ReturnType<typeof vi.fn>;
 const mockLogConteoCreate = prisma.logConteo.create as ReturnType<typeof vi.fn>;
 const mockLogConteoFindMany = prisma.logConteo.findMany as ReturnType<typeof vi.fn>;
 const mockCierreDiarioUpsert = prisma.cierreDiario.upsert as ReturnType<typeof vi.fn>;
+const mockCierreProduccionDiaUpsert = prisma.cierreProduccionDia.upsert as ReturnType<typeof vi.fn>;
 
 const BASE_INPUT = {
   galponId: 1,
@@ -36,7 +41,12 @@ const BASE_INPUT = {
   timestamp: new Date("2026-09-25T10:00:00Z"),
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+  mockCierreDiarioUpsert.mockResolvedValue({ id: 1 });
+  mockCierreProduccionDiaUpsert.mockResolvedValue({ id: 1 });
+});
 
 // ─── registerCount ────────────────────────────────────────────────────────────
 
@@ -237,23 +247,58 @@ describe("produccion.service → closeDailyProduction()", () => {
   });
 
   it("filtra por galponId cuando se proporciona", async () => {
+    mockFindManyGalpon.mockResolvedValue([{ id: 3 }]);
     mockLogConteoFindMany.mockResolvedValue([]);
 
     await closeDailyProduction({ fecha: "2026-09-25", galponId: 3 });
 
+    expect(mockFindManyGalpon).toHaveBeenCalledWith({
+      where: { id: 3 },
+      select: { id: true },
+    });
     expect(mockLogConteoFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ idGalpon: 3 }),
+        where: expect.objectContaining({ idGalpon: { in: [3] } }),
       })
     );
   });
 
-  it("no filtra por galponId cuando no se proporciona", async () => {
+  it("filtra por galpones activos cuando no se proporciona galponId", async () => {
+    mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
     mockLogConteoFindMany.mockResolvedValue([]);
 
     await closeDailyProduction({ fecha: "2026-09-25" });
 
-    const callArg = mockLogConteoFindMany.mock.calls[0][0];
-    expect(callArg.where).not.toHaveProperty("idGalpon");
+    expect(mockFindManyGalpon).toHaveBeenCalledWith({
+      where: { estado: "activo" },
+      select: { id: true },
+    });
+    expect(mockLogConteoFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ idGalpon: { in: [1, 2] } }),
+      })
+    );
+  });
+
+  it("lanza AppError 404 si el galpón especificado no existe", async () => {
+    mockFindManyGalpon.mockResolvedValue([]);
+
+    await expect(closeDailyProduction({ fecha: "2026-09-25", galponId: 99 })).rejects.toThrow(
+      new AppError(404, "Galpón no encontrado")
+    );
+  });
+
+  it("registra cierreProduccionDia para cada galpón involucrado", async () => {
+    mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    mockLogConteoFindMany.mockResolvedValue([]);
+
+    await closeDailyProduction({ fecha: "2026-09-25" });
+
+    expect(mockCierreProduccionDiaUpsert).toHaveBeenCalledTimes(2);
+    expect(mockCierreProduccionDiaUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { idGalpon_fecha: { idGalpon: 1, fecha: new Date("2026-09-25T00:00:00.000Z") } },
+      })
+    );
   });
 });

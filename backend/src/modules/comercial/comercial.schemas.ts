@@ -163,6 +163,9 @@ export function parseVentaInput(body: unknown): VentaInput {
   if (!Array.isArray(body.distribucion)) {
     throw new AppError(400, "distribucion debe ser una lista");
   }
+  if (body.distribucion.length === 0) {
+    throw new AppError(400, "distribucion debe contener al menos un elemento");
+  }
   const distribucion = body.distribucion.map((item, index) => {
     if (!isRecord(item)) {
       throw new AppError(400, `distribucion[${index}] es inválida`);
