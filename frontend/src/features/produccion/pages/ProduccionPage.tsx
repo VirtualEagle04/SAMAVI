@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
+import ModuleTabs from "../../../components/molecules/ModuleTabs";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import Snackbar from "@mui/material/Snackbar";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import FormatListNumberedRoundedIcon from "@mui/icons-material/FormatListNumberedRounded";
@@ -326,44 +325,15 @@ export default function ProduccionPage() {
 
       {/* 3. SERIOUS DATA TABLES & ANALYTICS SECTION */}
       <Box sx={{ mt: 1 }}>
-        <Box sx={{ borderBottom: "1px solid", borderColor: "divider", mb: 2, overflowX: "auto" }}>
-          <Tabs
-            value={activeTab}
-            onChange={(_e, val) => setActiveTab(val)}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              "& .MuiTab-root": {
-                textTransform: "none",
-                fontWeight: 700,
-                fontSize: "0.95rem",
-                minHeight: 48,
-                px: 2,
-                borderRadius: 2,
-                whiteSpace: "nowrap",
-              },
-            }}
-          >
-            <Tab
-              icon={<FormatListNumberedRoundedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Conteos en Vivo"
-            />
-            <Tab
-              icon={<HistoryRoundedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Cierres Diarios"
-            />
-            <Tab
-              icon={<Inventory2RoundedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Bodegas"
-            />
-          </Tabs>
-        </Box>
+        <ModuleTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { label: "Conteos en Vivo", icon: <FormatListNumberedRoundedIcon sx={{ fontSize: 18 }} /> },
+            { label: "Cierres Diarios", icon: <HistoryRoundedIcon sx={{ fontSize: 18 }} /> },
+            { label: "Bodegas", icon: <Inventory2RoundedIcon sx={{ fontSize: 18 }} /> },
+          ]}
+        />
 
         {/* Tab 0: Conteos */}
         {activeTab === 0 && (

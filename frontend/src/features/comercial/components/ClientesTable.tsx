@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import { pluralize, pluralWord } from "../../../utils/plural";
+import EmptyState from "../../../components/molecules/EmptyState";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
-import InputAdornment from "@mui/material/InputAdornment";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -11,22 +13,21 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import PaidOutlinedIcon from "@mui/icons-material/PaidOutlined";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import type { Mayorista, Pedido } from "../types/comercial.types";
+import TableToolbar from "../../../components/molecules/TableToolbar";
+import { useTableFilters } from "../../../hooks/useTableFilters";
 import {
-  commercialTableActionsSx,
-  commercialTableCardSx,
-  commercialTableDescriptionSx,
-  commercialTableMobileCardSx,
-  commercialTableMobilePrimaryTextSx,
-  commercialTablePaginationSx,
-  commercialTableSx,
-  commercialTableTitleSx,
-  commercialTableToolbarSx,
-} from "./commercialTableStyles";
+  tableCardSx,
+  tableMobileCardSx,
+  tableMobilePrimaryTextSx,
+  tablePaginationLabels,
+  tablePaginationSx,
+  tableSx,
+} from "../../../components/tableStyles";
+
+const NO_FILTER_KEYS = [] as const;
 
 interface ClientesTableProps {
   mayoristas: Mayorista[];
@@ -43,9 +44,8 @@ export default function ClientesTable({
   onOpenPrices,
   priceCounts,
 }: ClientesTableProps) {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const tableState = useTableFilters(NO_FILTER_KEYS);
+  const { search } = tableState;
 
   const filteredClients = useMemo(() => {
     const searchLower = search.toLowerCase().trim();
@@ -64,81 +64,38 @@ export default function ClientesTable({
     });
   }, [mayoristas, search]);
 
-  const clientRows = filteredClients.slice(
-    page * rowsPerPage,
-    (page + 1) * rowsPerPage,
-  );
+  const { rows: clientRows, page } = tableState.paginate(filteredClients);
 
   return (
-    <Card elevation={0} sx={commercialTableCardSx}>
-      {/* Toolbar */}
-      <Box sx={commercialTableToolbarSx}>
-        <Box>
-          <Typography variant="h6" sx={commercialTableTitleSx}>
-            Clientes Mayoristas
-          </Typography>
-          <Typography variant="body2" sx={commercialTableDescriptionSx}>
-            {filteredClients.length} clientes registrados en el sistema.
-          </Typography>
-        </Box>
+    <Card elevation={0} sx={tableCardSx}>
+      <TableToolbar
+        title="Clientes Mayoristas"
+        description={`${pluralize(filteredClients.length, "cliente registrado", "clientes registrados")} en el sistema.`}
+        search={{
+          value: search,
+          onChange: tableState.setSearch,
+          placeholder: "Buscar por cliente, ubicación o teléfono...",
+        }}
+      />
 
-        <Box sx={commercialTableActionsSx}>
-          <TextField
-            placeholder="Buscar por cliente, ubicación o teléfono..."
-            size="small"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRoundedIcon
-                      fontSize="small"
-                      sx={{ color: "text.disabled" }}
-                    />
-                  </InputAdornment>
-                ),
-              },
-            }}
-            sx={{
-              width: { xs: "100%", sm: 280 },
-              "& .MuiInputBase-root": {
-                minHeight: 40,
-                bgcolor: "background.paper",
-                fontSize: "0.875rem",
-              },
-            }}
-          />
-        </Box>
-      </Box>
-
-      {/* Mobile Card List View */}
-      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
-        {clientRows.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-            <Typography sx={{ fontWeight: 600 }}>
-              {mayoristas.length === 0
-                ? "No hay clientes registrados"
-                : "No se encontraron clientes"}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {mayoristas.length === 0
-                ? "Registra nuevos clientes mayoristas desde la creación de pedidos."
-                : "Verifica el término de búsqueda."}
-            </Typography>
-          </Box>
-        ) : (
-          clientRows.map((client) => {
+      {clientRows.length === 0 ? (
+        <EmptyState
+          icon={<PeopleAltOutlinedIcon />}
+          title={mayoristas.length === 0 ? "No hay clientes registrados" : "No se encontraron clientes"}
+          description={mayoristas.length === 0 ? "Registra nuevos clientes mayoristas desde la creación de pedidos." : "Verifica el término de búsqueda."}
+        />
+      ) : (
+        <>
+        {/* Mobile Card List View */}
+        <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+          {clientRows.map((client) => {
             const contact = client.contacto?.telefono;
             const clientOrdersCount = pedidos.filter(
               (p) => p.idMayorista === client.id,
             ).length;
 
             return (
-              <Box key={client.id} sx={commercialTableMobileCardSx}>
+              <Box key={client.id} sx={tableMobileCardSx}>
                 <Box
                   sx={{
                     display: "flex",
@@ -149,7 +106,7 @@ export default function ClientesTable({
                   }}
                 >
                   <Box>
-                    <Typography sx={commercialTableMobilePrimaryTextSx}>
+                    <Typography sx={tableMobilePrimaryTextSx}>
                       {client.nombre}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -159,7 +116,7 @@ export default function ClientesTable({
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={`${clientOrdersCount} pedidos`}
+                    label={pluralize(clientOrdersCount, "pedido")}
                   />
                 </Box>
 
@@ -188,7 +145,7 @@ export default function ClientesTable({
                     </Typography>
                     <Typography sx={{ fontWeight: 600, fontSize: "0.85rem" }}>
                       {priceCounts[client.id] !== undefined
-                        ? `${priceCounts[client.id]} categorias`
+                        ? pluralize(priceCounts[client.id], "categoría", "categorías")
                         : "Sin consultar"}
                     </Typography>
                   </Box>
@@ -208,41 +165,24 @@ export default function ClientesTable({
                 )}
               </Box>
             );
-          })
-        )}
-      </Box>
+          })}
+        </Box>
 
-      {/* Desktop Table View */}
-      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
-        <Table sx={commercialTableSx} aria-label="Tabla de clientes mayoristas">
-          <TableHead>
-            <TableRow>
-              <TableCell>CLIENTE</TableCell>
-              <TableCell>UBICACIÓN</TableCell>
-              <TableCell>CONTACTO</TableCell>
-              <TableCell align="center">PEDIDOS</TableCell>
-              <TableCell align="center">PRECIOS</TableCell>
-              <TableCell align="center">ACCIONES</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {clientRows.length === 0 ? (
+        {/* Desktop Table View */}
+        <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+          <Table sx={tableSx} aria-label="Tabla de clientes mayoristas">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    {mayoristas.length === 0
-                      ? "No hay clientes registrados"
-                      : "No se encontraron clientes"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {mayoristas.length === 0
-                      ? "Registra nuevos clientes mayoristas desde la creación de pedidos."
-                      : "Verifica el término de búsqueda."}
-                  </Typography>
-                </TableCell>
+                <TableCell>CLIENTE</TableCell>
+                <TableCell>UBICACIÓN</TableCell>
+                <TableCell>CONTACTO</TableCell>
+                <TableCell align="center">PEDIDOS</TableCell>
+                <TableCell align="center">PRECIOS</TableCell>
+                <TableCell align="center">ACCIONES</TableCell>
               </TableRow>
-            ) : (
-              clientRows.map((client) => {
+            </TableHead>
+            <TableBody>
+              {clientRows.map((client) => {
                 const contact = client.contacto?.telefono;
                 const clientOrdersCount = pedidos.filter(
                   (p) => p.idMayorista === client.id,
@@ -264,12 +204,12 @@ export default function ClientesTable({
                         variant="caption"
                         color="text.secondary"
                       >
-                        pedidos
+                        {pluralWord(clientOrdersCount, "pedido")}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
                       {priceCounts[client.id] !== undefined
-                        ? `${priceCounts[client.id]} categorias`
+                        ? pluralize(priceCounts[client.id], "categoría", "categorías")
                         : "Sin consultar"}
                     </TableCell>
                     <TableCell align="center">
@@ -286,29 +226,26 @@ export default function ClientesTable({
                     </TableCell>
                   </TableRow>
                 );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <TablePagination
-        component="div"
-        rowsPerPageOptions={[10, 25, 50]}
-        count={filteredClients.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={(_, value) => setPage(value)}
-        onRowsPerPageChange={(e) => {
-          setRowsPerPage(Number(e.target.value));
-          setPage(0);
-        }}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count}`
-        }
-        sx={commercialTablePaginationSx}
-      />
+        <TablePagination
+          component="div"
+          rowsPerPageOptions={[10, 25, 50]}
+          count={filteredClients.length}
+          rowsPerPage={tableState.rowsPerPage}
+          page={page}
+          onPageChange={(_, value) => tableState.setPage(value)}
+          onRowsPerPageChange={(e) => {
+            tableState.setRowsPerPage(Number(e.target.value));
+          }}
+          {...tablePaginationLabels}
+          sx={tablePaginationSx}
+        />
+        </>
+      )}
     </Card>
   );
 }

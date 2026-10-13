@@ -185,7 +185,7 @@ export default function LiveMonitoringCard({
 
         {/* Controls: Galpon filter, Refresh, Register count button */}
         <Box sx={{ display: "flex", width: { xs: "100%", sm: "auto" }, flexWrap: "wrap", alignItems: "center", gap: 1 }}>
-          <FormControl size="small" sx={{ minWidth: { xs: 0, sm: 160 }, flex: { xs: "1 1 0", sm: "0 0 auto" } }}>
+          <FormControl size="small" sx={{ minWidth: { xs: 0, sm: 240 }, flex: { xs: "1 1 0", sm: "0 0 auto" } }}>
             <Select
               value={selectedGalponId}
               onChange={(e) =>
@@ -467,7 +467,7 @@ export default function LiveMonitoringCard({
                           borderTop: "1px dashed #f1f5f9",
                         }}
                       >
-                        <Box sx={{ display: "flex", gap: 0.5 }}>
+                        <Box sx={{ display: "flex", gap: { xs: 1, sm: 0.5 } }}>
                           <Tooltip title="Descontar / Descarte (-1)">
                             <IconButton
                               size="small"
@@ -477,8 +477,8 @@ export default function LiveMonitoringCard({
                                 galpones.length > 1
                               }
                               sx={{
-                                width: 22,
-                                height: 22,
+                                width: { xs: 36, sm: 22 },
+                                height: { xs: 36, sm: 22 },
                                 p: 0,
                                 borderRadius: 0.8,
                                 bgcolor: "#fef2f2",
@@ -488,7 +488,7 @@ export default function LiveMonitoringCard({
                                 "&.Mui-disabled": { opacity: 0.4 },
                               }}
                             >
-                              <RemoveRoundedIcon sx={{ fontSize: 13 }} />
+                              <RemoveRoundedIcon sx={{ fontSize: { xs: 18, sm: 13 } }} />
                             </IconButton>
                           </Tooltip>
 
@@ -501,8 +501,8 @@ export default function LiveMonitoringCard({
                                 galpones.length > 1
                               }
                               sx={{
-                                width: 22,
-                                height: 22,
+                                width: { xs: 36, sm: 22 },
+                                height: { xs: 36, sm: 22 },
                                 p: 0,
                                 borderRadius: 0.8,
                                 bgcolor: "rgba(107, 142, 98, 0.12)",
@@ -512,7 +512,7 @@ export default function LiveMonitoringCard({
                                 "&.Mui-disabled": { opacity: 0.4 },
                               }}
                             >
-                              <AddRoundedIcon sx={{ fontSize: 13 }} />
+                              <AddRoundedIcon sx={{ fontSize: { xs: 18, sm: 13 } }} />
                             </IconButton>
                           </Tooltip>
                         </Box>

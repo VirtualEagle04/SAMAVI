@@ -10,6 +10,7 @@ import PaidRoundedIcon from "@mui/icons-material/PaidRounded";
 import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import ShoppingBagRoundedIcon from "@mui/icons-material/ShoppingBagRounded";
+import { pluralize, pluralWord } from "../../../utils/plural";
 import type { Mayorista, Pedido } from "../types/comercial.types";
 
 export interface CommercialKpiCardsProps {
@@ -86,7 +87,11 @@ export default function CommercialKpiCards({
       label: "VENTAS REGISTRADAS",
       value: formatMoney(salesTotal),
       unit: undefined,
-      caption: `${deliveredSales.length} pedidos entregados`,
+      caption: pluralize(
+        deliveredSales.length,
+        "pedido entregado",
+        "pedidos entregados",
+      ),
       icon: <PaidRoundedIcon sx={{ fontSize: 18 }} />,
       iconBg: "rgba(107, 142, 98, 0.12)",
       iconColor: "success.main",
@@ -96,7 +101,7 @@ export default function CommercialKpiCards({
     {
       label: "BANDEJAS VENDIDAS",
       value: soldTrays.toLocaleString("en-US"),
-      unit: "bandejas",
+      unit: pluralWord(soldTrays, "bandeja"),
       caption: "Total despachado en ventas",
       icon: <Inventory2RoundedIcon sx={{ fontSize: 18 }} />,
       iconBg: "rgba(33, 150, 243, 0.12)",
@@ -118,7 +123,7 @@ export default function CommercialKpiCards({
     {
       label: "POR PREPARAR",
       value: counts.pending.toLocaleString("en-US"),
-      unit: "pedidos",
+      unit: pluralWord(counts.pending, "pedido"),
       caption: "Pedidos recibidos en espera de carga",
       icon: <PendingActionsRoundedIcon sx={{ fontSize: 18 }} />,
       iconBg: "warning.light",
@@ -129,7 +134,7 @@ export default function CommercialKpiCards({
     {
       label: "LISTOS PARA ENTREGA",
       value: counts.ready.toLocaleString("en-US"),
-      unit: "pedidos",
+      unit: pluralWord(counts.ready, "pedido"),
       caption: "Pendientes de registrar venta",
       icon: <LocalShippingRoundedIcon sx={{ fontSize: 18 }} />,
       iconBg: "rgba(33, 150, 243, 0.12)",
@@ -140,8 +145,8 @@ export default function CommercialKpiCards({
     {
       label: "CLIENTES MAYORISTAS",
       value: mayoristas.length.toLocaleString("en-US"),
-      unit: "clientes",
-      caption: `${counts.delivered} pedidos entregados a la fecha`,
+      unit: pluralWord(mayoristas.length, "cliente"),
+      caption: `${pluralize(counts.delivered, "pedido entregado", "pedidos entregados")} a la fecha`,
       icon: <PeopleAltRoundedIcon sx={{ fontSize: 18 }} />,
       iconBg: "rgba(156, 39, 176, 0.12)",
       iconColor: "secondary.main",
@@ -156,7 +161,7 @@ export default function CommercialKpiCards({
         const isClickable = Boolean(kpi.state && onSelectFilter);
 
         return (
-          <Grid key={kpi.label} size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid key={kpi.label} size={{ xs: 6, md: 4 }}>
             <Card
               elevation={0}
               onClick={
@@ -181,7 +186,12 @@ export default function CommercialKpiCards({
                   : {}),
               }}
             >
-              <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+              <CardContent
+                sx={{
+                  p: { xs: 1.5, sm: 2 },
+                  "&:last-child": { pb: { xs: 1.5, sm: 2 } },
+                }}
+              >
                 <Box
                   sx={{
                     display: "flex",
@@ -195,7 +205,7 @@ export default function CommercialKpiCards({
                     sx={{
                       fontWeight: 700,
                       color: "text.secondary",
-                      fontSize: "0.8rem",
+                      fontSize: { xs: "0.7rem", sm: "0.8rem" },
                     }}
                   >
                     {kpi.label}
@@ -218,6 +228,8 @@ export default function CommercialKpiCards({
                     fontWeight: 800,
                     color: kpi.valueColor,
                     lineHeight: 1.1,
+                    fontSize: { xs: "1.15rem", sm: "1.5rem" },
+                    overflowWrap: "anywhere",
                   }}
                 >
                   {kpi.value}{" "}

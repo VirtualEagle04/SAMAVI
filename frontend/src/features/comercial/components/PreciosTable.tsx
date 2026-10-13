@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
+import PaidOutlinedIcon from "@mui/icons-material/PaidOutlined";
+import EmptyState from "../../../components/molecules/EmptyState";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
-import FormControl from "@mui/material/FormControl";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -22,16 +21,13 @@ import type {
   Mayorista,
   PrecioMayorista,
 } from "../types/comercial.types";
+import EntitySelect from "../../../components/molecules/EntitySelect";
+import TableToolbar from "../../../components/molecules/TableToolbar";
 import {
-  commercialTableActionsSx,
-  commercialTableCardSx,
-  commercialTableDescriptionSx,
-  commercialTableFiltersSx,
-  commercialTableMobileCardSx,
-  commercialTableSx,
-  commercialTableTitleSx,
-  commercialTableToolbarSx,
-} from "./commercialTableStyles";
+  tableCardSx,
+  tableMobileCardSx,
+  tableSx,
+} from "../../../components/tableStyles";
 
 interface PreciosTableProps {
   mayoristas: Mayorista[];
@@ -106,204 +102,98 @@ export default function PreciosTable({
   const selectedClient = mayoristas.find((m) => m.id === selectedClientId) ?? null;
 
   return (
-    <Card elevation={0} sx={commercialTableCardSx}>
-      {/* Toolbar */}
-      <Box sx={commercialTableToolbarSx}>
-        <Box>
-          <Typography variant="h6" sx={commercialTableTitleSx}>
-            Tarifario de Precios por Mayorista
-          </Typography>
-          <Typography variant="body2" sx={commercialTableDescriptionSx}>
-            Precios por bandeja acordados según clasificación y peso del huevo.
-          </Typography>
-        </Box>
-
-        <Box sx={commercialTableActionsSx}>
-          <FormControl
-            size="small"
-            sx={{
-              ...commercialTableFiltersSx,
-              minWidth: 0,
-              width: { xs: "100%", sm: 220 },
-            }}
-          >
-            <Select
-              value={selectedClientId ?? ""}
-              onChange={(e) => setSelectedClientId(Number(e.target.value))}
+    <Card elevation={0} sx={tableCardSx}>
+      <TableToolbar
+        title="Tarifario de Precios por Mayorista"
+        description="Precios por bandeja acordados según clasificación y peso del huevo."
+        actions={
+          <>
+            <EntitySelect
+              value={selectedClientId}
+              placeholder="Selecciona un mayorista"
+              ariaLabel="Mayorista"
               disabled={mayoristas.length === 0}
-              sx={{
-                minHeight: 40,
-                fontWeight: 600,
-                bgcolor: "background.paper",
-              }}
-            >
-              {mayoristas.map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              options={mayoristas.map((m) => ({ value: m.id, label: m.nombre }))}
+              onChange={setSelectedClientId}
+            />
+            {canEditPrices && selectedClient && (
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<EditRoundedIcon sx={{ fontSize: 18 }} />}
+                onClick={() => onOpenPrices(selectedClient)}
+              >
+                Editar precios
+              </Button>
+            )}
+          </>
+        }
+      />
 
-          {canEditPrices && selectedClient && (
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<EditRoundedIcon sx={{ fontSize: 18 }} />}
-              onClick={() => onOpenPrices(selectedClient)}
-            >
-              Editar precios
-            </Button>
-          )}
-        </Box>
-      </Box>
+      {!loading && mayoristas.length === 0 ? (
+        <EmptyState
+          icon={<PaidOutlinedIcon />}
+          title="No hay clientes mayoristas registrados"
+          description="Registra un cliente mayorista para configurar sus precios."
+        />
+      ) : (
+        <>
+        {/* Mobile Card List View */}
+        <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+          {loading ? (
+            <Box sx={{ py: 5, textAlign: "center" }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : (
+            categorias.map((cat) => {
+              const priceRecord = prices.find(
+                (p) => p.codigoCategoriaPeso === cat.codigo,
+              );
+              const hasPrice =
+                priceRecord !== undefined &&
+                Number(priceRecord.valorUnitario) > 0;
 
-      {/* Mobile Card List View */}
-      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
-        {loading ? (
-          <Box sx={{ py: 5, textAlign: "center" }}>
-            <CircularProgress size={28} />
-          </Box>
-        ) : mayoristas.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-            <Typography sx={{ fontWeight: 600 }}>
-              No hay clientes mayoristas registrados
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Registra un cliente mayorista para configurar sus precios.
-            </Typography>
-          </Box>
-        ) : (
-          categorias.map((cat) => {
-            const priceRecord = prices.find(
-              (p) => p.codigoCategoriaPeso === cat.codigo,
-            );
-            const hasPrice =
-              priceRecord !== undefined &&
-              Number(priceRecord.valorUnitario) > 0;
-
-            return (
-              <Box key={cat.codigo} sx={commercialTableMobileCardSx}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 1,
-                    mb: 0.8,
-                  }}
-                >
-                  <CategoryBadge codigo={cat.codigo} nombre={cat.nombre} />
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    color={hasPrice ? "success" : "default"}
-                    label={hasPrice ? "Configurado" : "Sin definir"}
-                  />
-                </Box>
-
-                <Typography variant="caption" color="text.secondary">
-                  Rango de peso: {formatWeightRange(cat)}
-                </Typography>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 1,
-                    pt: 1,
-                    borderTop: "1px solid",
-                    borderColor: "divider",
-                  }}
-                >
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Precio por bandeja
-                    </Typography>
-                    {hasPrice ? (
-                      <Typography sx={{ fontWeight: 800, fontSize: "1rem" }}>
-                        {formatMoney(Number(priceRecord.valorUnitario))}
-                      </Typography>
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        color="text.disabled"
-                        sx={{ fontStyle: "italic" }}
-                      >
-                        No asignado
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {canEditPrices && selectedClient && (
-                    <Button
+              return (
+                <Box key={cat.codigo} sx={tableMobileCardSx}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 0.8,
+                    }}
+                  >
+                    <CategoryBadge codigo={cat.codigo} nombre={cat.nombre} />
+                    <Chip
                       size="small"
                       variant="outlined"
-                      onClick={() => onOpenPrices(selectedClient)}
-                    >
-                      Modificar
-                    </Button>
-                  )}
-                </Box>
-              </Box>
-            );
-          })
-        )}
-      </Box>
+                      color={hasPrice ? "success" : "default"}
+                      label={hasPrice ? "Configurado" : "Sin definir"}
+                    />
+                  </Box>
 
-      {/* Desktop Table View */}
-      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
-        <Table sx={commercialTableSx} aria-label="Tabla de precios por mayorista">
-          <TableHead>
-            <TableRow>
-              <TableCell>CATEGORÍA</TableCell>
-              <TableCell>RANGO DE PESO</TableCell>
-              <TableCell align="right">PRECIO POR BANDEJA</TableCell>
-              <TableCell align="center">ESTADO</TableCell>
-              <TableCell align="center">ACCIONES</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                  <CircularProgress size={28} />
-                </TableCell>
-              </TableRow>
-            ) : mayoristas.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    No hay clientes mayoristas registrados
+                  <Typography variant="caption" color="text.secondary">
+                    Rango de peso: {formatWeightRange(cat)}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Registra un cliente mayorista para configurar sus precios.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              categorias.map((cat) => {
-                const priceRecord = prices.find(
-                  (p) => p.codigoCategoriaPeso === cat.codigo,
-                );
-                const hasPrice =
-                  priceRecord !== undefined &&
-                  Number(priceRecord.valorUnitario) > 0;
 
-                return (
-                  <TableRow key={cat.codigo} hover>
-                    <TableCell>
-                      <CategoryBadge codigo={cat.codigo} nombre={cat.nombre} />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {formatWeightRange(cat)}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mt: 1,
+                      pt: 1,
+                      borderTop: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Precio por bandeja
                       </Typography>
-                    </TableCell>
-                    <TableCell align="right">
                       {hasPrice ? (
-                        <Typography sx={{ fontWeight: 800 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: "1rem" }}>
                           {formatMoney(Number(priceRecord.valorUnitario))}
                         </Typography>
                       ) : (
@@ -315,32 +205,104 @@ export default function PreciosTable({
                           No asignado
                         </Typography>
                       )}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
+                    </Box>
+
+                    {canEditPrices && selectedClient && (
+                      <Button
                         size="small"
                         variant="outlined"
-                        color={hasPrice ? "success" : "default"}
-                        label={hasPrice ? "Configurado" : "Sin definir"}
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      {canEditPrices && selectedClient && (
-                        <Button
+                        onClick={() => onOpenPrices(selectedClient)}
+                      >
+                        Modificar
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+              );
+            })
+          )}
+        </Box>
+
+        {/* Desktop Table View */}
+        <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+          <Table sx={tableSx} aria-label="Tabla de precios por mayorista">
+            <TableHead>
+              <TableRow>
+                <TableCell>CATEGORÍA</TableCell>
+                <TableCell>RANGO DE PESO</TableCell>
+                <TableCell align="right">PRECIO POR BANDEJA</TableCell>
+                <TableCell align="center">ESTADO</TableCell>
+                <TableCell align="center">ACCIONES</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={28} />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                categorias.map((cat) => {
+                  const priceRecord = prices.find(
+                    (p) => p.codigoCategoriaPeso === cat.codigo,
+                  );
+                  const hasPrice =
+                    priceRecord !== undefined &&
+                    Number(priceRecord.valorUnitario) > 0;
+
+                  return (
+                    <TableRow key={cat.codigo} hover>
+                      <TableCell>
+                        <CategoryBadge codigo={cat.codigo} nombre={cat.nombre} />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {formatWeightRange(cat)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        {hasPrice ? (
+                          <Typography sx={{ fontWeight: 800 }}>
+                            {formatMoney(Number(priceRecord.valorUnitario))}
+                          </Typography>
+                        ) : (
+                          <Typography
+                            variant="body2"
+                            color="text.disabled"
+                            sx={{ fontStyle: "italic" }}
+                          >
+                            No asignado
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip
                           size="small"
-                          onClick={() => onOpenPrices(selectedClient)}
-                        >
-                          Modificar
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                          variant="outlined"
+                          color={hasPrice ? "success" : "default"}
+                          label={hasPrice ? "Configurado" : "Sin definir"}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        {canEditPrices && selectedClient && (
+                          <Button
+                            size="small"
+                            onClick={() => onOpenPrices(selectedClient)}
+                          >
+                            Modificar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        </>
+      )}
     </Card>
   );
 }

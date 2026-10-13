@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import ModuleTabs from "../../../components/molecules/ModuleTabs";
 import AddShoppingCartRoundedIcon from "@mui/icons-material/AddShoppingCartRounded";
-import PaidOutlinedIcon from "@mui/icons-material/PaidOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import Alert from "@mui/material/Alert";
@@ -9,14 +9,11 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import { useAuthStore } from "../../auth/stores/authStore";
 import CommercialKpiCards from "../components/CommercialKpiCards";
 import PedidosTable from "../components/PedidosTable";
 import ClientesTable from "../components/ClientesTable";
-import PreciosTable from "../components/PreciosTable";
 import PedidoDetailsDialog from "../components/PedidoDetailsDialog";
 import PedidoFormDialog from "../components/PedidoFormDialog";
 import PreciosDialog from "../components/PreciosDialog";
@@ -65,7 +62,6 @@ export default function ComercialPage() {
   const [toast, setToast] = useState("");
   const [tab, setTab] = useState(0);
   const [filter, setFilter] = useState("todos");
-  const [priceRefreshKey, setPriceRefreshKey] = useState(0);
   const [orderOpen, setOrderOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Pedido | null>(null);
   const [detailsOrder, setDetailsOrder] = useState<Pedido | null>(null);
@@ -178,7 +174,6 @@ export default function ComercialPage() {
       ...counts,
       [priceClient.id]: (counts[priceClient.id] ?? 0) + 1,
     }));
-    setPriceRefreshKey((k) => k + 1);
     setToast("Precio actualizado.");
   };
   const openSale = async (pedido: Pedido) => {
@@ -278,51 +273,14 @@ export default function ComercialPage() {
 
       {/* TABS & DATA TABLES SECTION */}
       <Box sx={{ mt: 1 }}>
-        <Box
-          sx={{
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            mb: 2,
-            overflowX: "auto",
-          }}
-        >
-          <Tabs
-            value={tab}
-            onChange={(_e, val) => setTab(val)}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              "& .MuiTab-root": {
-                textTransform: "none",
-                fontWeight: 700,
-                fontSize: "0.95rem",
-                minHeight: 48,
-                px: 2,
-                borderRadius: 2,
-                whiteSpace: "nowrap",
-              },
-            }}
-          >
-            <Tab
-              icon={<ShoppingBagOutlinedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Pedidos"
-            />
-            <Tab
-              icon={<PeopleAltOutlinedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Clientes"
-            />
-            <Tab
-              icon={<PaidOutlinedIcon sx={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="Precios"
-            />
-          </Tabs>
-        </Box>
+        <ModuleTabs
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { label: "Pedidos", icon: <ShoppingBagOutlinedIcon sx={{ fontSize: 18 }} /> },
+            { label: "Clientes", icon: <PeopleAltOutlinedIcon sx={{ fontSize: 18 }} /> },
+          ]}
+        />
 
         {/* Tab 0: Pedidos */}
         {tab === 0 && (
@@ -349,16 +307,6 @@ export default function ComercialPage() {
           />
         )}
 
-        {/* Tab 2: Precios */}
-        {tab === 2 && (
-          <PreciosTable
-            mayoristas={mayoristas}
-            categorias={categorias}
-            canEditPrices={canEditPrices}
-            onOpenPrices={(cliente) => void openPrices(cliente)}
-            refreshKey={priceRefreshKey}
-          />
-        )}
       </Box>
       <PedidoFormDialog
         open={orderOpen}

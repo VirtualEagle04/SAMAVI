@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useMemo } from "react";
+import EventAvailableRoundedIcon from "@mui/icons-material/EventAvailableRounded";
+import EmptyState from "../../../components/molecules/EmptyState";
 import type { ChangeEvent } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
-import FormControl from "@mui/material/FormControl";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -14,7 +13,6 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CategoryBadge from "../../../components/atoms/CategoryBadge";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -25,18 +23,21 @@ import type {
   CierreProduccionDia,
   Galpon,
 } from "../types/produccion.types";
+import TableToolbar from "../../../components/molecules/TableToolbar";
+import type { FilterField } from "../../../components/molecules/filterTypes";
+import { useTableFilters } from "../../../hooks/useTableFilters";
 import {
-  productionTableActionsSx,
-  productionTableCardSx,
-  productionTableFiltersSx,
-  productionTableMobileCardSx,
-  productionTableMobilePrimaryTextSx,
-  productionTablePaginationSx,
-  productionTableSx,
-  productionTableTitleSx,
-  productionTableToolbarSx,
-} from "./productionTableStyles";
+  tableCardSx,
+  tableMobileCardSx,
+  tableMobilePrimaryTextSx,
+  tablePaginationLabels,
+  tablePaginationSx,
+  tableSx,
+} from "../../../components/tableStyles";
 import { formatProductionDate } from "./productionDateFormatters";
+
+const FILTER_KEYS = ["fecha", "galpon"] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
 
 interface ClosuresTableProps {
   cierres: CierreDiario[];
@@ -55,16 +56,29 @@ export default function ClosuresTable({
   onOpenDailyCloseModal,
   canPerformClose,
 }: ClosuresTableProps) {
-  const [selectedGalpon, setSelectedGalpon] = useState<number | "all">("all");
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const filters = useTableFilters(FILTER_KEYS);
+  const selectedDate = filters.values.fecha;
+  const selectedGalpon = filters.values.galpon;
+
+  const filterFields: FilterField[] = useMemo(
+    () => [
+      { key: "fecha", type: "date", label: "Fecha" },
+      {
+        key: "galpon",
+        type: "select",
+        label: "Galpón",
+        allLabel: "Todos los galpones",
+        options: galpones.map((g) => ({ value: String(g.id), label: g.nombre })),
+      },
+    ],
+    [galpones],
+  );
 
   const filteredCierres = cierres.filter((c) => {
     const cierreDateStr = c.fecha.slice(0, 10);
     const matchesDate = selectedDate === "" || cierreDateStr === selectedDate;
     const matchesGalpon =
-      selectedGalpon === "all" || c.idGalpon === selectedGalpon;
+      selectedGalpon === "" || c.idGalpon === Number(selectedGalpon);
     return matchesDate && matchesGalpon;
   });
 
@@ -85,7 +99,7 @@ export default function ClosuresTable({
     const date = marker.fecha.slice(0, 10);
     if (
       (selectedDate && date !== selectedDate) ||
-      (selectedGalpon !== "all" && marker.idGalpon !== selectedGalpon)
+      (selectedGalpon !== "" && marker.idGalpon !== Number(selectedGalpon))
     )
       continue;
     const key = `${marker.idGalpon}:${date}`;
@@ -103,87 +117,25 @@ export default function ClosuresTable({
     (a, b) => b.fecha.localeCompare(a.fecha) || a.idGalpon - b.idGalpon,
   );
 
-  const paginatedCierres = groupedCierres.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage,
-  );
-
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
+  const { rows: paginatedCierres, page } = filters.paginate(groupedCierres);
 
   const handleChangeRowsPerPage = (event: ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    filters.setRowsPerPage(parseInt(event.target.value, 10));
   };
 
   return (
-    <Card elevation={0} sx={productionTableCardSx}>
-      {/* Header Toolbar */}
-      <Box sx={productionTableToolbarSx}>
-        <Box>
-          <Typography variant="h6" sx={productionTableTitleSx}>
-            Historial de Cierres Diarios
-          </Typography>
-        </Box>
-
-        <Box sx={productionTableActionsSx}>
-          {/* Date filter */}
-          <TextField
-            type="date"
-            size="small"
-            value={selectedDate}
-            onChange={(e) => {
-              setSelectedDate(e.target.value);
-              setPage(0);
-            }}
-            sx={{
-              width: { xs: "calc(50% - 4px)", sm: 150 },
-              minWidth: 0,
-              "& .MuiInputBase-root": {
-                minHeight: 40,
-                borderRadius: 1,
-                bgcolor: "background.paper",
-                fontSize: "0.875rem",
-              },
-            }}
-          />
-
-          {/* Galpon Filter */}
-          <FormControl
-            size="small"
-            sx={{
-              ...productionTableFiltersSx,
-              width: { xs: "calc(50% - 4px)", sm: 140 },
-              minWidth: 0,
-            }}
-          >
-            <Select
-              value={selectedGalpon}
-              onChange={(e) => {
-                setSelectedGalpon(
-                  e.target.value === "all" ? "all" : Number(e.target.value),
-                );
-                setPage(0);
-              }}
-              sx={{
-                borderRadius: 1,
-                minHeight: 40,
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                bgcolor: "background.paper",
-              }}
-            >
-              <MenuItem value="all">Todos los galpones</MenuItem>
-              {galpones.map((g) => (
-                <MenuItem key={g.id} value={g.id}>
-                  {g.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {canPerformClose && (
+    <Card elevation={0} sx={tableCardSx}>
+      <TableToolbar
+        title="Historial de Cierres Diarios"
+        filters={{
+          fields: filterFields,
+          values: filters.values,
+          activeCount: filters.activeCount,
+          onChange: (key, value) => filters.setValue(key as FilterKey, value),
+          onReset: filters.reset,
+        }}
+        actions={
+          canPerformClose && (
             <Button
               variant="contained"
               size="small"
@@ -204,22 +156,20 @@ export default function ClosuresTable({
             >
               Efectuar Cierre
             </Button>
-          )}
-        </Box>
-      </Box>
+          )
+        }
+      />
 
-      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
-        {paginatedCierres.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-            <Typography sx={{ fontWeight: 600 }}>
-              No hay cierres para estos filtros
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Realiza un cierre diario para consolidar la producción.
-            </Typography>
-          </Box>
-        ) : (
-          paginatedCierres.map((group) => {
+      {paginatedCierres.length === 0 ? (
+        <EmptyState
+          icon={<EventAvailableRoundedIcon />}
+          title="No hay cierres para estos filtros"
+          description="Realiza un cierre diario para consolidar la producción."
+        />
+      ) : (
+        <>
+        <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+          {paginatedCierres.map((group) => {
             const barn =
               group.galpon ?? galpones.find((g) => g.id === group.idGalpon);
             const trays = group.categorias.reduce(
@@ -238,7 +188,7 @@ export default function ClosuresTable({
             return (
               <Box
                 key={`${group.idGalpon}-${group.fecha}`}
-                sx={productionTableMobileCardSx}
+                sx={tableMobileCardSx}
               >
                 <Box
                   sx={{
@@ -249,7 +199,7 @@ export default function ClosuresTable({
                   }}
                 >
                   <Box>
-                    <Typography sx={productionTableMobilePrimaryTextSx}>
+                    <Typography sx={tableMobilePrimaryTextSx}>
                       {barn?.nombre ?? `Galpón ${group.idGalpon}`}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -331,114 +281,93 @@ export default function ClosuresTable({
                 </Box>
               </Box>
             );
-          })
-        )}
-      </Box>
+          })}
+        </Box>
 
-      {/* Desktop table */}
-      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
-        <Table sx={productionTableSx} aria-label="tabla de cierres diarios">
-          <TableHead>
-            <TableRow>
-              <TableCell
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                FECHA
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                GALPÓN
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                CATEGORÍA
-              </TableCell>
-              <TableCell
-                align="center"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                BANDEJAS
-              </TableCell>
-              <TableCell
-                align="center"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                HUEVOS SOBRANTES
-              </TableCell>
-              <TableCell
-                align="right"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                TOTAL UNIDADES
-              </TableCell>
-              <TableCell
-                align="center"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  color: "text.secondary",
-                  py: 1.2,
-                }}
-              >
-                ESTADO
-              </TableCell>
-            </TableRow>
-          </TableHead>
-
-          <TableBody>
-            {paginatedCierres.length === 0 ? (
+        {/* Desktop table */}
+        <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+          <Table sx={tableSx} aria-label="tabla de cierres diarios">
+            <TableHead>
               <TableRow>
                 <TableCell
-                  colSpan={7}
-                  align="center"
-                  sx={{ py: 6, color: "text.secondary" }}
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
                 >
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    No hay registros de cierres diarios disponibles
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "text.disabled", mt: 0.5 }}
-                  >
-                    Realiza un cierre diario para consolidar los conteos en
-                    bandejas y stock.
-                  </Typography>
+                  FECHA
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
+                >
+                  GALPÓN
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
+                >
+                  CATEGORÍA
+                </TableCell>
+                <TableCell
+                  align="center"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
+                >
+                  BANDEJAS
+                </TableCell>
+                <TableCell
+                  align="center"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
+                >
+                  HUEVOS SOBRANTES
+                </TableCell>
+                <TableCell
+                  align="right"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
+                >
+                  TOTAL UNIDADES
+                </TableCell>
+                <TableCell
+                  align="center"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    color: "text.secondary",
+                    py: 1.2,
+                  }}
+                >
+                  ESTADO
                 </TableCell>
               </TableRow>
-            ) : (
-              paginatedCierres.map((group, idx) => {
+            </TableHead>
+
+            <TableBody>
+              {paginatedCierres.map((group, idx) => {
                 const dateStr = formatProductionDate(group.fecha);
 
                 const galponObj =
@@ -555,27 +484,25 @@ export default function ClosuresTable({
                     </TableCell>
                   </TableRow>
                 );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Pagination */}
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 50]}
-        component="div"
-        count={groupedCierres.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count}`
-        }
-        sx={productionTablePaginationSx}
-      />
+        {/* Pagination */}
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50]}
+          component="div"
+          count={groupedCierres.length}
+          rowsPerPage={filters.rowsPerPage}
+          page={page}
+          onPageChange={(_event, newPage) => filters.setPage(newPage)}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          {...tablePaginationLabels}
+          sx={tablePaginationSx}
+        />
+        </>
+      )}
     </Card>
   );
 }

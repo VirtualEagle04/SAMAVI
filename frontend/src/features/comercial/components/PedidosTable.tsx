@@ -1,12 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
+import { pluralize } from "../../../utils/plural";
+import EmptyState from "../../../components/molecules/EmptyState";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
-import FormControl from "@mui/material/FormControl";
-import InputAdornment from "@mui/material/InputAdornment";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -15,25 +14,38 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import CategoryBadge from "../../../components/atoms/CategoryBadge";
 import type { Pedido } from "../types/comercial.types";
+import TableToolbar from "../../../components/molecules/TableToolbar";
+import type { FilterField } from "../../../components/molecules/filterTypes";
+import { useTableFilters } from "../../../hooks/useTableFilters";
 import {
-  commercialTableActionsSx,
-  commercialTableCardSx,
-  commercialTableDescriptionSx,
-  commercialTableFiltersSx,
-  commercialTableMobileCardSx,
-  commercialTableMobilePrimaryTextSx,
-  commercialTablePaginationSx,
-  commercialTableSx,
-  commercialTableTitleSx,
-  commercialTableToolbarSx,
-} from "./commercialTableStyles";
+  tableCardSx,
+  tableMobileCardSx,
+  tableMobilePrimaryTextSx,
+  tablePaginationLabels,
+  tablePaginationSx,
+  tableSx,
+} from "../../../components/tableStyles";
+
+const NO_FILTER_KEYS = [] as const;
+
+const estadoFilterField: FilterField = {
+  key: "estado",
+  type: "select",
+  label: "Estado del pedido",
+  allLabel: "Todos los estados",
+  options: [
+    { value: "pendiente", label: "Pendientes" },
+    { value: "cargado", label: "Listos para entrega" },
+    { value: "entregado", label: "Entregados" },
+    { value: "entregado_parcial", label: "Entrega parcial" },
+    { value: "cancelado", label: "Cancelados" },
+  ],
+};
 
 interface PedidosTableProps {
   pedidos: Pedido[];
@@ -76,9 +88,11 @@ export default function PedidosTable({
   filter,
   onFilterChange,
 }: PedidosTableProps) {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // El estado del filtro vive en ComercialPage (las tarjetas KPI también lo fijan);
+  // aquí solo se gestionan búsqueda y paginación.
+  const tableState = useTableFilters(NO_FILTER_KEYS);
+  const { search } = tableState;
+  const estadoValue = filter === "todos" ? "" : filter;
 
   const visibleOrders = useMemo(
     () =>
@@ -100,103 +114,44 @@ export default function PedidosTable({
     [pedidos, filter, search],
   );
 
-  const orderRows = visibleOrders.slice(
-    page * rowsPerPage,
-    (page + 1) * rowsPerPage,
-  );
+  const { rows: orderRows, page } = tableState.paginate(visibleOrders);
 
   return (
-    <Card elevation={0} sx={commercialTableCardSx}>
-      {/* Toolbar */}
-      <Box sx={commercialTableToolbarSx}>
-        <Box>
-          <Typography variant="h6" sx={commercialTableTitleSx}>
-            Pedidos Registrados
-          </Typography>
-          <Typography variant="body2" sx={commercialTableDescriptionSx}>
-            {visibleOrders.length} pedidos encontrados para consultar y gestionar.
-          </Typography>
-        </Box>
+    <Card elevation={0} sx={tableCardSx}>
+      <TableToolbar
+        title="Pedidos Registrados"
+        description={`${pluralize(visibleOrders.length, "pedido encontrado", "pedidos encontrados")} para consultar y gestionar.`}
+        search={{
+          value: search,
+          onChange: tableState.setSearch,
+          placeholder: "Buscar cliente o pedido...",
+        }}
+        filters={{
+          fields: [estadoFilterField],
+          values: { estado: estadoValue },
+          activeCount: estadoValue === "" ? 0 : 1,
+          onChange: (_key, value) => {
+            onFilterChange(value === "" ? "todos" : value);
+            tableState.setPage(0);
+          },
+          onReset: () => {
+            onFilterChange("todos");
+            tableState.setPage(0);
+          },
+        }}
+      />
 
-        <Box sx={commercialTableActionsSx}>
-          <TextField
-            placeholder="Buscar cliente o pedido..."
-            size="small"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRoundedIcon
-                      fontSize="small"
-                      sx={{ color: "text.disabled" }}
-                    />
-                  </InputAdornment>
-                ),
-              },
-            }}
-            sx={{
-              width: { xs: "100%", sm: 220 },
-              "& .MuiInputBase-root": {
-                minHeight: 40,
-                bgcolor: "background.paper",
-                fontSize: "0.875rem",
-              },
-            }}
-          />
-
-          <FormControl
-            size="small"
-            sx={{
-              ...commercialTableFiltersSx,
-              minWidth: 0,
-              width: { xs: "100%", sm: 170 },
-            }}
-          >
-            <Select
-              value={filter}
-              onChange={(e) => {
-                onFilterChange(e.target.value);
-                setPage(0);
-              }}
-              sx={{
-                minHeight: 40,
-                fontWeight: 600,
-                bgcolor: "background.paper",
-              }}
-            >
-              <MenuItem value="todos">Todos los estados</MenuItem>
-              <MenuItem value="pendiente">Pendientes</MenuItem>
-              <MenuItem value="cargado">Listos para entrega</MenuItem>
-              <MenuItem value="entregado">Entregados</MenuItem>
-              <MenuItem value="entregado_parcial">Entrega parcial</MenuItem>
-              <MenuItem value="cancelado">Cancelados</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Box>
-
-      {/* Mobile Card List View */}
-      <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
-        {orderRows.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-            <Typography sx={{ fontWeight: 600 }}>
-              {pedidos.length === 0
-                ? "Aún no hay pedidos"
-                : "No hay pedidos para mostrar"}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              {pedidos.length === 0
-                ? "Crea un nuevo pedido para empezar."
-                : "Cambia el filtro o el término de búsqueda."}
-            </Typography>
-          </Box>
-        ) : (
-          orderRows.map((pedido) => {
+      {orderRows.length === 0 ? (
+        <EmptyState
+          icon={<ShoppingBagOutlinedIcon />}
+          title={pedidos.length === 0 ? "Aún no hay pedidos" : "No hay pedidos para mostrar"}
+          description={pedidos.length === 0 ? "Crea un nuevo pedido para empezar." : "Cambia el filtro o el término de búsqueda."}
+        />
+      ) : (
+        <>
+        {/* Mobile Card List View */}
+        <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+          {orderRows.map((pedido) => {
             const saleAmount = pedido.venta?.detalles.reduce(
               (sum, detail) =>
                 sum +
@@ -210,7 +165,7 @@ export default function PedidosTable({
             );
 
             return (
-              <Box key={pedido.id} sx={commercialTableMobileCardSx}>
+              <Box key={pedido.id} sx={tableMobileCardSx}>
                 <Box
                   sx={{
                     display: "flex",
@@ -221,7 +176,7 @@ export default function PedidosTable({
                   }}
                 >
                   <Box>
-                    <Typography sx={commercialTableMobilePrimaryTextSx}>
+                    <Typography sx={tableMobilePrimaryTextSx}>
                       Pedido #{pedido.id}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -333,42 +288,25 @@ export default function PedidosTable({
                 </Stack>
               </Box>
             );
-          })
-        )}
-      </Box>
+          })}
+        </Box>
 
-      {/* Desktop Table View */}
-      <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
-        <Table sx={commercialTableSx} aria-label="Tabla de pedidos">
-          <TableHead>
-            <TableRow>
-              <TableCell>PEDIDO / FECHA</TableCell>
-              <TableCell>CLIENTE</TableCell>
-              <TableCell>PRESENTACIONES</TableCell>
-              <TableCell align="center">BANDEJAS</TableCell>
-              <TableCell>ESTADO</TableCell>
-              <TableCell align="right">TOTAL VENTA</TableCell>
-              <TableCell align="center">ACCIONES</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {orderRows.length === 0 ? (
+        {/* Desktop Table View */}
+        <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+          <Table sx={tableSx} aria-label="Tabla de pedidos">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    {pedidos.length === 0
-                      ? "Aún no hay pedidos"
-                      : "No hay pedidos para mostrar"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {pedidos.length === 0
-                      ? "Crea un nuevo pedido para empezar."
-                      : "Cambia el filtro o el término de búsqueda."}
-                  </Typography>
-                </TableCell>
+                <TableCell>PEDIDO / FECHA</TableCell>
+                <TableCell>CLIENTE</TableCell>
+                <TableCell>PRESENTACIONES</TableCell>
+                <TableCell align="center">BANDEJAS</TableCell>
+                <TableCell>ESTADO</TableCell>
+                <TableCell align="right">TOTAL VENTA</TableCell>
+                <TableCell align="center">ACCIONES</TableCell>
               </TableRow>
-            ) : (
-              orderRows.map((pedido) => {
+            </TableHead>
+            <TableBody>
+              {orderRows.map((pedido) => {
                 const saleAmount = pedido.venta?.detalles.reduce(
                   (sum, detail) =>
                     sum +
@@ -466,29 +404,26 @@ export default function PedidosTable({
                     </TableCell>
                   </TableRow>
                 );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <TablePagination
-        component="div"
-        rowsPerPageOptions={[10, 25, 50]}
-        count={visibleOrders.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={(_, value) => setPage(value)}
-        onRowsPerPageChange={(e) => {
-          setRowsPerPage(Number(e.target.value));
-          setPage(0);
-        }}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count}`
-        }
-        sx={commercialTablePaginationSx}
-      />
+        <TablePagination
+          component="div"
+          rowsPerPageOptions={[10, 25, 50]}
+          count={visibleOrders.length}
+          rowsPerPage={tableState.rowsPerPage}
+          page={page}
+          onPageChange={(_, value) => tableState.setPage(value)}
+          onRowsPerPageChange={(e) => {
+            tableState.setRowsPerPage(Number(e.target.value));
+          }}
+          {...tablePaginationLabels}
+          sx={tablePaginationSx}
+        />
+        </>
+      )}
     </Card>
   );
 }

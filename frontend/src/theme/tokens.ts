@@ -12,6 +12,7 @@ export const designTokens = {
     error: { main: "#C05C56" },
   },
   shape: { borderRadius: 12, buttonRadius: 10, cardRadius: 16, chipRadius: 8, inputRadius: 10 },
+  control: { height: 40 },
   typography: {
     heading: "'Bree Serif', Georgia, serif",
     interface: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",

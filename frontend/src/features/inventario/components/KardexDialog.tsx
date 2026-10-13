@@ -6,14 +6,8 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import type { Movimiento, StockInsumo } from "../types/inventario.types";
-
-const amount = (value: number | string) =>
-  Number(value).toLocaleString("es-CO", { maximumFractionDigits: 2 });
-const dateTime = (value: string) =>
-  new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+import { amount } from "../utils/inventarioFormat";
+import MovementList from "./MovementList";
 
 export default function KardexDialog({
   open,
@@ -28,64 +22,29 @@ export default function KardexDialog({
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle sx={{ fontWeight: 900 }}>
+      <DialogTitle sx={{ fontWeight: 700 }}>
         {item ? `Kardex · ${item.nombre}` : "Kardex"}
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent>
         {item && (
-          <Stack spacing={1.5}>
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
               <Chip
-                label={`${amount(item.stock)} ${item.unidadMedida}`}
+                size="small"
                 color="success"
+                label={`${amount(item.stock)} ${item.unidadMedida}`}
               />
               <Chip
-                label={`Mínimo ${amount(item.stockMinimo)}`}
+                size="small"
                 variant="outlined"
+                label={`Mínimo ${amount(item.stockMinimo)}`}
               />
             </Stack>
-            {movements.length ? (
-              movements.map((movement) => {
-                const input = movement.tipoMovimiento.efecto === "entrada";
-                return (
-                  <Stack
-                    key={String(movement.id)}
-                    direction="row"
-                    sx={{
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 1,
-                      p: 1.5,
-                      border: "1px solid",
-                      borderColor: input ? "#acd1b5" : "#e7c58f",
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-                      <strong>{movement.tipoMovimiento.nombre}</strong>
-                      <span>
-                        {dateTime(movement.fecha)} ·{" "}
-                        {movement.idCompra
-                          ? `Compra #${movement.idCompra}`
-                          : movement.idGalpon
-                            ? `Galpón ${movement.idGalpon}`
-                            : "Bodega"}
-                      </span>
-                    </Stack>
-                    <strong>
-                      {input ? "+" : "-"}
-                      {amount(movement.cantidad)}
-                    </strong>
-                  </Stack>
-                );
-              })
-            ) : (
-              <span>No hay movimientos registrados.</span>
-            )}
+            <MovementList movements={movements} />
           </Stack>
         )}
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
         <Button onClick={onClose}>Cerrar</Button>
       </DialogActions>
     </Dialog>

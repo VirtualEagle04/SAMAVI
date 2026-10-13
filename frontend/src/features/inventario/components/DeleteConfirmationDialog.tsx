@@ -23,21 +23,25 @@ export default function DeleteConfirmationDialog({
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle
-        sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 900 }}
+        sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 700 }}
       >
         <DeleteForeverRoundedIcon color="error" />
         Eliminar permanentemente
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent>
         <Typography>
-          ¿Deseas eliminar permanentemente el {label} <strong>{name}</strong>?
+          ¿Deseas eliminar permanentemente el {label}{" "}
+          <Typography component="span" sx={{ fontWeight: 700 }}>
+            {name}
+          </Typography>
+          ?
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Esta acción no se puede deshacer. Si tiene registros relacionados, el
           sistema impedirá la eliminación.
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ p: 2, gap: 1 }}>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
         <Button onClick={onClose}>Cancelar</Button>
         <Button
           color="error"
