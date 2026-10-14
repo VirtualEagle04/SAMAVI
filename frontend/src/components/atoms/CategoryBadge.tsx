@@ -16,6 +16,7 @@ export const CATEGORY_COLORS: Record<
 
 type Props = {
   codigo: string;
+  /** @deprecated El chip siempre muestra el código de la categoría. */
   nombre?: string;
   cantidad?: number;
   size?: "small" | "medium";
@@ -23,7 +24,6 @@ type Props = {
 
 export default function CategoryBadge({
   codigo,
-  nombre,
   cantidad,
   size = "small",
 }: Props) {
@@ -33,7 +33,7 @@ export default function CategoryBadge({
     border: "#9A8E80",
   };
   const label = [
-    nombre ?? codigo,
+    codigo,
     cantidad === undefined ? null : `${cantidad} band.`,
   ]
     .filter(Boolean)

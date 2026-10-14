@@ -322,7 +322,11 @@ export default function App() {
         <Box
           component="header"
           sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: (theme) => theme.zIndex.appBar,
             height: 72,
+            flexShrink: 0,
             px: { xs: 2, md: 4 },
             display: "flex",
             alignItems: "center",

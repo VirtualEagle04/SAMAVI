@@ -13,13 +13,21 @@ import CircularProgress from "@mui/material/CircularProgress"
 import Snackbar from "@mui/material/Snackbar"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
+import { alpha } from "@mui/material/styles"
+import SurfaceCard from "../../../components/atoms/SurfaceCard"
+import PetsRoundedIcon from "@mui/icons-material/PetsRounded"
+import EmptyState from "../../../components/molecules/EmptyState"
+import TableToolbar from "../../../components/molecules/TableToolbar"
+import { tableCardSx } from "../../../components/tableStyles"
+import FeedbackAlert from "../../../components/organisms/FeedbackAlert"
 import AlimentacionDialog from "../components/AlimentacionDialog"
 import GallinasDialog from "../components/GallinasDialog"
 import { cambiarGallinas, getGalpon, registrarAlimentacion } from "../services/galponesService"
 import type { CambioGallinasPayload, GalponDetalle, TipoCambioGallinas } from "../types/galpones.types"
 
 const HISTORY_DAYS = 7
-const panel = { border: "1px solid", borderColor: "divider", borderRadius: 3, p: { xs: 2, sm: 2.5 } } as const
+const panel = { p: { xs: 2, sm: 2.5 } } as const
+const rowSx = { px: 2, py: 1.25, borderBottom: "1px solid", borderColor: "divider", "&:last-of-type": { borderBottom: 0 } } as const
 const time = (value: string) =>
   new Intl.DateTimeFormat("es-CO", { timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(value))
 const dateTime = (value: string) =>
@@ -75,7 +83,7 @@ export default function GalponDetallePage() {
       variant="text"
       startIcon={<ArrowBackRoundedIcon />}
       onClick={() => navigate("/galpones")}
-      sx={{ alignSelf: "flex-start", ml: -1 }}
+      sx={{ ml: -1 }}
     >
       Volver a galpones
     </Button>
@@ -90,7 +98,7 @@ export default function GalponDetallePage() {
   if (pageError || !galpon)
     return (
       <Stack spacing={2} sx={{ maxWidth: 700, mx: "auto", py: 4 }}>
-        <Alert severity="error">{pageError || "No se pudo cargar el galpón."}</Alert>
+        <FeedbackAlert severity="error">{pageError || "No se pudo cargar el galpón."}</FeedbackAlert>
         <Button variant="outlined" onClick={() => void loadData(true)}>
           Intentar de nuevo
         </Button>
@@ -113,104 +121,130 @@ export default function GalponDetallePage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 720, width: "100%", mx: "auto" }}>
-      {back}
-
+    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 3 } }}>
       <Box>
-        <Typography variant="h4" sx={{ fontSize: { xs: "1.7rem", sm: "2rem" } }}>
-          {galpon.nombre}
-        </Typography>
-        {!active && <Chip variant="outlined" label={galpon.estado === "inactivo" ? "Inactivo" : "En mantenimiento"} sx={{ mt: 1, fontWeight: 700 }} />}
-      </Box>
-
-      {!active && <Alert severity="info">Este galpón no está activo, por eso no se puede registrar nada.</Alert>}
-
-      {active && (
-        <Box
-          sx={{
-            ...panel,
-            bgcolor: galpon.alimentadoHoy ? "rgba(52, 199, 89, 0.10)" : "rgba(255, 152, 0, 0.10)",
-            borderColor: galpon.alimentadoHoy ? "success.main" : "warning.main",
-          }}
-        >
-          {galpon.alimentadoHoy ? (
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-              <CheckCircleRoundedIcon color="success" sx={{ fontSize: 40 }} />
-              <Box>
-                <Typography sx={{ fontWeight: 800, fontSize: "1.2rem" }}>Ya se alimentó hoy</Typography>
-                <Typography color="text.secondary">
-                  {galpon.alimentadoEn ? `A las ${time(galpon.alimentadoEn)}` : ""}
-                  {todayRecord ? ` · ${todayRecord.usuario}` : ""}
-                </Typography>
-              </Box>
-            </Stack>
-          ) : (
-            <Stack spacing={1.5}>
-              <Typography sx={{ fontWeight: 800, fontSize: "1.2rem" }}>Falta alimentar hoy</Typography>
-              <Button variant="contained" size="large" startIcon={<RestaurantRoundedIcon />} onClick={() => setFeedOpen(true)} sx={{ minHeight: 56, fontSize: "1.05rem" }}>
-                Registrar alimentación
-              </Button>
-            </Stack>
-          )}
-        </Box>
-      )}
-
-      <Box sx={panel}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-          GALLINAS
-        </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: "2.4rem", lineHeight: 1.1 }}>
-          {galpon.gallinasActuales.toLocaleString("en-US")}
-        </Typography>
-        {active && (
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.2, mt: 2 }}>
-            <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setHensMode("ingreso")} sx={{ minHeight: 52 }}>
-              Agregar
-            </Button>
-            <Button variant="outlined" startIcon={<RemoveRoundedIcon />} onClick={() => setHensMode("baja")} sx={{ minHeight: 52 }}>
-              Reducir
-            </Button>
-          </Box>
-        )}
-      </Box>
-
-      <Box sx={panel}>
-        <Typography sx={{ fontWeight: 800, mb: 1 }}>Alimentación de los últimos días</Typography>
-        {days.map(({ date, record }) => (
-          <Stack key={date} direction="row" sx={{ justifyContent: "space-between", alignItems: "center", py: 1, borderTop: "1px solid", borderColor: "divider" }}>
-            <Typography sx={{ textTransform: "capitalize", fontWeight: date === galpon.fechaHoy ? 800 : 500 }}>{dayLabel(date, galpon.fechaHoy)}</Typography>
-            {record ? (
-              <Chip size="small" color="success" icon={<CheckCircleRoundedIcon />} label={`${time(record.registradoEn)} · ${record.usuario}`} sx={{ fontWeight: 700 }} />
-            ) : (
-              <Typography variant="body2" color="text.secondary">{date === galpon.fechaHoy ? "Pendiente" : "Sin registro"}</Typography>
-            )}
-          </Stack>
-        ))}
-      </Box>
-
-      <Box sx={panel}>
-        <Typography sx={{ fontWeight: 800, mb: 1 }}>Cambios en las gallinas</Typography>
-        {galpon.cambiosGallinas.length === 0 && (
-          <Typography color="text.secondary" sx={{ pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
-            Todavía no hay cambios registrados.
+        {back}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", mt: 0.5 }}>
+          <Typography variant="h4" sx={{ fontSize: { xs: "1.7rem", sm: "2rem" } }}>
+            {galpon.nombre}
           </Typography>
-        )}
-        {galpon.cambiosGallinas.map((change) => {
-          const data = change.datosNuevos
-          if (!data) return null
-          const drop = data.tipo === "baja"
-          return (
-            <Stack key={change.id} direction="row" spacing={1.5} sx={{ justifyContent: "space-between", py: 1.2, borderTop: "1px solid", borderColor: "divider" }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 700 }}>{data.causa ?? "Ingreso de gallinas"}</Typography>
-                <Typography variant="body2" color="text.secondary">{dateTime(change.fechaHora)} · {change.usuario}</Typography>
-              </Box>
-              <Typography sx={{ fontWeight: 800, color: drop ? "error.main" : "success.dark", whiteSpace: "nowrap" }}>
-                {drop ? "−" : "+"}{data.cantidad.toLocaleString("en-US")}
+          <Chip
+            size="small"
+            color={active ? "success" : "default"}
+            variant={active ? "filled" : "outlined"}
+            label={galpon.estado === "activo" ? "Activo" : galpon.estado === "inactivo" ? "Inactivo" : "En mantenimiento"}
+            sx={{ fontWeight: 700 }}
+          />
+        </Box>
+      </Box>
+
+      {!active && <FeedbackAlert severity="info">Este galpón no está activo, por eso no se puede registrar nada.</FeedbackAlert>}
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "minmax(0, 5fr) minmax(0, 7fr)" },
+          gap: { xs: 1.5, sm: 3 },
+          alignItems: "start",
+        }}
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 3 } }}>
+          {active && (
+            <SurfaceCard
+              sx={(theme) => ({
+                ...panel,
+                bgcolor: alpha(galpon.alimentadoHoy ? theme.palette.success.main : theme.palette.warning.main, 0.1),
+                borderColor: galpon.alimentadoHoy ? "success.main" : "warning.main",
+              })}
+            >
+              {galpon.alimentadoHoy ? (
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                  <CheckCircleRoundedIcon color="success" sx={{ fontSize: 40 }} />
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: "1.125rem" }}>Ya se alimentó hoy</Typography>
+                    <Typography color="text.secondary">
+                      {galpon.alimentadoEn ? `A las ${time(galpon.alimentadoEn)}` : ""}
+                      {todayRecord ? ` · ${todayRecord.usuario}` : ""}
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : (
+                <Stack spacing={1.5}>
+                  <Typography sx={{ fontWeight: 700, fontSize: "1.125rem" }}>Falta alimentar hoy</Typography>
+                  <Button variant="contained" size="large" startIcon={<RestaurantRoundedIcon />} onClick={() => setFeedOpen(true)} sx={{ minHeight: 56, fontSize: "1.05rem" }}>
+                    Registrar alimentación
+                  </Button>
+                </Stack>
+              )}
+            </SurfaceCard>
+          )}
+
+          <SurfaceCard sx={panel}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: "text.secondary", fontSize: { xs: "0.7rem", sm: "0.8rem" } }}>
+                GALLINAS
               </Typography>
-            </Stack>
-          )
-        })}
+              <Box sx={{ p: 0.8, borderRadius: 1, bgcolor: "warning.light", color: "warning.dark", display: "flex" }}>
+                <PetsRoundedIcon sx={{ fontSize: 18 }} />
+              </Box>
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.1, fontSize: "2rem" }}>
+              {galpon.gallinasActuales.toLocaleString("en-US")}
+            </Typography>
+            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, mt: 0.8, display: "block" }}>
+              Población actual del galpón
+            </Typography>
+            {active && (
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.2, mt: 2 }}>
+                <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setHensMode("ingreso")} sx={{ minHeight: 52 }}>
+                  Agregar
+                </Button>
+                <Button variant="outlined" startIcon={<RemoveRoundedIcon />} onClick={() => setHensMode("baja")} sx={{ minHeight: 52 }}>
+                  Reducir
+                </Button>
+              </Box>
+            )}
+          </SurfaceCard>
+        </Box>
+
+        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 3 } }}>
+          <SurfaceCard sx={tableCardSx}>
+            <TableToolbar title="Alimentación" description={`Registro de los últimos ${HISTORY_DAYS} días.`} />
+            {days.map(({ date, record }) => (
+              <Stack key={date} direction="row" sx={{ ...rowSx, justifyContent: "space-between", alignItems: "center" }}>
+                <Typography sx={{ textTransform: "capitalize", fontWeight: date === galpon.fechaHoy ? 700 : 500 }}>{dayLabel(date, galpon.fechaHoy)}</Typography>
+                {record ? (
+                  <Chip size="small" color="success" icon={<CheckCircleRoundedIcon />} label={`${time(record.registradoEn)} · ${record.usuario}`} sx={{ fontWeight: 700 }} />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">{date === galpon.fechaHoy ? "Pendiente" : "Sin registro"}</Typography>
+                )}
+              </Stack>
+            ))}
+          </SurfaceCard>
+
+          <SurfaceCard sx={tableCardSx}>
+            <TableToolbar title="Cambios en las gallinas" description="Ingresos y bajas registrados en este galpón." />
+            {galpon.cambiosGallinas.length === 0 && (
+              <EmptyState icon={<PetsRoundedIcon />} title="Sin cambios" description="Todavía no hay cambios registrados." />
+            )}
+            {galpon.cambiosGallinas.map((change) => {
+              const data = change.datosNuevos
+              if (!data) return null
+              const drop = data.tipo === "baja"
+              return (
+                <Stack key={change.id} direction="row" spacing={1.5} sx={{ ...rowSx, justifyContent: "space-between" }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 700 }}>{data.causa ?? "Ingreso de gallinas"}</Typography>
+                    <Typography variant="body2" color="text.secondary">{dateTime(change.fechaHora)} · {change.usuario}</Typography>
+                  </Box>
+                  <Typography sx={{ fontWeight: 800, color: drop ? "error.main" : "success.dark", whiteSpace: "nowrap" }}>
+                    {drop ? "−" : "+"}{data.cantidad.toLocaleString("en-US")}
+                  </Typography>
+                </Stack>
+              )
+            })}
+          </SurfaceCard>
+        </Box>
       </Box>
 
       <AlimentacionDialog open={feedOpen} nombre={galpon.nombre} onClose={() => setFeedOpen(false)} onSave={handleFeed} />

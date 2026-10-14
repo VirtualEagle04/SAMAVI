@@ -15,7 +15,6 @@ import LiveMonitoringCard from "../components/LiveMonitoringCard";
 import ProductionKpiCards from "../components/ProductionKpiCards";
 import CountsTable from "../components/CountsTable";
 import ClosuresTable from "../components/ClosuresTable";
-import RegisterCountDialog from "../components/RegisterCountDialog";
 import DailyCloseDialog from "../components/DailyCloseDialog";
 import { BodegaTable } from "../components/ProductionTables";
 import {
@@ -40,7 +39,6 @@ import type {
   Galpon,
   LogConteo,
   ResumenConteoDiario,
-  RegisterCountPayload,
 } from "../types/produccion.types";
 
 // Default fallback categories in case DB is initially empty
@@ -90,10 +88,6 @@ export default function ProduccionPage() {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // Modal dialog states
-  const [registerModalOpen, setRegisterModalOpen] = useState(false);
-  const [preselectedCategory, setPreselectedCategory] = useState<
-    string | undefined
-  >();
   const [dailyCloseModalOpen, setDailyCloseModalOpen] = useState(false);
 
   // Notification Toast
@@ -210,16 +204,6 @@ export default function ProduccionPage() {
     }
   };
 
-  const handleRegisterCount = async (payload: RegisterCountPayload) => {
-    await registerCount(payload);
-    setToast({
-      open: true,
-      message: `Conteo de producción guardado con éxito (${payload.cantidad > 0 ? "+1" : "-1"} ${payload.categoriaPeso})`,
-      severity: "success",
-    });
-    loadData(false);
-  };
-
   const handleDailyClose = async (payload: DailyClosePayload) => {
     const res = await closeDailyProduction(payload);
     setToast({
@@ -303,15 +287,12 @@ export default function ProduccionPage() {
       </Box>
       <LiveMonitoringCard
         dailyCounts={dailyCounts}
+        counts={counts}
         galpones={galpones}
         categorias={categorias}
         selectedGalponId={selectedGalponId}
         onSelectGalpon={setSelectedGalponId}
         onRefresh={() => loadData(false)}
-        onOpenRegisterModal={(cat) => {
-          setPreselectedCategory(cat);
-          setRegisterModalOpen(true);
-        }}
         onQuickCount={handleQuickCount}
         lastUpdated={lastUpdated}
         deviceStatus={deviceStatus}
@@ -362,18 +343,6 @@ export default function ProduccionPage() {
       </Box>
 
       {/* Modals */}
-      <RegisterCountDialog
-        open={registerModalOpen}
-        onClose={() => setRegisterModalOpen(false)}
-        onRegister={handleRegisterCount}
-        galpones={galpones}
-        categorias={categorias}
-        initialGalponId={
-          typeof selectedGalponId === "number" ? selectedGalponId : undefined
-        }
-        initialCategory={preselectedCategory}
-      />
-
       <DailyCloseDialog
         open={dailyCloseModalOpen}
         onClose={() => setDailyCloseModalOpen(false)}

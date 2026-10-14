@@ -1,11 +1,11 @@
 import { useState } from "react"
-import Alert from "@mui/material/Alert"
 import Button from "@mui/material/Button"
 import Dialog from "@mui/material/Dialog"
 import DialogActions from "@mui/material/DialogActions"
 import DialogContent from "@mui/material/DialogContent"
 import DialogTitle from "@mui/material/DialogTitle"
 import Typography from "@mui/material/Typography"
+import FeedbackAlert from "../../../components/organisms/FeedbackAlert"
 
 type Props = { open: boolean; nombre: string; onClose: () => void; onSave: () => Promise<void> }
 
@@ -20,11 +20,11 @@ export default function AlimentacionDialog({ open, nombre, onClose, onSave }: Pr
     finally { setSaving(false) }
   }
 
-  return <Dialog open={open} onClose={() => { if (!saving) onClose() }} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
-    <DialogTitle sx={{ fontWeight: 800 }}>¿Ya alimentó el {nombre}?</DialogTitle>
+  return <Dialog open={open} onClose={() => { if (!saving) onClose() }} fullWidth maxWidth="xs">
+    <DialogTitle sx={{ fontWeight: 700 }}>¿Ya alimentó el {nombre}?</DialogTitle>
     <DialogContent>
       <Typography color="text.secondary">Se guardará la hora de ahora. Solo se puede registrar una vez al día.</Typography>
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      {error && <FeedbackAlert severity="error" sx={{ mt: 2 }}>{error}</FeedbackAlert>}
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
       <Button onClick={onClose} disabled={saving}>Todavía no</Button>

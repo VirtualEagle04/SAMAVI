@@ -1,7 +1,6 @@
 import { useState } from "react"
 import AddRoundedIcon from "@mui/icons-material/AddRounded"
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded"
-import Alert from "@mui/material/Alert"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Chip from "@mui/material/Chip"
@@ -12,6 +11,7 @@ import DialogTitle from "@mui/material/DialogTitle"
 import IconButton from "@mui/material/IconButton"
 import TextField from "@mui/material/TextField"
 import Typography from "@mui/material/Typography"
+import FeedbackAlert from "../../../components/organisms/FeedbackAlert"
 import type { CambioGallinasPayload, TipoCambioGallinas } from "../types/galpones.types"
 
 const CAUSAS = ["Enfermedad", "Muerte natural", "Calor o estrés", "Depredador", "Venta", "Otra"]
@@ -50,8 +50,8 @@ export default function GallinasDialog({ mode, actuales, onClose, onSave }: Prop
     finally { setSaving(false) }
   }
 
-  return <Dialog open onClose={() => { if (!saving) onClose() }} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
-    <DialogTitle sx={{ fontWeight: 800 }}>{isDrop ? "Reducir gallinas" : "Agregar gallinas"}</DialogTitle>
+  return <Dialog open onClose={() => { if (!saving) onClose() }} fullWidth maxWidth="xs">
+    <DialogTitle sx={{ fontWeight: 700 }}>{isDrop ? "Reducir gallinas" : "Agregar gallinas"}</DialogTitle>
     <DialogContent>
       <Typography color="text.secondary" sx={{ mb: 2 }}>Ahora hay {actuales.toLocaleString("en-US")} gallinas.</Typography>
       <Typography variant="body2" sx={{ mb: 1, fontWeight: 700 }}>{isDrop ? "¿Cuántas salen?" : "¿Cuántas entran?"}</Typography>
@@ -102,7 +102,7 @@ export default function GallinasDialog({ mode, actuales, onClose, onSave }: Prop
           onChange={(e) => setOtherCause(e.target.value.slice(0, 200))}
         />}
       </>}
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      {error && <FeedbackAlert severity="error" sx={{ mt: 2 }}>{error}</FeedbackAlert>}
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
       <Button onClick={onClose} disabled={saving}>Cancelar</Button>
