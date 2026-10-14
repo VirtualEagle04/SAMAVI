@@ -82,7 +82,6 @@ export default function DailyCloseDialog({
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 1.5,
             p: 0.5,
           },
         },
@@ -154,9 +153,10 @@ export default function DailyCloseDialog({
           <Box
             sx={{
               p: 2,
-              borderRadius: 1,
-              bgcolor: "#faf7f2",
-              border: "1px solid #eadbd2",
+              borderRadius: 2,
+              bgcolor: "background.default",
+              border: "1px solid",
+              borderColor: "divider",
             }}
           >
             <Typography

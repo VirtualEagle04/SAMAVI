@@ -42,7 +42,6 @@ export default function ProductionKpiCards({
           elevation={0}
           sx={{
             height: "100%",
-            borderRadius: 1.25,
             border: "1px solid",
             borderColor: "divider",
             backgroundColor: "background.paper",
@@ -72,8 +71,8 @@ export default function ProductionKpiCards({
                 sx={{
                   p: 0.8,
                   borderRadius: 1,
-                  bgcolor: "#f0fdf4",
-                  color: "#16a34a",
+                  bgcolor: "rgba(107, 142, 98, 0.12)",
+                  color: "success.main",
                   display: "flex",
                 }}
               >
@@ -82,7 +81,7 @@ export default function ProductionKpiCards({
             </Box>
             <Typography
               variant="h4"
-              sx={{ fontWeight: 800, color: "#16a34a", lineHeight: 1.1 }}
+              sx={{ fontWeight: 800, color: "success.main", lineHeight: 1.1 }}
             >
               {posturaRate}%
             </Typography>
@@ -107,7 +106,6 @@ export default function ProductionKpiCards({
           elevation={0}
           sx={{
             height: "100%",
-            borderRadius: 1.25,
             border: "1px solid",
             borderColor: "divider",
             backgroundColor: "background.paper",
@@ -137,8 +135,8 @@ export default function ProductionKpiCards({
                 sx={{
                   p: 0.8,
                   borderRadius: 1,
-                  bgcolor: "#fef3c7",
-                  color: "#d97706",
+                  bgcolor: "warning.light",
+                  color: "warning.dark",
                   display: "flex",
                 }}
               >

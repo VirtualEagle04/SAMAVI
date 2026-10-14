@@ -92,10 +92,6 @@ npm --prefix backend run test:report
 
 ```text
 SAMAVI/
-├── .github/                   # Instrucciones para GitHub Copilot
-│   └── copilot-instructions.md
-├── .agents/                   # Recursos para integración de agentes
-│   └── README.md
 ├── docs/                      # Documentación técnica del proyecto
 │   ├── architecture.md
 │   ├── domain.md
@@ -128,7 +124,8 @@ SAMAVI/
 │       ├── stores/            # Estado global
 │       └── theme/             # Tema de Material UI
 ├── infra/                     # Docker Compose y configuración de Mosquitto
-├── AGENTS.md                  # Contrato principal para agentes de IA
+├── AGENTS.md                  # Instrucciones únicas para agentes de IA
+├── CLAUDE.md                  # Importa AGENTS.md para Claude Code
 ├── CONTRIBUTING.md            # Guía de contribución y flujo Git
 ├── .env.example               # Plantilla de variables de entorno
 ├── package.json               # Scripts del monorepo

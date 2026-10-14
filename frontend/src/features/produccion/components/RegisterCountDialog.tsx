@@ -15,6 +15,7 @@ import Select from "@mui/material/Select";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
+import { CATEGORY_COLORS } from "../../../components/atoms/CategoryBadge";
 import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
 import RemoveCircleOutlineRoundedIcon from "@mui/icons-material/RemoveCircleOutlineRounded";
 import type {
@@ -32,19 +33,6 @@ interface RegisterCountDialogProps {
   initialGalponId?: number;
   initialCategory?: string;
 }
-
-const CATEGORY_COLORS: Record<
-  string,
-  { bg: string; text: string; border: string }
-> = {
-  Y: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  Ex: { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8" },
-  AA: { bg: "#e0f2fe", text: "#075985", border: "#bae6fd" },
-  A: { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" },
-  B: { bg: "#ffedd5", text: "#9a3412", border: "#fed7aa" },
-  C: { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" },
-  P: { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1" },
-};
 
 export default function RegisterCountDialog({
   open,
@@ -117,7 +105,6 @@ export default function RegisterCountDialog({
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 1.5,
             p: 0.5,
           },
         },
@@ -173,9 +160,9 @@ export default function RegisterCountDialog({
               {categorias.map((cat) => {
                 const isSelected = categoriaPeso === cat.codigo;
                 const colors = CATEGORY_COLORS[cat.codigo] || {
-                  bg: "#f1f5f9",
-                  text: "#334155",
-                  border: "#cbd5e1",
+                  bg: "#F0ECE7",
+                  text: "#51483F",
+                  border: "#9A8E80",
                 };
 
                 return (

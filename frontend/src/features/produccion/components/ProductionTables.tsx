@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
+import EventAvailableRoundedIcon from "@mui/icons-material/EventAvailableRounded";
+import EmptyState from "../../../components/molecules/EmptyState";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
-import FormControl from "@mui/material/FormControl";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -12,7 +12,6 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CategoryBadge from "../../../components/atoms/CategoryBadge";
 import type {
@@ -20,19 +19,37 @@ import type {
   CierreProduccionDia,
   Galpon,
 } from "../types/produccion.types";
+import TableToolbar from "../../../components/molecules/TableToolbar";
+import type { FilterField } from "../../../components/molecules/filterTypes";
+import { useTableFilters } from "../../../hooks/useTableFilters";
+import {
+  tableCardSx,
+  tableMobileCardSx,
+  tableMobilePrimaryTextSx,
+  tablePaginationLabels,
+  tablePaginationSx,
+  tableSx,
+} from "../../../components/tableStyles";
+import {
+  formatProductionDate,
+  formatProductionDateTime,
+} from "./productionDateFormatters";
 
-const dateLabel = (value: string) =>
-  new Date(value).toLocaleDateString("es-CO", {
-    timeZone: "UTC",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-const stampLabel = (value: string) =>
-  new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+const FILTER_KEYS = ["fecha", "galpon"] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
+
+function buildFilterFields(galpones: Galpon[], dateLabel: string): FilterField[] {
+  return [
+    { key: "fecha", type: "date", label: dateLabel },
+    {
+      key: "galpon",
+      type: "select",
+      label: "Galpón",
+      allLabel: "Todos los galpones",
+      options: galpones.map((g) => ({ value: String(g.id), label: g.nombre })),
+    },
+  ];
+}
 
 export function BodegaTable({
   rows,
@@ -41,15 +58,13 @@ export function BodegaTable({
   rows: BodegaStock[];
   galpones: Galpon[];
 }) {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [filter, setFilter] = useState<number | "all">("all");
-  const [date, setDate] = useState("");
+  const filters = useTableFilters(FILTER_KEYS);
+  const { fecha: date, galpon: filter } = filters.values;
   const filtered = useMemo(
     () =>
       rows.filter(
         (row) =>
-          (filter === "all" || row.idGalpon === filter) &&
+          (filter === "" || row.idGalpon === Number(filter)) &&
           (!date || row.fechaCorte.slice(0, 10) === date),
       ),
     [rows, filter, date],
@@ -74,155 +89,122 @@ export function BodegaTable({
       ),
     [filtered],
   );
+  const { rows: pageRows, page } = filters.paginate(grouped);
   return (
-    <Card
-      elevation={0}
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1.5,
-        overflow: "hidden",
-      }}
-    >
-      <Box
-        sx={{
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 1.5,
-          borderBottom: "1px solid",
-          borderColor: "divider",
+    <Card elevation={0} sx={tableCardSx}>
+      <TableToolbar
+        title="Historial de Bodegas y Remanentes"
+        filters={{
+          fields: buildFilterFields(galpones, "Fecha de corte"),
+          values: filters.values,
+          activeCount: filters.activeCount,
+          onChange: (key, value) => filters.setValue(key as FilterKey, value),
+          onReset: filters.reset,
         }}
-      >
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Bodega y Remanentes
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Saldo guardado en cada corte semanal. Las ventas actuales se
-            calculan sumando cierres diarios y despachos.
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          <TextField
-            type="date"
-            size="small"
-            label="Fecha de corte"
-            value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
-              setPage(0);
-            }}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <FormControl size="small" sx={{ minWidth: 170 }}>
-            <Select
-              value={filter}
-              onChange={(event) => {
-                setFilter(
-                  event.target.value === "all"
-                    ? "all"
-                    : Number(event.target.value),
-                );
-                setPage(0);
-              }}
-            >
-              <MenuItem value="all">Todos los galpones</MenuItem>
-              {galpones.map((barn) => (
-                <MenuItem key={barn.id} value={barn.id}>
-                  {barn.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      </Box>
-      <TableContainer>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: "#faf7f2" }}>
-            <TableRow>
-              {[
-                "FECHA DE CORTE",
-                "GALPÓN",
-                "REMANENTES POR CATEGORÍA",
-                "TOTAL BANDEJAS",
-                "USO",
-              ].map((heading, index) => (
-                <TableCell
-                  key={heading}
-                  align={index === 3 ? "right" : "left"}
-                  sx={{ fontWeight: 800 }}
-                >
-                  {heading}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {grouped
-              .slice(page * rowsPerPage, (page + 1) * rowsPerPage)
-              .map((group) => (
-                <TableRow key={`${group.idGalpon}-${group.fechaCorte}`} hover>
-                  <TableCell>{dateLabel(group.fechaCorte)}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    {group.galpon?.nombre ?? `Galpón ${group.idGalpon}`}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.7 }}>
-                      {group.categorias.map((row) => (
-                        <CategoryBadge
-                          key={row.codigoCategoriaPeso}
-                          codigo={row.codigoCategoriaPeso}
-                          nombre={
-                            row.categoriaPeso?.nombre ?? row.codigoCategoriaPeso
-                          }
-                          cantidad={row.cantidadBandejas}
-                        />
-                      ))}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800 }}>
-                    {group.categorias
-                      .reduce((sum, row) => sum + row.cantidadBandejas, 0)
-                      .toLocaleString("en-US")}
-                  </TableCell>
-                  <TableCell>
-                    <Chip size="small" color="info" label="Saldo de corte" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            {grouped.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  align="center"
-                  sx={{ py: 5, color: "text.secondary" }}
-                >
-                  No hay remanentes para los filtros seleccionados.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        component="div"
-        count={grouped.length}
-        page={page}
-        rowsPerPage={rowsPerPage}
-        rowsPerPageOptions={[10, 25, 50]}
-        onPageChange={(_, next) => setPage(next)}
-        onRowsPerPageChange={(event) => {
-          setRowsPerPage(Number(event.target.value));
-          setPage(0);
-        }}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count}`
-        }
       />
+      {grouped.length === 0 ? (
+        <EmptyState
+          icon={<Inventory2RoundedIcon />}
+          title="Sin remanentes"
+          description="No hay remanentes para los filtros seleccionados."
+        />
+      ) : (
+        <>
+        <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
+          {pageRows.map((group) => {
+            const total = group.categorias.reduce((sum, row) => sum + row.cantidadBandejas, 0);
+            return (
+              <Box key={`${group.idGalpon}-${group.fechaCorte}`} sx={tableMobileCardSx}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+                  <Box>
+                    <Typography sx={tableMobilePrimaryTextSx}>{group.galpon?.nombre ?? `Galpón ${group.idGalpon}`}</Typography>
+                    <Typography variant="caption" color="text.secondary">{formatProductionDate(group.fechaCorte)}</Typography>
+                  </Box>
+                  <Chip size="small" color="info" label="Saldo de corte" />
+                </Box>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.25 }}>
+                  {group.categorias.map((row) => (
+                    <CategoryBadge key={row.codigoCategoriaPeso} codigo={row.codigoCategoriaPeso} nombre={row.categoriaPeso?.nombre ?? row.codigoCategoriaPeso} cantidad={row.cantidadBandejas} />
+                  ))}
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1.25, pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
+                  <Typography variant="caption" color="text.secondary">Total de bandejas</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{total.toLocaleString("es-CO")}</Typography>
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+        <TableContainer sx={{ display: { xs: "none", sm: "block" } }}>
+          <Table sx={tableSx}>
+          <TableHead>
+              <TableRow>
+                {[
+                  "FECHA DE CORTE",
+                  "GALPÓN",
+                  "REMANENTES POR CATEGORÍA",
+                  "TOTAL BANDEJAS",
+                  "USO",
+                ].map((heading, index) => (
+                  <TableCell
+                    key={heading}
+                    align={index === 3 ? "right" : "left"}
+                    sx={{ fontWeight: 800 }}
+                  >
+                    {heading}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pageRows.map((group) => (
+                  <TableRow key={`${group.idGalpon}-${group.fechaCorte}`} hover>
+                    <TableCell>{formatProductionDate(group.fechaCorte)}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>
+                      {group.galpon?.nombre ?? `Galpón ${group.idGalpon}`}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.7 }}>
+                        {group.categorias.map((row) => (
+                          <CategoryBadge
+                            key={row.codigoCategoriaPeso}
+                            codigo={row.codigoCategoriaPeso}
+                            nombre={
+                              row.categoriaPeso?.nombre ?? row.codigoCategoriaPeso
+                            }
+                            cantidad={row.cantidadBandejas}
+                          />
+                        ))}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      {group.categorias
+                        .reduce((sum, row) => sum + row.cantidadBandejas, 0)
+                        .toLocaleString("en-US")}
+                    </TableCell>
+                    <TableCell>
+                      <Chip size="small" color="info" label="Saldo de corte" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={grouped.length}
+          page={page}
+          rowsPerPage={filters.rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_, next) => filters.setPage(next)}
+          onRowsPerPageChange={(event) => {
+            filters.setRowsPerPage(Number(event.target.value));
+          }}
+          {...tablePaginationLabels}
+          sx={tablePaginationSx}
+        />
+        </>
+      )}
     </Card>
   );
 }
@@ -234,138 +216,79 @@ export function ProductionClosuresTable({
   rows: CierreProduccionDia[];
   galpones: Galpon[];
 }) {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [filter, setFilter] = useState<number | "all">("all");
-  const [date, setDate] = useState("");
+  const filters = useTableFilters(FILTER_KEYS);
+  const { fecha: date, galpon: filter } = filters.values;
   const filtered = useMemo(
     () =>
       rows.filter(
         (row) =>
-          (filter === "all" || row.idGalpon === filter) &&
+          (filter === "" || row.idGalpon === Number(filter)) &&
           (!date || row.fecha.slice(0, 10) === date),
       ),
     [rows, filter, date],
   );
+  const { rows: pageRows, page } = filters.paginate(filtered);
   return (
-    <Card
-      elevation={0}
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1.5,
-        overflow: "hidden",
-      }}
-    >
-      <Box
-        sx={{
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 1.5,
-          borderBottom: "1px solid",
-          borderColor: "divider",
+    <Card elevation={0} sx={tableCardSx}>
+      <TableToolbar
+        title="Cierres realizados"
+        description="Incluye los galpones que cerraron el día sin producción registrada."
+        filters={{
+          fields: buildFilterFields(galpones, "Fecha"),
+          values: filters.values,
+          activeCount: filters.activeCount,
+          onChange: (key, value) => filters.setValue(key as FilterKey, value),
+          onReset: filters.reset,
         }}
-      >
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Cierres realizados
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Incluye los galpones que cerraron el día sin producción registrada.
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          <TextField
-            type="date"
-            size="small"
-            label="Fecha"
-            value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
-              setPage(0);
-            }}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <FormControl size="small" sx={{ minWidth: 170 }}>
-            <Select
-              value={filter}
-              onChange={(event) => {
-                setFilter(
-                  event.target.value === "all"
-                    ? "all"
-                    : Number(event.target.value),
-                );
-                setPage(0);
-              }}
-            >
-              <MenuItem value="all">Todos los galpones</MenuItem>
-              {galpones.map((barn) => (
-                <MenuItem key={barn.id} value={barn.id}>
-                  {barn.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      </Box>
-      <TableContainer>
-        <Table sx={{ minWidth: 520 }}>
-          <TableHead sx={{ bgcolor: "#faf7f2" }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 800 }}>FECHA DEL CIERRE</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>GALPÓN</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>REGISTRADO EN</TableCell>
-              <TableCell sx={{ fontWeight: 800 }}>ESTADO</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filtered
-              .slice(page * rowsPerPage, (page + 1) * rowsPerPage)
-              .map((row) => (
-                <TableRow key={`${row.idGalpon}-${row.fecha}`} hover>
-                  <TableCell>{dateLabel(row.fecha)}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    {row.galpon?.nombre ?? `Galpón ${row.idGalpon}`}
-                  </TableCell>
-                  <TableCell>{stampLabel(row.cerradoEn)}</TableCell>
-                  <TableCell>
-                    <Chip size="small" color="success" label="Cerrado" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  align="center"
-                  sx={{ py: 5, color: "text.secondary" }}
-                >
-                  No hay cierres registrados para los filtros seleccionados.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        component="div"
-        count={filtered.length}
-        page={page}
-        rowsPerPage={rowsPerPage}
-        rowsPerPageOptions={[10, 25, 50]}
-        onPageChange={(_, next) => setPage(next)}
-        onRowsPerPageChange={(event) => {
-          setRowsPerPage(Number(event.target.value));
-          setPage(0);
-        }}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count}`
-        }
       />
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<EventAvailableRoundedIcon />}
+          title="Sin cierres registrados"
+          description="No hay cierres registrados para los filtros seleccionados."
+        />
+      ) : (
+        <>
+        <TableContainer>
+          <Table sx={{ minWidth: 520 }}>
+          <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 800 }}>FECHA DEL CIERRE</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>GALPÓN</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>REGISTRADO EN</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>ESTADO</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pageRows.map((row) => (
+                  <TableRow key={`${row.idGalpon}-${row.fecha}`} hover>
+                    <TableCell>{formatProductionDate(row.fecha)}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>
+                      {row.galpon?.nombre ?? `Galpón ${row.idGalpon}`}
+                    </TableCell>
+                    <TableCell>{formatProductionDateTime(row.cerradoEn)}</TableCell>
+                    <TableCell>
+                      <Chip size="small" color="success" label="Cerrado" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={filtered.length}
+          page={page}
+          rowsPerPage={filters.rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_, next) => filters.setPage(next)}
+          onRowsPerPageChange={(event) => {
+            filters.setRowsPerPage(Number(event.target.value));
+          }}
+          {...tablePaginationLabels}
+        />
+        </>
+      )}
     </Card>
   );
 }

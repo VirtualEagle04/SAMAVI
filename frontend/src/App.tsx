@@ -15,13 +15,14 @@ import EggIcon from '@mui/icons-material/Egg';
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded"
-import { useAuthStore } from "./stores/authStore"
+import { useAuthStore } from "./features/auth/stores/authStore"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
 import ComercialPage from "./features/comercial/pages/ComercialPage"
 import GalponesPage from "./features/galpones/pages/GalponesPage"
 import GalponDetallePage from "./features/galpones/pages/GalponDetallePage"
 import InventarioPage from "./features/inventario/pages/InventarioPage"
-import samanLogo from "./assets/saman_logo.png"
+import samanLogoText from "./assets/saman_logo_text.png"
+import samanLogoNoText from "./assets/saman_logo_notext.png"
 
 const drawerWidth = 260
 
@@ -135,24 +136,21 @@ export default function App() {
           gap: 1.5,
           borderBottom: "1px solid",
           borderColor: "divider",
+          justifyContent: "center",
         }}
       >
         <Box
           component="img"
-          src={samanLogo}
+          src={samanLogoNoText}
           alt="SAMAVI Logo"
-          sx={{ height: 48, width: "auto" }}
+          sx={{ height: 48, width: "auto", display: "block" }}
         />
-        <Typography
-          variant="h6"
-          sx={{
-            color: "primary.dark",
-            fontWeight: 900,
-            letterSpacing: 1.5,
-          }}
-        >
-          SAMAVI
-        </Typography>
+        <Box
+          component="img"
+          src={samanLogoText}
+          alt="SAMAVI Logo"
+          sx={{ height: 72, width: "auto", display: "block" }}
+        />
       </Box>
 
       {/* Navigation Area with RBAC Filtered Modules */}
@@ -193,9 +191,9 @@ export default function App() {
                   py: 1,
                   px: 1.8,
                   color: isSelected ? "primary.dark" : "text.secondary",
-                  backgroundColor: isSelected ? "primary.light" : "transparent",
+                    backgroundColor: isSelected ? "rgba(200, 122, 87, 0.14)" : "transparent",
                   "&:hover": {
-                    backgroundColor: isSelected ? "primary.light" : "rgba(231, 121, 120, 0.08)",
+                    backgroundColor: isSelected ? "rgba(200, 122, 87, 0.14)" : "rgba(200, 122, 87, 0.08)",
                     color: "primary.dark",
                   },
                 }}
@@ -240,7 +238,7 @@ export default function App() {
             borderRadius: 1,
             color: "text.secondary",
             "&:hover": {
-              backgroundColor: "primary.light",
+              backgroundColor: "rgba(200, 122, 87, 0.14)",
               color: "primary.dark",
             },
           }}
