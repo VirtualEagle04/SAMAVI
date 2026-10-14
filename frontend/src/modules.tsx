@@ -1,4 +1,5 @@
 import type { ReactElement } from "react"
+import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded"
 import EggIcon from "@mui/icons-material/Egg"
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded"
@@ -6,7 +7,7 @@ import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./features/auth/stores/authStore"
 import type { Role } from "./features/auth/services/authService"
 
-export type ModuleId = "produccion" | "comercial" | "galpones" | "inventario"
+export type ModuleId = "dashboard" | "produccion" | "comercial" | "galpones" | "inventario"
 
 export type AppModule = {
   id: ModuleId
@@ -25,6 +26,15 @@ export type AppModule = {
  * defecto (el primero accesible para el usuario).
  */
 export const APP_MODULES: AppModule[] = [
+  {
+    id: "dashboard",
+    path: "/dashboard",
+    label: "Dashboard",
+    title: "Resumen Semanal",
+    icon: <DashboardRoundedIcon fontSize="small" />,
+    canAccess: (role, permissions) =>
+      role === "Administrador" || permissions.includes("VER_CIERRE"),
+  },
   {
     id: "produccion",
     path: "/produccion",
