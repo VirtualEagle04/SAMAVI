@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { NavLink, Outlet, matchPath, useLocation, useNavigate } from "react-router-dom"
 import Avatar from "@mui/material/Avatar"
 import Box from "@mui/material/Box"
 import Drawer from "@mui/material/Drawer"
@@ -11,16 +11,8 @@ import ListItemText from "@mui/material/ListItemText"
 import Typography from "@mui/material/Typography"
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
-import EggIcon from '@mui/icons-material/Egg';
-import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
-import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
-import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded"
 import { useAuthStore } from "./features/auth/stores/authStore"
-import ProduccionPage from "./features/produccion/pages/ProduccionPage"
-import ComercialPage from "./features/comercial/pages/ComercialPage"
-import GalponesPage from "./features/galpones/pages/GalponesPage"
-import GalponDetallePage from "./features/galpones/pages/GalponDetallePage"
-import InventarioPage from "./features/inventario/pages/InventarioPage"
+import { useAccessibleModules } from "./modules"
 import samanLogoText from "./assets/saman_logo_text.png"
 import samanLogoNoText from "./assets/saman_logo_notext.png"
 
@@ -30,43 +22,17 @@ function initials(user: string | null): string {
   return user?.slice(0, 2).toUpperCase() ?? "SA"
 }
 
+/** Shell autenticado: sidebar, header y el módulo activo en el <Outlet />. */
 export default function App() {
-  const { user, role, permissions, isAuthenticated, logout } = useAuthStore()
+  const { user, role, logout } = useAuthStore()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Module RBAC checks
-  const canAccessProduccion =
-    role === "Administrador" ||
-    role === "Galponero" ||
-    permissions.includes("VER_PRODUCCION")
-
-  const canAccessComercial =
-    role === "Administrador" ||
-    role === "Vendedor" ||
-    permissions.includes("INGRESAR_PEDIDO") ||
-    permissions.includes("REGISTRAR_VENTA")
-
-  const canAccessGalpones =
-    role === "Administrador" || permissions.includes("GESTIONAR_GALPONES")
-
-  const canAccessInventario =
-    role === "Administrador" || permissions.includes("GESTIONAR_INVENTARIO")
-
-  // Active module state based on permissions
-  const [selectedModule, setSelectedModule] = useState<string>(
-    canAccessProduccion ? "produccion" : canAccessComercial ? "comercial" : "overview"
+  const navItems = useAccessibleModules()
+  const activeModule = navItems.find((item) =>
+    matchPath({ path: item.path, end: false }, pathname),
   )
-  // Galpones is routed by URL, the other modules keep using the local state
-  const inGalpones = pathname.startsWith("/galpones")
-  const activeModule = inGalpones ? "galpones" : selectedModule
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true })
-    }
-  }, [isAuthenticated, navigate])
 
   const handleLogout = () => {
     logout()
@@ -76,45 +42,6 @@ export default function App() {
   const handleDrawerToggle = () => {
     setMobileOpen((prev) => !prev)
   }
-
-  const navItems = [
-    ...(canAccessProduccion
-      ? [
-          {
-            id: "produccion",
-            label: "Producción",
-            icon: <EggIcon fontSize="small" />,
-          },
-        ]
-      : []),
-    ...(canAccessComercial
-      ? [
-          {
-            id: "comercial",
-            label: "Comercial",
-            icon: <StorefrontRoundedIcon fontSize="small" />,
-          },
-        ]
-      : []),
-    ...(canAccessGalpones
-      ? [
-          {
-            id: "galpones",
-            label: "Galpones",
-            icon: <HomeWorkRoundedIcon fontSize="small" />,
-          },
-        ]
-      : []),
-    ...(canAccessInventario
-      ? [
-          {
-            id: "inventario",
-            label: "Inventario",
-            icon: <Inventory2RoundedIcon fontSize="small" />,
-          },
-        ]
-      : []),
-  ]
 
   const sidebarContent = (
     <Box
@@ -172,20 +99,14 @@ export default function App() {
         </Typography>
         <List disablePadding sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
           {navItems.map((item) => {
-            const isSelected = activeModule === item.id
+            const isSelected = activeModule?.id === item.id
             return (
               <ListItemButton
                 key={item.id}
+                component={NavLink}
+                to={item.path}
                 selected={isSelected}
-                onClick={() => {
-                  if (item.id === "galpones") {
-                    navigate("/galpones")
-                  } else {
-                    setSelectedModule(item.id)
-                    if (inGalpones) navigate("/dashboard")
-                  }
-                  setMobileOpen(false)
-                }}
+                onClick={() => setMobileOpen(false)}
                 sx={{
                   borderRadius: 1,
                   py: 1,
@@ -345,15 +266,7 @@ export default function App() {
               <MenuRoundedIcon />
             </IconButton>
             <Typography variant="h6" sx={{ fontWeight: 800, color: "text.primary" }}>
-              {activeModule === "produccion"
-                ? "Módulo de Producción"
-                : activeModule === "comercial"
-                ? "Módulo Comercial"
-                : activeModule === "galpones"
-                ? "Módulo de Galpones"
-                : activeModule === "inventario"
-                ? "Módulo de Inventario"
-                : "Panel Principal"}
+              {activeModule?.title ?? "Panel Principal"}
             </Typography>
           </Box>
 
@@ -393,19 +306,7 @@ export default function App() {
             boxSizing: "border-box",
           }}
         >
-          {activeModule === "produccion" && <ProduccionPage />}
-          {activeModule === "comercial" && <ComercialPage />}
-          {activeModule === "inventario" && canAccessInventario && <InventarioPage />}
-          {activeModule === "galpones" &&
-            (canAccessGalpones ? (
-              <Routes>
-                <Route index element={<GalponesPage />} />
-                <Route path=":id" element={<GalponDetallePage />} />
-                <Route path="*" element={<Navigate to="/galpones" replace />} />
-              </Routes>
-            ) : (
-              <Navigate to="/dashboard" replace />
-            ))}
+          <Outlet />
         </Box>
       </Box>
     </Box>

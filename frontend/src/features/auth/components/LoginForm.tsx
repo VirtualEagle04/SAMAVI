@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
@@ -7,7 +6,6 @@ import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import LoginFormFields from "./LoginFormFields";
 import { useAuthStore } from "../stores/authStore";
-import type { Role } from "../services/authService";
 
 function validate(username: string, password: string) {
   const errors = { username: "", password: "" };
@@ -23,12 +21,6 @@ function validate(username: string, password: string) {
   return errors;
 }
 
-function roleToRoute(role: Role): string {
-  if (role === "Administrador") return "/admin";
-  if (role === "Galponero") return "/galpon";
-  return "/ventas";
-}
-
 export default function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +31,6 @@ export default function LoginForm() {
   const [touched, setTouched] = useState(false);
 
   const { login, isLoading, error, clearError } = useAuthStore();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,12 +40,8 @@ export default function LoginForm() {
     if (errors.username || errors.password) return;
 
     clearError();
+    // LoginPage redirige cuando la sesión queda activa
     await login(username, password);
-
-    const updatedRole = useAuthStore.getState().role;
-    if (updatedRole) {
-      navigate(roleToRoute(updatedRole), { replace: true });
-    }
   };
 
   const handleUsernameChange = (v: string) => {
