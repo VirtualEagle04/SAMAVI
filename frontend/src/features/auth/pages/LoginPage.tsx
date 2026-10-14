@@ -1,24 +1,23 @@
 import { useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import Typography from "@mui/material/Typography"
 import AuthLayout from "../components/AuthLayout"
 import LoginForm from "../components/LoginForm"
 import { useAuthStore } from "../stores/authStore"
-import type { Role } from "../services/authService"
-
-function roleToRoute(role: Role): string {
-  return role ? "/dashboard" : "/login"
-}
+import type { LoginRedirectState } from "../components/RequireAuth"
 
 export default function LoginPage() {
   const { isAuthenticated, role } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as LoginRedirectState | null)?.from
 
+  // Con sesión: vuelve a la ruta protegida pedida o a "/", que elige el módulo
   useEffect(() => {
     if (isAuthenticated && role) {
-      navigate(roleToRoute(role), { replace: true })
+      navigate(from ? `${from.pathname}${from.search}${from.hash}` : "/", { replace: true })
     }
-  }, [isAuthenticated, role, navigate])
+  }, [isAuthenticated, role, navigate, from])
 
   return (
     <AuthLayout>
