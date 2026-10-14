@@ -3,6 +3,7 @@ import LoginPage from "./features/auth/pages/LoginPage"
 import RequireAuth from "./features/auth/components/RequireAuth"
 import RequireModule from "./features/auth/components/RequireModule"
 import DefaultModuleRedirect from "./features/auth/components/DefaultModuleRedirect"
+import DashboardPage from "./features/dashboard/pages/DashboardPage"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
 import ComercialPage from "./features/comercial/pages/ComercialPage"
 import GalponesPage from "./features/galpones/pages/GalponesPage"
@@ -18,6 +19,9 @@ export default function AppRouter() {
         {/* Shell (sidebar + header); cada módulo se renderiza en su <Outlet /> */}
         <Route element={<App />}>
           <Route index element={<DefaultModuleRedirect />} />
+          <Route element={<RequireModule module="dashboard" />}>
+            <Route path="dashboard" element={<DashboardPage />} />
+          </Route>
           <Route element={<RequireModule module="produccion" />}>
             <Route path="produccion" element={<ProduccionPage />} />
           </Route>
@@ -34,7 +38,7 @@ export default function AppRouter() {
           <Route element={<RequireModule module="inventario" />}>
             <Route path="inventario" element={<InventarioPage />} />
           </Route>
-          {/* Rutas desconocidas o heredadas (p. ej. /dashboard) */}
+          {/* Rutas desconocidas o heredadas */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>
