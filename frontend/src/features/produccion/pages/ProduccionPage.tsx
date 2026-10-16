@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import ModuleTabs from "../../../components/molecules/ModuleTabs";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -28,6 +28,7 @@ import {
   getDeviceStatus,
   getGalpones,
   registerCount,
+  subscribeProductionEvents,
 } from "../services/produccionService";
 import type {
   CategoriaPeso,
@@ -40,6 +41,9 @@ import type {
   LogConteo,
   ResumenConteoDiario,
 } from "../types/produccion.types";
+
+// Ventana para agrupar ráfagas de lecturas del ESP32 en una sola recarga
+const LIVE_REFRESH_THROTTLE_MS = 150;
 
 // Default fallback categories in case DB is initially empty
 const DEFAULT_CATEGORIES: CategoriaPeso[] = [
@@ -101,11 +105,16 @@ export default function ProduccionPage() {
     severity: "success",
   });
 
+  // Solo la recarga más reciente aplica sus resultados, para que una respuesta
+  // lenta no pise datos más nuevos cuando llegan varios eventos seguidos.
+  const loadSequenceRef = useRef(0);
+
   // Data fetching
   const loadData = useCallback(
     async (showLoading = false) => {
       if (!hasAccess) return;
       if (showLoading) setIsLoading(true);
+      const sequence = ++loadSequenceRef.current;
 
       try {
         const [
@@ -128,6 +137,7 @@ export default function ProduccionPage() {
           getDeviceStatus().catch(() => null),
         ]);
 
+        if (sequence !== loadSequenceRef.current) return;
         setCounts(countsData);
         setDailyCounts(dailyCountsData);
         setGalpones(galponesData);
@@ -157,13 +167,32 @@ export default function ProduccionPage() {
   useEffect(() => {
     loadData(true);
 
-    // Auto-polling interval for real-time live monitoring (every 10 seconds)
+    // Respaldo: refresca el estado del dispositivo y cubre caídas del stream de eventos
     const interval = setInterval(() => {
       loadData(false);
     }, 10000);
 
     return () => clearInterval(interval);
   }, [loadData]);
+
+  // Recarga en cuanto el backend registra un conteo (MQTT o manual)
+  useEffect(() => {
+    if (!hasAccess) return;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const unsubscribe = subscribeProductionEvents(() => {
+      if (refreshTimer) return;
+      refreshTimer = setTimeout(() => {
+        refreshTimer = undefined;
+        void loadData(false);
+      }, LIVE_REFRESH_THROTTLE_MS);
+    });
+
+    return () => {
+      unsubscribe();
+      clearTimeout(refreshTimer);
+    };
+  }, [hasAccess, loadData]);
 
   // Handle Quick count (+1 / -1) from the Live card
   const handleQuickCount = async (

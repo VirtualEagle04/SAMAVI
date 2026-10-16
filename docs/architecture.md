@@ -11,6 +11,7 @@ El despliegue documentado utiliza Docker Compose sobre AWS Lightsail. La infraes
 - El backend Node.js y Express expone la API REST, procesa MQTT, aplica autenticación JWT/RBAC y persiste mediante Prisma.
 - PostgreSQL almacena la información del sistema.
 - El frontend React consume la API y presenta la operación por rol.
+- Cada conteo guardado (por MQTT o manual) se notifica a los clientes conectados a `GET /api/v1/produccion/eventos` (Server-Sent Events, evento `conteo`); el módulo de producción recarga sus datos al recibirlo y conserva un polling de 10 s como respaldo. El bus de eventos vive en memoria, así que solo avisa a los clientes de la misma instancia del backend. Un proxy delante del backend (p. ej. nginx) no debe almacenar en búfer esa ruta; el backend envía `X-Accel-Buffering: no`.
 
 ## Límites
 
