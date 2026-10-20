@@ -13,6 +13,7 @@ import {
   registerCount,
 } from "./produccion.service.js";
 import { deviceTracker } from "../../mqtt/device-status.js";
+import { onConteoRegistrado } from "./produccion.events.js";
 
 function serializeCount<T extends { id: bigint }>(count: T) {
   return { ...count, id: count.id.toString() };
@@ -71,4 +72,31 @@ export async function listBodegaController(request: Request, response: Response)
   const galponId = request.query.galponId ? Number(request.query.galponId) : undefined;
   const fechaCorte = typeof request.query.fechaCorte === "string" ? request.query.fechaCorte : undefined;
   response.status(200).json(await listBodega(galponId, fechaCorte));
+}
+
+const SSE_KEEPALIVE_MS = 25000;
+
+export function streamProductionEventsController(request: Request, response: Response): void {
+  response.status(200).set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  response.flushHeaders();
+  response.write("retry: 3000\n\n");
+
+  const unsubscribe = onConteoRegistrado((event) => {
+    response.write(`event: conteo\ndata: ${JSON.stringify(event)}\n\n`);
+  });
+
+  // Comentario periódico para que proxies e intermediarios no cierren la conexión inactiva.
+  const keepAlive = setInterval(() => {
+    response.write(": keepalive\n\n");
+  }, SSE_KEEPALIVE_MS);
+
+  request.on("close", () => {
+    clearInterval(keepAlive);
+    unsubscribe();
+  });
 }

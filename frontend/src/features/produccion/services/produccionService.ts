@@ -3,6 +3,7 @@ import type {
   CategoriaPeso,
   CierreDiario,
   CierreProduccionDia,
+  ConteoEvent,
   BodegaStock,
   DailyClosePayload,
   DeviceStatus,
@@ -122,4 +123,75 @@ export async function getDeviceStatus(): Promise<DeviceStatus> {
     headers: getAuthHeaders(),
   })
   return handleResponse<DeviceStatus>(response)
+}
+
+const EVENTS_RETRY_MS = 3000
+
+/**
+ * Abre el stream SSE de producción y llama a `onConteo` cada vez que el backend
+ * registra un conteo. Se reconecta solo si la conexión se cae. Devuelve la función
+ * que cierra la suscripción.
+ */
+export function subscribeProductionEvents(onConteo: (event: ConteoEvent) => void): () => void {
+  const controller = new AbortController()
+  let retryTimer: ReturnType<typeof setTimeout> | undefined
+
+  const dispatch = (rawEvent: string) => {
+    let eventName = "message"
+    const dataLines: string[] = []
+    for (const line of rawEvent.split("\n")) {
+      if (line.startsWith("event:")) eventName = line.slice(6).trim()
+      else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart())
+    }
+    if (eventName !== "conteo" || dataLines.length === 0) return
+    try {
+      onConteo(JSON.parse(dataLines.join("\n")) as ConteoEvent)
+    } catch (err) {
+      console.error("Evento de producción inválido:", err)
+    }
+  }
+
+  const connect = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/produccion/eventos`, {
+        headers: { ...getAuthHeaders(), Accept: "text/event-stream" },
+        signal: controller.signal,
+      })
+      // Sin sesión válida no tiene sentido reintentar; el polling de la página sigue funcionando.
+      if (response.status === 401 || response.status === 403) {
+        console.error("Stream de producción rechazado:", response.status)
+        return
+      }
+      if (!response.ok || !response.body) {
+        throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`)
+      }
+
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+      let buffer = ""
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += value.replace(/\r\n?/g, "\n")
+        let boundary = buffer.indexOf("\n\n")
+        while (boundary !== -1) {
+          dispatch(buffer.slice(0, boundary))
+          buffer = buffer.slice(boundary + 2)
+          boundary = buffer.indexOf("\n\n")
+        }
+      }
+    } catch (err) {
+      if (controller.signal.aborted) return
+      console.error("Stream de producción desconectado:", err)
+    }
+    if (!controller.signal.aborted) {
+      retryTimer = setTimeout(() => void connect(), EVENTS_RETRY_MS)
+    }
+  }
+
+  void connect()
+
+  return () => {
+    controller.abort()
+    clearTimeout(retryTimer)
+  }
 }

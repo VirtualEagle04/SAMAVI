@@ -68,6 +68,8 @@ const server = app.listen(env.port, () => {
 
 async function shutdown(): Promise<void> {
   server.close();
+  // Las conexiones SSE de /produccion/eventos no terminan solas.
+  server.closeAllConnections();
   await client.endAsync();
   await prisma.$disconnect();
 }

@@ -11,12 +11,14 @@ import {
   listCountsController,
   listDailyCountSummaryController,
   listGalponesController,
+  streamProductionEventsController,
 } from "./produccion.controller.js";
 
 export const produccionRoutes = Router();
 produccionRoutes.use(authenticate, requireRole("Administrador", "Galponero"));
 
 produccionRoutes.get("/dispositivo-estado", getDeviceStatusController);
+produccionRoutes.get("/eventos", streamProductionEventsController);
 produccionRoutes.get("/galpones", listGalponesController);
 produccionRoutes.get("/categorias", listCategoriasController);
 produccionRoutes.get("/cierres", listCierresController);

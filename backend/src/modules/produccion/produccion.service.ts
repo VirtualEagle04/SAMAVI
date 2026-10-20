@@ -2,6 +2,7 @@ import { prisma } from "../../database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type { ProductionCountInput } from "./produccion.schemas.js";
 import type { DailyCloseInput } from "./produccion.schemas.js";
+import { emitConteoRegistrado } from "./produccion.events.js";
 
 export async function registerCount(input: ProductionCountInput) {
   const [galpon, categoria] = await Promise.all([
@@ -16,7 +17,7 @@ export async function registerCount(input: ProductionCountInput) {
     throw new AppError(404, "Categoría de peso no encontrada");
   }
 
-  return prisma.logConteo.create({
+  const count = await prisma.logConteo.create({
     data: {
       idGalpon: input.galponId,
       codigoCategoriaPeso: input.categoriaPeso,
@@ -24,6 +25,16 @@ export async function registerCount(input: ProductionCountInput) {
       timestamp: input.timestamp,
     },
   });
+
+  emitConteoRegistrado({
+    id: String(count.id),
+    galponId: input.galponId,
+    categoriaPeso: input.categoriaPeso,
+    cantidad: input.cantidad,
+    timestamp: input.timestamp.toISOString(),
+  });
+
+  return count;
 }
 
 export async function listCounts(galponId?: number, take = 100) {

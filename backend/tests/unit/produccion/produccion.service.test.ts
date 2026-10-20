@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { registerCount, listCategorias, closeDailyProduction } from "../../../src/modules/produccion/produccion.service.js";
+import { emitConteoRegistrado, onConteoRegistrado } from "../../../src/modules/produccion/produccion.events.js";
 import { prisma } from "../../../src/database/prisma.js";
 import { AppError } from "../../../src/shared/errors/app-error.js";
 
@@ -98,6 +99,55 @@ describe("produccion.service → registerCount()", () => {
 
     expect(mockFindUniqueGalpon).toHaveBeenCalledWith({ where: { id: 1 } });
     expect(mockFindUniqueCategoria).toHaveBeenCalledWith({ where: { codigo: "AA" } });
+  });
+
+  it("emite el evento de conteo registrado después de guardar", async () => {
+    mockFindUniqueGalpon.mockResolvedValue({ id: 1 });
+    mockFindUniqueCategoria.mockResolvedValue({ codigo: "AA" });
+    mockLogConteoCreate.mockResolvedValue({ id: 99n });
+    const listener = vi.fn();
+    const unsubscribe = onConteoRegistrado(listener);
+
+    await registerCount(BASE_INPUT);
+    unsubscribe();
+
+    expect(listener).toHaveBeenCalledWith({
+      id: "99",
+      galponId: 1,
+      categoriaPeso: "AA",
+      cantidad: 1,
+      timestamp: "2026-09-25T10:00:00.000Z",
+    });
+  });
+
+  it("no emite el evento si el conteo no se guarda", async () => {
+    mockFindUniqueGalpon.mockResolvedValue(null);
+    mockFindUniqueCategoria.mockResolvedValue({ codigo: "AA" });
+    const listener = vi.fn();
+    const unsubscribe = onConteoRegistrado(listener);
+
+    await expect(registerCount(BASE_INPUT)).rejects.toThrow(AppError);
+    unsubscribe();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("produccion.events → onConteoRegistrado()", () => {
+  it("deja de notificar al oyente después de desuscribirse", () => {
+    const listener = vi.fn();
+    const unsubscribe = onConteoRegistrado(listener);
+    unsubscribe();
+
+    emitConteoRegistrado({
+      id: "1",
+      galponId: 1,
+      categoriaPeso: "A",
+      cantidad: 1,
+      timestamp: "2026-09-25T10:00:00.000Z",
+    });
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 

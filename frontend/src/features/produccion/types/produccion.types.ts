@@ -82,3 +82,11 @@ export interface DeviceStatus {
   lastActivity: string | null
   status: "online" | "offline"
 }
+
+export interface ConteoEvent {
+  id: string
+  galponId: number
+  categoriaPeso: string
+  cantidad: number
+  timestamp: string
+}
