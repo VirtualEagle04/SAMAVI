@@ -16,12 +16,17 @@ const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
 const char* MQTT_TOPIC = "samavi/conteo";
 const uint16_t DISTANCIA_MIN_MM = 10;
 const uint16_t DISTANCIA_MAX_MM = 100;
+// Histéresis: para soltar un huevo hace falta ver el canal libre varias lecturas
+// seguidas (a 50 ms por lectura) o una distancia claramente mayor al umbral.
+const uint16_t DISTANCIA_LIBERAR_MM = 120;
+const uint8_t LECTURAS_PARA_LIBERAR = 3;
 const unsigned long INTERVALO_LECTURA_MS = 50;
 
 Adafruit_VL53L0X sensores[NUM_SENSORES];
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 bool sensorActivo[NUM_SENSORES] = {false};
+uint8_t lecturasLibres[NUM_SENSORES] = {0};
 unsigned long ultimaLectura = 0;
 
 void conectarWiFi();
@@ -73,19 +78,28 @@ void loop() {
 
   for (int i = 0; i < NUM_SENSORES; i++) {
     if (sensores[i].isRangeComplete()) {
-      uint16_t lectura = sensores[i].readRange();
+      // En modo continuo se lee con readRangeResult(): readRange() lanza una
+      // medición única encima de la continua y puede dejar el sensor trabado.
+      uint16_t lectura = sensores[i].readRangeResult();
 
-      if (sensores[i].timeoutOccurred()) {
-        sensorActivo[i] = false;
+      if (sensores[i].Status != VL53L0X_ERROR_NONE) {
         continue;
       }
 
-      bool dentroDelRango = lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
-      if (dentroDelRango && !sensorActivo[i]) {
-        publicarConteo(i);
-        sensorActivo[i] = true;
-      } else if (!dentroDelRango) {
+      // Estado 0 = medición válida; 4 = nada al frente. Los estados 1-3 (p. ej. señal
+      // débil) dan distancias poco fiables y no cambian el estado del sensor.
+      uint8_t estado = sensores[i].readRangeStatus();
+      bool huevoAlFrente = estado == 0 && lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
+      bool canalLibre = estado == 4 || (estado == 0 && lectura > DISTANCIA_LIBERAR_MM);
+      if (huevoAlFrente) {
+        lecturasLibres[i] = 0;
+        if (!sensorActivo[i]) {
+          publicarConteo(i);
+          sensorActivo[i] = true;
+        }
+      } else if (canalLibre && sensorActivo[i] && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
         sensorActivo[i] = false;
+        lecturasLibres[i] = 0;
       }
 
       Serial.printf("S%d: %4d | ", i + 1, lectura);
