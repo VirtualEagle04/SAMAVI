@@ -1,7 +1,11 @@
 // Prueba de la pantalla TFT ST7789 (panel de 240x320) con el conteo por categoría.
 // Sin Wi-Fi ni MQTT: el conteo es local y se reinicia al apagar el ESP32.
-// Muestra lo mismo que el monitoreo en vivo del frontend: total del día y,
-// por categoría, bandejas, huevos sueltos y una barra relativa a la mayor.
+//
+// 1. Pantalla de arranque: un chulito verde por cada paso (bus I2C, XSHUT y cada
+//    sensor). Una X roja indica el paso que falló y por qué.
+// 2. Pantalla de conteo: una tarjeta por categoría con el total de huevos, las
+//    bandejas, un punto que se enciende mientras hay un huevo al frente y un
+//    destello verde con cada conteo.
 //
 // Compilar y subir: pio run -e tft_test -t upload
 // Por el monitor serie se puede simular un conteo: "A+", "AA-", "Ex+", "0" (reinicia).
@@ -27,36 +31,39 @@
 
 const uint8_t pinesXSHUT[NUM_SENSORES] = {15, 4, 18, 13, 14, 33};
 const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
+const uint8_t DIRECCION_DEFECTO = 0x29;
+const uint8_t DIRECCION_BASE = 0x30;
+const uint8_t INTENTOS_INICIO = 3;
 const uint16_t DISTANCIA_MIN_MM = 10;
 const uint16_t DISTANCIA_MAX_MM = 100;
+// Histéresis: para soltar un huevo hace falta ver el canal libre varias lecturas
+// seguidas (a 50 ms por lectura) o una distancia claramente mayor al umbral.
+const uint16_t DISTANCIA_LIBERAR_MM = 120;
+const uint8_t LECTURAS_PARA_LIBERAR = 3;
 const unsigned long INTERVALO_LECTURA_MS = 50;
 const int HUEVOS_POR_BANDEJA = 30;
+const unsigned long DURACION_DESTELLO_MS = 300;
+const unsigned long PAUSA_ARRANQUE_OK_MS = 1500;
+const unsigned long PAUSA_ARRANQUE_FALLO_MS = 5000;
 
-// Colores de CATEGORY_COLORS (frontend/src/components/atoms/CategoryBadge.tsx).
-struct ColoresCategoria {
-  uint32_t fondo;
-  uint32_t texto;
-  uint32_t borde;
-};
-const ColoresCategoria coloresHex[NUM_SENSORES] = {
-  {0xF7E5B5, 0x5C4333, 0xD99B26},  // Y
-  {0xF3DFD5, 0x743F2A, 0xC87A57},  // Ex
-  {0xEDE3D1, 0x665331, 0xA88C52},  // AA
-  {0xE6EBDD, 0x40573A, 0x6B8E62},  // A
-  {0xEFE3D9, 0x674433, 0xA66B48},  // B
-  {0xF3DEDA, 0x753D39, 0xC05C56},  // C
-};
+// Color de acento por categoría (borde de CATEGORY_COLORS en el frontend).
+const uint32_t acentosHex[NUM_SENSORES] = {0xD99B26, 0xC87A57, 0xA88C52, 0x6B8E62, 0xA66B48, 0xC05C56};
 
-// Disposición en horizontal (320x170).
-const int16_t ALTO_ENCABEZADO = 52;
-const int16_t ALTO_FILA = (TFT_ALTO - ALTO_ENCABEZADO) / NUM_SENSORES;
-const int16_t X_INSIGNIA = 4;
-const int16_t ANCHO_INSIGNIA = 40;
-const int16_t X_BARRA = 52;
-const int16_t ANCHO_BARRA = 120;
-const int16_t ALTO_BARRA = 6;
-const int16_t X_FIN_BANDEJAS = 262;
-const int16_t X_FIN_HUEVOS = 314;
+// Pantalla de arranque.
+const int16_t Y_PRIMER_PASO = 44;
+const int16_t ALTO_PASO = 22;
+const uint8_t PASO_BUS = 0;
+const uint8_t PASO_XSHUT = 1;
+const uint8_t PRIMER_PASO_SENSOR = 2;
+
+// Pantalla de conteo: encabezado y cuadrícula de 3x2 tarjetas.
+const int16_t ALTO_ENCABEZADO = 40;
+const int16_t MARGEN = 4;
+const int16_t COLUMNAS = 3;
+const int16_t ANCHO_TARJETA = (TFT_ANCHO - MARGEN * (COLUMNAS + 1)) / COLUMNAS;
+const int16_t ALTO_TARJETA = (TFT_ALTO - ALTO_ENCABEZADO - MARGEN * 3) / 2;
+
+enum EstadoPaso { PENDIENTE, EN_CURSO, CORRECTO, FALLIDO };
 
 SPIClass spiTft(VSPI);
 Adafruit_ST7789 tft(&spiTft, TFT_CS, TFT_DC, TFT_RST);
@@ -64,19 +71,25 @@ Adafruit_VL53L0X sensores[NUM_SENSORES];
 
 bool sensorDisponible[NUM_SENSORES] = {false};
 bool sensorActivo[NUM_SENSORES] = {false};
+uint8_t lecturasLibres[NUM_SENSORES] = {0};
 int32_t conteos[NUM_SENSORES] = {0};
-bool filaPendiente[NUM_SENSORES] = {false};
+bool tarjetaPendiente[NUM_SENSORES] = {false};
+bool puntoPendiente[NUM_SENSORES] = {false};
+bool puntoDibujado[NUM_SENSORES] = {false};
+unsigned long finDestello[NUM_SENSORES] = {0};
+bool destelloDibujado[NUM_SENSORES] = {false};
 bool totalPendiente = true;
-int32_t maximoDibujado = -1;
 unsigned long ultimaLectura = 0;
 
 uint16_t colorFondo;
+uint16_t colorTarjeta;
 uint16_t colorTexto;
 uint16_t colorSecundario;
-uint16_t colorDeshabilitado;
-uint16_t colorPrimario;
-uint16_t colorDivisor;
-uint16_t colorFondoBarra;
+uint16_t colorApagado;
+uint16_t colorCorrecto;
+uint16_t colorFallo;
+uint16_t colorEnCurso;
+uint16_t acentos[NUM_SENSORES];
 
 uint16_t hexA565(uint32_t hex) {
   return tft.color565((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF);
@@ -97,120 +110,299 @@ String formatearMiles(int32_t valor) {
   return resultado;
 }
 
-void textoAlineadoDerecha(const String& texto, int16_t xFin, int16_t y, uint8_t tamano) {
-  int16_t ancho = texto.length() * 6 * tamano;
+int16_t anchoTexto(const String& texto, uint8_t tamano) {
+  return texto.length() * 6 * tamano;
+}
+
+void imprimir(const String& texto, int16_t x, int16_t y, uint8_t tamano, uint16_t color, uint16_t fondo) {
   tft.setTextSize(tamano);
-  tft.setCursor(xFin - ancho, y);
+  tft.setTextColor(color, fondo);
+  tft.setCursor(x, y);
   tft.print(texto);
 }
 
-int32_t totalHuevos() {
-  int32_t total = 0;
-  for (int i = 0; i < NUM_SENSORES; i++) {
-    total += conteos[i];
+// ---------------------------------------------------------------------------
+// Pantalla de arranque
+// ---------------------------------------------------------------------------
+
+void dibujarIcono(int16_t cx, int16_t cy, EstadoPaso estado) {
+  const int16_t r = 8;
+  tft.fillCircle(cx, cy, r + 1, colorFondo);
+  switch (estado) {
+    case PENDIENTE:
+      tft.drawCircle(cx, cy, r, colorApagado);
+      break;
+    case EN_CURSO:
+      tft.drawCircle(cx, cy, r, colorEnCurso);
+      tft.drawCircle(cx, cy, r - 1, colorEnCurso);
+      tft.fillCircle(cx, cy, 3, colorEnCurso);
+      break;
+    case CORRECTO:
+      // Chulito blanco grueso sobre círculo verde.
+      tft.fillCircle(cx, cy, r, colorCorrecto);
+      for (int8_t d = 0; d < 2; d++) {
+        tft.drawLine(cx - 4, cy + d, cx - 1, cy + 3 + d, colorTexto);
+        tft.drawLine(cx - 1, cy + 3 + d, cx + 4, cy - 3 + d, colorTexto);
+      }
+      break;
+    case FALLIDO:
+      tft.fillCircle(cx, cy, r, colorFallo);
+      for (int8_t d = 0; d < 2; d++) {
+        tft.drawLine(cx - 3 + d, cy - 3, cx + 3 + d, cy + 3, colorTexto);
+        tft.drawLine(cx - 3 + d, cy + 3, cx + 3 + d, cy - 3, colorTexto);
+      }
+      break;
   }
-  return total;
 }
 
-int32_t maximoCategoria() {
-  int32_t maximo = 0;
+// Dibuja un paso: icono, nombre y detalle (el detalle va en rojo si falló).
+void dibujarPaso(uint8_t paso, EstadoPaso estado, const String& nombre, const String& detalle) {
+  int16_t y = Y_PRIMER_PASO + paso * ALTO_PASO;
+  int16_t yCentro = y + ALTO_PASO / 2;
+  dibujarIcono(14, yCentro, estado);
+
+  uint16_t colorNombre = estado == PENDIENTE ? colorApagado : colorTexto;
+  imprimir(nombre, 30, yCentro - 7, 2, colorNombre, colorFondo);
+
+  tft.fillRect(130, y, TFT_ANCHO - 130, ALTO_PASO, colorFondo);
+  uint16_t colorDetalle = estado == FALLIDO ? colorFallo : colorSecundario;
+  imprimir(detalle, 130, yCentro - 3, 1, colorDetalle, colorFondo);
+}
+
+String nombreSensor(uint8_t i) {
+  return "S" + String(i + 1) + " " + categorias[i];
+}
+
+String detalleSensor(uint8_t i) {
+  char texto[32];
+  snprintf(texto, sizeof(texto), "GPIO %u -> 0x%02X", pinesXSHUT[i], DIRECCION_BASE + i);
+  return String(texto);
+}
+
+void dibujarPiePagina(const String& texto, uint16_t color) {
+  tft.fillRect(0, TFT_ALTO - 18, TFT_ANCHO, 18, colorFondo);
+  imprimir(texto, 8, TFT_ALTO - 14, 1, color, colorFondo);
+}
+
+void dibujarPantallaArranque() {
+  tft.fillScreen(colorFondo);
+  imprimir("SAMAVI", 8, 10, 2, colorTexto, colorFondo);
+  imprimir("Revisando sensores", 8 + anchoTexto("SAMAVI", 2) + 12, 15, 1, colorSecundario, colorFondo);
+  tft.drawFastHLine(8, 34, TFT_ANCHO - 16, colorApagado);
+
+  dibujarPaso(PASO_BUS, PENDIENTE, "Bus I2C", "SDA 21 / SCL 22");
+  dibujarPaso(PASO_XSHUT, PENDIENTE, "XSHUT", "nadie responde apagado");
   for (int i = 0; i < NUM_SENSORES; i++) {
-    maximo = max(maximo, conteos[i]);
+    dibujarPaso(PRIMER_PASO_SENSOR + i, PENDIENTE, nombreSensor(i), detalleSensor(i));
   }
-  return maximo;
 }
 
-int16_t yFila(uint8_t indice) {
-  return ALTO_ENCABEZADO + indice * ALTO_FILA;
+bool responde(uint8_t direccion) {
+  Wire.beginTransmission(direccion);
+  return Wire.endTransmission() == 0;
 }
 
-void dibujarEncabezado() {
-  tft.setTextColor(colorSecundario, colorFondo);
-  tft.setTextSize(1);
-  tft.setCursor(X_INSIGNIA, 6);
-  tft.print("PRODUCCION DE HOY");
+// Devuelve "" si el sensor quedó listo o el motivo del último fallo.
+String iniciarSensor(uint8_t i) {
+  uint8_t direccion = DIRECCION_BASE + i;
+  String motivo;
 
-  textoAlineadoDerecha("BANDEJAS", X_FIN_BANDEJAS, 40, 1);
-  textoAlineadoDerecha("HUEVOS", X_FIN_HUEVOS, 40, 1);
-  tft.drawFastHLine(0, ALTO_ENCABEZADO - 1, TFT_ANCHO, colorDivisor);
+  for (uint8_t intento = 1; intento <= INTENTOS_INICIO; intento++) {
+    String detalle = detalleSensor(i);
+    if (intento > 1) {
+      detalle += "  intento " + String(intento);
+    }
+    dibujarPaso(PRIMER_PASO_SENSOR + i, EN_CURSO, nombreSensor(i), detalle);
+
+    digitalWrite(pinesXSHUT[i], LOW);
+    delay(10);
+    digitalWrite(pinesXSHUT[i], HIGH);
+    delay(10);
+
+    if (!responde(DIRECCION_DEFECTO)) {
+      motivo = "no despierta (XSHUT/cables)";
+    } else if (!sensores[i].begin(direccion)) {
+      motivo = "fallo al configurar";
+    } else if (!responde(direccion)) {
+      char texto[32];
+      snprintf(texto, sizeof(texto), "no responde en 0x%02X", direccion);
+      motivo = texto;
+    } else if (!sensores[i].startRangeContinuous()) {
+      motivo = "no inicia la medicion";
+    } else {
+      return "";
+    }
+    Serial.printf("S%d (%s) intento %u: %s\n", i + 1, categorias[i], intento, motivo.c_str());
+  }
+
+  // Se deja en reset para que no ocupe 0x29 durante el resto de la secuencia.
+  digitalWrite(pinesXSHUT[i], LOW);
+  return motivo;
+}
+
+void iniciarSensores() {
+  dibujarPantallaArranque();
+  delay(300);
+
+  // Paso 1: el bus I2C debe estar en reposo (SDA y SCL en alto).
+  dibujarPaso(PASO_BUS, EN_CURSO, "Bus I2C", "SDA 21 / SCL 22");
+  pinMode(PIN_SDA, INPUT);
+  pinMode(PIN_SCL, INPUT);
+  bool busLibre = digitalRead(PIN_SDA) == HIGH && digitalRead(PIN_SCL) == HIGH;
+  Wire.begin(PIN_SDA, PIN_SCL);
+  delay(150);
+  dibujarPaso(PASO_BUS, busLibre ? CORRECTO : FALLIDO, "Bus I2C",
+              busLibre ? "SDA 21 / SCL 22 libres" : "linea en bajo: bus trabado");
+
+  // Paso 2: con todos los XSHUT en bajo ningún sensor debe responder.
+  dibujarPaso(PASO_XSHUT, EN_CURSO, "XSHUT", "apagando sensores");
+  for (int i = 0; i < NUM_SENSORES; i++) {
+    pinMode(pinesXSHUT[i], OUTPUT);
+    digitalWrite(pinesXSHUT[i], LOW);
+  }
+  delay(10);
+  bool xshutCorrecto = !responde(DIRECCION_DEFECTO);
+  delay(150);
+  dibujarPaso(PASO_XSHUT, xshutCorrecto ? CORRECTO : FALLIDO, "XSHUT",
+              xshutCorrecto ? "todos apagan" : "0x29 responde: XSHUT no apaga");
+
+  // Paso 3: cada sensor, uno a uno.
+  uint8_t listos = 0;
+  for (int i = 0; i < NUM_SENSORES; i++) {
+    String motivo = iniciarSensor(i);
+    sensorDisponible[i] = motivo.length() == 0;
+    if (sensorDisponible[i]) {
+      listos++;
+      dibujarPaso(PRIMER_PASO_SENSOR + i, CORRECTO, nombreSensor(i), detalleSensor(i));
+    } else {
+      dibujarPaso(PRIMER_PASO_SENSOR + i, FALLIDO, nombreSensor(i), motivo);
+    }
+  }
+
+  bool todoCorrecto = busLibre && xshutCorrecto && listos == NUM_SENSORES;
+  String resumen = String(listos) + "/" + String(NUM_SENSORES) + " sensores listos";
+  if (todoCorrecto) {
+    dibujarPiePagina(resumen, colorCorrecto);
+  } else {
+    dibujarPiePagina(resumen + " - revisa los pasos en rojo", colorFallo);
+  }
+  Serial.println(resumen);
+  delay(todoCorrecto ? PAUSA_ARRANQUE_OK_MS : PAUSA_ARRANQUE_FALLO_MS);
+}
+
+// ---------------------------------------------------------------------------
+// Pantalla de conteo
+// ---------------------------------------------------------------------------
+
+int16_t xTarjeta(uint8_t i) {
+  return MARGEN + (i % COLUMNAS) * (ANCHO_TARJETA + MARGEN);
+}
+
+int16_t yTarjeta(uint8_t i) {
+  return ALTO_ENCABEZADO + MARGEN + (i / COLUMNAS) * (ALTO_TARJETA + MARGEN);
+}
+
+void dibujarBorde(uint8_t i, bool destello) {
+  uint16_t color = destello ? colorCorrecto : colorTarjeta;
+  int16_t x = xTarjeta(i);
+  int16_t y = yTarjeta(i);
+  tft.drawRoundRect(x, y, ANCHO_TARJETA, ALTO_TARJETA, 8, color);
+  tft.drawRoundRect(x + 1, y + 1, ANCHO_TARJETA - 2, ALTO_TARJETA - 2, 7, color);
+}
+
+void dibujarPunto(uint8_t i) {
+  int16_t cx = xTarjeta(i) + ANCHO_TARJETA - 14;
+  int16_t cy = yTarjeta(i) + 18;
+  tft.fillCircle(cx, cy, 5, colorTarjeta);
+  if (!sensorDisponible[i]) {
+    return;
+  }
+  if (sensorActivo[i]) {
+    tft.fillCircle(cx, cy, 5, colorCorrecto);
+  } else {
+    tft.drawCircle(cx, cy, 5, colorApagado);
+  }
+}
+
+void dibujarTarjeta(uint8_t i) {
+  int16_t x = xTarjeta(i);
+  int16_t y = yTarjeta(i);
+  tft.fillRoundRect(x, y, ANCHO_TARJETA, ALTO_TARJETA, 8, colorTarjeta);
+  // Franja de color de la categoría a la izquierda del código.
+  tft.fillRoundRect(x + 8, y + 10, 4, 16, 2, sensorDisponible[i] ? acentos[i] : colorApagado);
+  imprimir(categorias[i], x + 16, y + 11, 2, sensorDisponible[i] ? colorTexto : colorApagado, colorTarjeta);
+
+  int32_t huevos = max<int32_t>(0, conteos[i]);
+  String numero = formatearMiles(huevos);
+  uint8_t tamano = numero.length() <= 3 ? 4 : 3;
+  uint16_t colorNumero = huevos > 0 ? colorTexto : colorApagado;
+  int16_t yNumero = y + 38 + (tamano == 4 ? 0 : 4);
+  imprimir(numero, x + (ANCHO_TARJETA - anchoTexto(numero, tamano)) / 2, yNumero, tamano, colorNumero, colorTarjeta);
+
+  String pie;
+  uint16_t colorPie = colorSecundario;
+  if (!sensorDisponible[i]) {
+    pie = "sin sensor";
+    colorPie = colorFallo;
+  } else {
+    pie = String(huevos / HUEVOS_POR_BANDEJA) + " band + " + String(huevos % HUEVOS_POR_BANDEJA);
+  }
+  imprimir(pie, x + (ANCHO_TARJETA - anchoTexto(pie, 1)) / 2, y + ALTO_TARJETA - 16, 1, colorPie, colorTarjeta);
+
+  dibujarPunto(i);
+  dibujarBorde(i, millis() < finDestello[i]);
 }
 
 void dibujarTotal() {
-  tft.fillRect(X_INSIGNIA, 18, 200, 24, colorFondo);
-  String total = formatearMiles(max<int32_t>(0, totalHuevos()));
-  tft.setTextColor(colorPrimario, colorFondo);
-  tft.setTextSize(3);
-  tft.setCursor(X_INSIGNIA, 18);
-  tft.print(total);
+  int32_t total = 0;
+  for (int i = 0; i < NUM_SENSORES; i++) {
+    total += max<int32_t>(0, conteos[i]);
+  }
 
-  tft.setTextColor(colorSecundario, colorFondo);
-  tft.setTextSize(1);
-  tft.setCursor(tft.getCursorX() + 6, 32);
-  tft.print("huevos");
+  tft.fillRect(0, 0, TFT_ANCHO, ALTO_ENCABEZADO, colorFondo);
+  imprimir("HOY", 8, 15, 1, colorSecundario, colorFondo);
+  String numero = formatearMiles(total);
+  imprimir(numero, 32, 8, 3, colorTexto, colorFondo);
+  int16_t finHuevos = 32 + anchoTexto(numero, 3) + 6 + anchoTexto("huevos", 1);
+  imprimir("huevos", 32 + anchoTexto(numero, 3) + 6, 22, 1, colorSecundario, colorFondo);
+
+  // Con totales grandes las bandejas pasan a letra pequeña para no encimarse.
+  String bandejas = String(total / HUEVOS_POR_BANDEJA) + " bandejas";
+  uint8_t tamano = TFT_ANCHO - 8 - anchoTexto(bandejas, 2) > finHuevos + 8 ? 2 : 1;
+  imprimir(bandejas, TFT_ANCHO - 8 - anchoTexto(bandejas, tamano), tamano == 2 ? 13 : 17, tamano,
+           colorSecundario, colorFondo);
 }
 
-void dibujarFila(uint8_t i, int32_t maximo) {
-  int16_t y = yFila(i);
-  int16_t yCentro = y + ALTO_FILA / 2;
-  uint16_t fondoInsignia = hexA565(coloresHex[i].fondo);
-  uint16_t textoInsignia = hexA565(coloresHex[i].texto);
-  uint16_t bordeInsignia = hexA565(coloresHex[i].borde);
-
-  // Insignia con el código de la categoría.
-  int16_t yInsignia = yCentro - 12;
-  tft.fillRoundRect(X_INSIGNIA, yInsignia, ANCHO_INSIGNIA, 24, 4, fondoInsignia);
-  tft.drawRoundRect(X_INSIGNIA, yInsignia, ANCHO_INSIGNIA, 24, 4, bordeInsignia);
-  tft.setTextColor(textoInsignia, fondoInsignia);
-  tft.setTextSize(2);
-  int16_t anchoCodigo = strlen(categorias[i]) * 12;
-  tft.setCursor(X_INSIGNIA + (ANCHO_INSIGNIA - anchoCodigo) / 2, yInsignia + 5);
-  tft.print(categorias[i]);
-
-  // Barra proporcional a la categoría con más huevos.
-  int16_t yBarra = yCentro - ALTO_BARRA / 2;
-  int32_t huevos = max<int32_t>(0, conteos[i]);
-  int16_t relleno = maximo > 0 ? (int32_t)ANCHO_BARRA * huevos / maximo : 0;
-  if (huevos > 0 && relleno < 4) {
-    relleno = 4;
+void dibujarPantallaConteo() {
+  tft.fillScreen(colorFondo);
+  for (int i = 0; i < NUM_SENSORES; i++) {
+    tarjetaPendiente[i] = true;
   }
-  tft.fillRoundRect(X_BARRA, yBarra, ANCHO_BARRA, ALTO_BARRA, 3, colorFondoBarra);
-  if (relleno > 0) {
-    tft.fillRoundRect(X_BARRA, yBarra, relleno, ALTO_BARRA, 3, bordeInsignia);
-  }
-
-  // Números: bandejas y huevos sueltos (o "--" si el sensor no respondió).
-  int16_t xNumeros = X_BARRA + ANCHO_BARRA + 4;
-  tft.fillRect(xNumeros, y + 1, X_FIN_HUEVOS - xNumeros + 1, ALTO_FILA - 2, colorFondo);
-  int16_t yTexto = yCentro - 11;
-  if (!sensorDisponible[i] && conteos[i] == 0) {
-    tft.setTextColor(colorDeshabilitado, colorFondo);
-    textoAlineadoDerecha("--", X_FIN_BANDEJAS, yTexto, 3);
-    textoAlineadoDerecha("--", X_FIN_HUEVOS, yTexto, 3);
-  } else {
-    int32_t bandejas = huevos / HUEVOS_POR_BANDEJA;
-    int32_t sueltos = huevos % HUEVOS_POR_BANDEJA;
-    tft.setTextColor(bandejas > 0 ? colorTexto : colorDeshabilitado, colorFondo);
-    textoAlineadoDerecha(formatearMiles(bandejas), X_FIN_BANDEJAS, yTexto, 3);
-    tft.setTextColor(sueltos > 0 ? colorTexto : colorDeshabilitado, colorFondo);
-    textoAlineadoDerecha(String(sueltos), X_FIN_HUEVOS, yTexto, 3);
-  }
-
-  if (i < NUM_SENSORES - 1) {
-    tft.drawFastHLine(X_INSIGNIA, y + ALTO_FILA - 1, TFT_ANCHO - 2 * X_INSIGNIA, colorDivisor);
-  }
+  totalPendiente = true;
 }
 
 // Redibuja solo lo que cambió para evitar parpadeo.
 void actualizarPantalla() {
-  int32_t maximo = maximoCategoria();
-  bool cambioEscala = maximo != maximoDibujado;
   for (int i = 0; i < NUM_SENSORES; i++) {
-    if (cambioEscala || filaPendiente[i]) {
-      dibujarFila(i, maximo);
-      filaPendiente[i] = false;
+    if (tarjetaPendiente[i]) {
+      dibujarTarjeta(i);
+      tarjetaPendiente[i] = false;
+      puntoPendiente[i] = false;
+      puntoDibujado[i] = sensorActivo[i];
+      destelloDibujado[i] = millis() < finDestello[i];
+      continue;
+    }
+    if (puntoPendiente[i] || puntoDibujado[i] != sensorActivo[i]) {
+      dibujarPunto(i);
+      puntoDibujado[i] = sensorActivo[i];
+      puntoPendiente[i] = false;
+    }
+    bool destello = millis() < finDestello[i];
+    if (destello != destelloDibujado[i]) {
+      dibujarBorde(i, destello);
+      destelloDibujado[i] = destello;
     }
   }
-  maximoDibujado = maximo;
 
   if (totalPendiente) {
     dibujarTotal();
@@ -223,7 +415,10 @@ void registrarConteo(uint8_t indice, int8_t cantidad) {
   if (conteos[indice] < 0) {
     conteos[indice] = 0;
   }
-  filaPendiente[indice] = true;
+  if (cantidad > 0) {
+    finDestello[indice] = millis() + DURACION_DESTELLO_MS;
+  }
+  tarjetaPendiente[indice] = true;
   totalPendiente = true;
   Serial.printf("Conteo %s: %+d -> %ld\n", categorias[indice], cantidad, (long)conteos[indice]);
 }
@@ -241,7 +436,7 @@ void procesarComandoSerie() {
     if (linea == "0") {
       for (int i = 0; i < NUM_SENSORES; i++) {
         conteos[i] = 0;
-        filaPendiente[i] = true;
+        tarjetaPendiente[i] = true;
       }
       totalPendiente = true;
       Serial.println("Conteos reiniciados");
@@ -264,30 +459,6 @@ void procesarComandoSerie() {
   }
 }
 
-void iniciarSensores() {
-  Wire.begin(PIN_SDA, PIN_SCL);
-
-  for (int i = 0; i < NUM_SENSORES; i++) {
-    pinMode(pinesXSHUT[i], OUTPUT);
-    digitalWrite(pinesXSHUT[i], LOW);
-  }
-  delay(10);
-
-  // A diferencia de main.cpp, un sensor que falla no detiene la prueba:
-  // su fila muestra "--" y se puede simular por el monitor serie.
-  for (int i = 0; i < NUM_SENSORES; i++) {
-    digitalWrite(pinesXSHUT[i], HIGH);
-    delay(10);
-    if (sensores[i].begin(0x30 + i)) {
-      sensores[i].startRangeContinuous();
-      sensorDisponible[i] = true;
-    } else {
-      digitalWrite(pinesXSHUT[i], LOW);
-      Serial.printf("Error sensor %d (%s)\n", i + 1, categorias[i]);
-    }
-  }
-}
-
 void leerSensores() {
   if (millis() - ultimaLectura < INTERVALO_LECTURA_MS) {
     return;
@@ -298,19 +469,28 @@ void leerSensores() {
     if (!sensorDisponible[i] || !sensores[i].isRangeComplete()) {
       continue;
     }
-    uint16_t lectura = sensores[i].readRange();
+    // En modo continuo se lee con readRangeResult(): readRange() lanza una
+    // medición única encima de la continua y puede dejar el sensor trabado.
+    uint16_t lectura = sensores[i].readRangeResult();
 
-    if (sensores[i].timeoutOccurred()) {
-      sensorActivo[i] = false;
+    if (sensores[i].Status != VL53L0X_ERROR_NONE) {
       continue;
     }
 
-    bool dentroDelRango = lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
-    if (dentroDelRango && !sensorActivo[i]) {
-      registrarConteo(i, 1);
-      sensorActivo[i] = true;
-    } else if (!dentroDelRango) {
+    // Estado 0 = medición válida; 4 = nada al frente. Los estados 1-3 (p. ej. señal
+    // débil) dan distancias poco fiables y no cambian el estado del sensor.
+    uint8_t estado = sensores[i].readRangeStatus();
+    bool huevoAlFrente = estado == 0 && lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
+    bool canalLibre = estado == 4 || (estado == 0 && lectura > DISTANCIA_LIBERAR_MM);
+    if (huevoAlFrente) {
+      lecturasLibres[i] = 0;
+      if (!sensorActivo[i]) {
+        sensorActivo[i] = true;
+        registrarConteo(i, 1);
+      }
+    } else if (canalLibre && sensorActivo[i] && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
       sensorActivo[i] = false;
+      lecturasLibres[i] = 0;
     }
   }
 }
@@ -322,24 +502,22 @@ void setup() {
   tft.init(TFT_ALTO, TFT_ANCHO);
   tft.setSPISpeed(40000000);
   tft.setRotation(1);
-
-  colorFondo = hexA565(0xFFFFFF);
-  colorTexto = hexA565(0x3A3530);
-  colorSecundario = hexA565(0x7A736E);
-  colorDeshabilitado = hexA565(0xC9C3BD);
-  colorPrimario = hexA565(0x5C4333);
-  colorDivisor = hexA565(0xE8E2DB);
-  colorFondoBarra = hexA565(0xF0ECE7);
-
-  tft.fillScreen(colorFondo);
   tft.setTextWrap(false);
-  dibujarEncabezado();
-  actualizarPantalla();
+
+  colorFondo = hexA565(0x14110E);
+  colorTarjeta = hexA565(0x2A251F);
+  colorTexto = hexA565(0xFFFFFF);
+  colorSecundario = hexA565(0xA59D94);
+  colorApagado = hexA565(0x5A524A);
+  colorCorrecto = hexA565(0x3FBF5F);
+  colorFallo = hexA565(0xE5534B);
+  colorEnCurso = hexA565(0xE8B33A);
+  for (int i = 0; i < NUM_SENSORES; i++) {
+    acentos[i] = hexA565(acentosHex[i]);
+  }
 
   iniciarSensores();
-  for (int i = 0; i < NUM_SENSORES; i++) {
-    filaPendiente[i] = true;
-  }
+  dibujarPantallaConteo();
   actualizarPantalla();
   Serial.println("Prueba TFT lista");
 }
