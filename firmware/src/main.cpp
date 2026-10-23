@@ -14,11 +14,8 @@
 const uint8_t pinesXSHUT[NUM_SENSORES] = {15, 4, 18, 13, 14, 33};
 const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
 const char* MQTT_TOPIC = "samavi/conteo";
-const uint16_t DISTANCIA_MIN_MM = 10;
-const uint16_t DISTANCIA_MAX_MM = 100;
-// Histéresis: para soltar un huevo hace falta ver el canal libre varias lecturas
-// seguidas (a 50 ms por lectura) o una distancia claramente mayor al umbral.
-const uint16_t DISTANCIA_LIBERAR_MM = 120;
+// Rango de detección en config.h. Histéresis: para soltar un huevo hace falta ver
+// el canal libre varias lecturas seguidas (a 50 ms por lectura).
 const uint8_t LECTURAS_PARA_LIBERAR = 3;
 const unsigned long INTERVALO_LECTURA_MS = 50;
 
@@ -27,6 +24,7 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 bool sensorActivo[NUM_SENSORES] = {false};
 uint8_t lecturasLibres[NUM_SENSORES] = {0};
+unsigned long ultimoConteo[NUM_SENSORES] = {0};
 unsigned long ultimaLectura = 0;
 
 void conectarWiFi();
@@ -89,15 +87,18 @@ void loop() {
       // Estado 0 = medición válida; 4 = nada al frente. Los estados 1-3 (p. ej. señal
       // débil) dan distancias poco fiables y no cambian el estado del sensor.
       uint8_t estado = sensores[i].readRangeStatus();
-      bool huevoAlFrente = estado == 0 && lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
-      bool canalLibre = estado == 4 || (estado == 0 && lectura > DISTANCIA_LIBERAR_MM);
+      bool enRango = lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
+      bool huevoAlFrente = estado == 0 && enRango;
+      bool canalLibre = estado == 4 || (estado == 0 && !enRango);
+      bool enDebounce = millis() - ultimoConteo[i] < DEBOUNCE_MS;
       if (huevoAlFrente) {
         lecturasLibres[i] = 0;
-        if (!sensorActivo[i]) {
+        if (!sensorActivo[i] && !enDebounce) {
+          ultimoConteo[i] = millis();
           publicarConteo(i);
           sensorActivo[i] = true;
         }
-      } else if (canalLibre && sensorActivo[i] && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
+      } else if (canalLibre && sensorActivo[i] && !enDebounce && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
         sensorActivo[i] = false;
         lecturasLibres[i] = 0;
       }

@@ -16,6 +16,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
 #include <Adafruit_VL53L0X.h>
+#include "config.h"
 
 #define PIN_SCL 22
 #define PIN_SDA 21
@@ -34,11 +35,8 @@ const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
 const uint8_t DIRECCION_DEFECTO = 0x29;
 const uint8_t DIRECCION_BASE = 0x30;
 const uint8_t INTENTOS_INICIO = 3;
-const uint16_t DISTANCIA_MIN_MM = 10;
-const uint16_t DISTANCIA_MAX_MM = 100;
-// Histéresis: para soltar un huevo hace falta ver el canal libre varias lecturas
-// seguidas (a 50 ms por lectura) o una distancia claramente mayor al umbral.
-const uint16_t DISTANCIA_LIBERAR_MM = 120;
+// Rango de detección en config.h. Histéresis: para soltar un huevo hace falta ver
+// el canal libre varias lecturas seguidas (a 50 ms por lectura).
 const uint8_t LECTURAS_PARA_LIBERAR = 3;
 const unsigned long INTERVALO_LECTURA_MS = 50;
 const int HUEVOS_POR_BANDEJA = 30;
@@ -72,6 +70,7 @@ Adafruit_VL53L0X sensores[NUM_SENSORES];
 bool sensorDisponible[NUM_SENSORES] = {false};
 bool sensorActivo[NUM_SENSORES] = {false};
 uint8_t lecturasLibres[NUM_SENSORES] = {0};
+unsigned long ultimoConteo[NUM_SENSORES] = {0};
 int32_t conteos[NUM_SENSORES] = {0};
 bool tarjetaPendiente[NUM_SENSORES] = {false};
 bool puntoPendiente[NUM_SENSORES] = {false};
@@ -480,15 +479,18 @@ void leerSensores() {
     // Estado 0 = medición válida; 4 = nada al frente. Los estados 1-3 (p. ej. señal
     // débil) dan distancias poco fiables y no cambian el estado del sensor.
     uint8_t estado = sensores[i].readRangeStatus();
-    bool huevoAlFrente = estado == 0 && lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
-    bool canalLibre = estado == 4 || (estado == 0 && lectura > DISTANCIA_LIBERAR_MM);
+    bool enRango = lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
+    bool huevoAlFrente = estado == 0 && enRango;
+    bool canalLibre = estado == 4 || (estado == 0 && !enRango);
+    bool enDebounce = millis() - ultimoConteo[i] < DEBOUNCE_MS;
     if (huevoAlFrente) {
       lecturasLibres[i] = 0;
-      if (!sensorActivo[i]) {
+      if (!sensorActivo[i] && !enDebounce) {
+        ultimoConteo[i] = millis();
         sensorActivo[i] = true;
         registrarConteo(i, 1);
       }
-    } else if (canalLibre && sensorActivo[i] && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
+    } else if (canalLibre && sensorActivo[i] && !enDebounce && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
       sensorActivo[i] = false;
       lecturasLibres[i] = 0;
     }
