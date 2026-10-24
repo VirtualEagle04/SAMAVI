@@ -10,7 +10,7 @@ import { galponesRoutes } from "./modules/galpones/galpones.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
-import { deviceTracker } from "./mqtt/device-status.js";
+import { deviceTracker, TOPICO_ESTADO_DISPOSITIVOS } from "./mqtt/device-status.js";
 
 const app = express();
 app.use(express.json());
@@ -27,13 +27,7 @@ app.use(errorMiddleware);
 
 const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
 
-const topicsToSubscribe = [
-  env.mqttTopic,
-  "$SYS/broker/clients/connected",
-  "samavi/esp32/#",
-  "samavi/status",
-  "samavi/heartbeat",
-];
+const topicsToSubscribe = [env.mqttTopic, TOPICO_ESTADO_DISPOSITIVOS];
 
 client.on("connect", () => {
   console.log("MQTT: Conectado al broker MQTT");
@@ -54,8 +48,8 @@ client.on("close", () => {
   deviceTracker.setBrokerConnected(false);
 });
 
-client.on("message", (topic, message) => {
-  void handleProductionMessage(topic, message);
+client.on("message", (topic, message, packet) => {
+  void handleProductionMessage(topic, message, packet.retain);
 });
 
 client.on("error", (error) => {

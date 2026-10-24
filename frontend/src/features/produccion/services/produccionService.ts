@@ -127,12 +127,18 @@ export async function getDeviceStatus(): Promise<DeviceStatus> {
 
 const EVENTS_RETRY_MS = 3000
 
+export interface ProductionEventHandlers {
+  onConteo: (event: ConteoEvent) => void
+  onDispositivo: (status: DeviceStatus) => void
+}
+
 /**
- * Abre el stream SSE de producción y llama a `onConteo` cada vez que el backend
- * registra un conteo. Se reconecta solo si la conexión se cae. Devuelve la función
- * que cierra la suscripción.
+ * Abre el stream SSE de producción: llama a `onConteo` cada vez que el backend
+ * registra un conteo y a `onDispositivo` al conectar y cada vez que cambia el estado
+ * del ESP32. Se reconecta solo si la conexión se cae. Devuelve la función que cierra
+ * la suscripción.
  */
-export function subscribeProductionEvents(onConteo: (event: ConteoEvent) => void): () => void {
+export function subscribeProductionEvents({ onConteo, onDispositivo }: ProductionEventHandlers): () => void {
   const controller = new AbortController()
   let retryTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -143,9 +149,11 @@ export function subscribeProductionEvents(onConteo: (event: ConteoEvent) => void
       if (line.startsWith("event:")) eventName = line.slice(6).trim()
       else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart())
     }
-    if (eventName !== "conteo" || dataLines.length === 0) return
+    if (dataLines.length === 0) return
     try {
-      onConteo(JSON.parse(dataLines.join("\n")) as ConteoEvent)
+      const data: unknown = JSON.parse(dataLines.join("\n"))
+      if (eventName === "conteo") onConteo(data as ConteoEvent)
+      else if (eventName === "dispositivo") onDispositivo(data as DeviceStatus)
     } catch (err) {
       console.error("Evento de producción inválido:", err)
     }

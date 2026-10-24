@@ -167,7 +167,7 @@ export default function ProduccionPage() {
   useEffect(() => {
     loadData(true);
 
-    // Respaldo: refresca el estado del dispositivo y cubre caídas del stream de eventos
+    // Respaldo por si se cae el stream de eventos, que trae conteos y estado del ESP32 al instante
     const interval = setInterval(() => {
       loadData(false);
     }, 10000);
@@ -175,17 +175,21 @@ export default function ProduccionPage() {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  // Recarga en cuanto el backend registra un conteo (MQTT o manual)
+  // Recarga en cuanto el backend registra un conteo (MQTT o manual) y aplica al
+  // instante los cambios de estado del ESP32
   useEffect(() => {
     if (!hasAccess) return;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const unsubscribe = subscribeProductionEvents(() => {
-      if (refreshTimer) return;
-      refreshTimer = setTimeout(() => {
-        refreshTimer = undefined;
-        void loadData(false);
-      }, LIVE_REFRESH_THROTTLE_MS);
+    const unsubscribe = subscribeProductionEvents({
+      onConteo: () => {
+        if (refreshTimer) return;
+        refreshTimer = setTimeout(() => {
+          refreshTimer = undefined;
+          void loadData(false);
+        }, LIVE_REFRESH_THROTTLE_MS);
+      },
+      onDispositivo: setDeviceStatus,
     });
 
     return () => {
