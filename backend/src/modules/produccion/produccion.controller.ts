@@ -13,7 +13,7 @@ import {
   registerCount,
 } from "./produccion.service.js";
 import { deviceTracker } from "../../mqtt/device-status.js";
-import { onConteoRegistrado } from "./produccion.events.js";
+import { onConteoRegistrado, onDispositivoEstado } from "./produccion.events.js";
 
 function serializeCount<T extends { id: bigint }>(count: T) {
   return { ...count, id: count.id.toString() };
@@ -86,9 +86,14 @@ export function streamProductionEventsController(request: Request, response: Res
   response.flushHeaders();
   response.write("retry: 3000\n\n");
 
-  const unsubscribe = onConteoRegistrado((event) => {
-    response.write(`event: conteo\ndata: ${JSON.stringify(event)}\n\n`);
-  });
+  const send = (event: string, data: unknown) => {
+    response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // El estado actual va primero para que el cliente quede al día al (re)conectarse.
+  send("dispositivo", deviceTracker.getStatus());
+  const unsubscribeConteo = onConteoRegistrado((event) => send("conteo", event));
+  const unsubscribeDispositivo = onDispositivoEstado((status) => send("dispositivo", status));
 
   // Comentario periódico para que proxies e intermediarios no cierren la conexión inactiva.
   const keepAlive = setInterval(() => {
@@ -97,6 +102,7 @@ export function streamProductionEventsController(request: Request, response: Res
 
   request.on("close", () => {
     clearInterval(keepAlive);
-    unsubscribe();
+    unsubscribeConteo();
+    unsubscribeDispositivo();
   });
 }

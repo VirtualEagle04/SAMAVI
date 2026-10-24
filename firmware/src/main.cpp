@@ -1,5 +1,6 @@
 // Firmware SAMAVI: cuenta huevos por categoría con seis VL53L0X, publica cada
-// conteo por MQTT en samavi/conteo y muestra el estado en la pantalla TFT.
+// conteo por MQTT en samavi/conteo y muestra el estado en la pantalla TFT. Su
+// estado de conexión se publica retenido en samavi/dispositivos/<MAC>/estado.
 //
 // 1. Pantalla de arranque: un chulito verde por cada paso (bus I2C, XSHUT, cada
 //    sensor, Wi-Fi con la IP asignada y broker MQTT). Una X roja indica el paso
@@ -271,12 +272,25 @@ String iniciarSensor(uint8_t i) {
   return motivo;
 }
 
+// Estado publicado en samavi/dispositivos/<MAC>/estado, p. ej.
+// {"estado":"online","galponId":1,"ip":"192.168.1.50"}.
+String mensajeEstado(const char* estado) {
+  return "{\"estado\":\"" + String(estado) + "\",\"galponId\":" + String(GALPON_ID) +
+         ",\"ip\":\"" + WiFi.localIP().toString() + "\"}";
+}
+
 // Intenta conectar al broker una vez; no bloquea más que el intento.
 bool conectarMQTT() {
-  String clientId = "samavi-esp32-" + WiFi.macAddress();
+  String dispositivoId = WiFi.macAddress();
+  dispositivoId.replace(":", "");
+  String clientId = "samavi-esp32-" + dispositivoId;
+  String topicoEstado = "samavi/dispositivos/" + dispositivoId + "/estado";
+  String offline = mensajeEstado("offline");
   Serial.println("Conectando a MQTT...");
-  if (mqttClient.connect(clientId.c_str())) {
-    Serial.println("MQTT conectado");
+  // LWT: si el ESP32 cae sin desconectarse, el broker publica "offline" retenido.
+  if (mqttClient.connect(clientId.c_str(), topicoEstado.c_str(), 1, true, offline.c_str())) {
+    mqttClient.publish(topicoEstado.c_str(), mensajeEstado("online").c_str(), true);
+    Serial.println("MQTT conectado como " + clientId);
     return true;
   }
   Serial.printf("MQTT fallo, rc=%d\n", mqttClient.state());

@@ -34,11 +34,16 @@ export default function LiveStatusBar({
   now,
 }: LiveStatusBarProps) {
   const connected = deviceStatus?.connected ?? false;
-  const lastActivity = formatRelativeTime(deviceStatus?.lastActivity, now);
+  // Con un solo ESP32 se muestra el conectado o, si no hay, el último conocido.
+  const dispositivos = deviceStatus?.dispositivos ?? [];
+  const dispositivo = dispositivos.find((d) => d.conectado) ?? dispositivos[0];
+  const since = formatRelativeTime(dispositivo?.desde, now);
 
-  const statusText = connected
-    ? `ESP32 en línea${lastActivity ? ` · ${lastActivity}` : ""}`
-    : `ESP32 sin conexión${lastActivity ? ` · último dato ${lastActivity}` : ""}`;
+  const sinceText = since === "ahora" ? since : since ? `desde ${since}` : null;
+  const statusText = `ESP32 ${connected ? "en línea" : "sin conexión"}${sinceText ? ` · ${sinceText}` : ""}`;
+  const detail = dispositivo
+    ? `${dispositivo.id}${dispositivo.galponId !== null ? ` · galpón ${dispositivo.galponId}` : ""}${dispositivo.ip ? ` · IP ${dispositivo.ip}` : ""}`
+    : "Ningún ESP32 se ha anunciado en el broker MQTT.";
 
   return (
     <Box
@@ -83,8 +88,8 @@ export default function LiveStatusBar({
           <Tooltip
             title={
               connected
-                ? "ESP32 activo en el broker MQTT."
-                : "ESP32 no detectado en el broker MQTT. Puedes registrar conteos manualmente."
+                ? detail
+                : `${detail} Puedes registrar conteos manualmente.`
             }
           >
             <Box

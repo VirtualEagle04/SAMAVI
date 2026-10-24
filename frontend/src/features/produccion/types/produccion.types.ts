@@ -75,12 +75,18 @@ export interface CategoryCountSummary {
   porcentaje: number
 }
 
+export interface Dispositivo {
+  id: string
+  galponId: number | null
+  ip: string | null
+  conectado: boolean
+  desde: string | null
+}
+
 export interface DeviceStatus {
-  connected: boolean
   brokerConnected: boolean
-  connectedClients: number
-  lastActivity: string | null
-  status: "online" | "offline"
+  connected: boolean
+  dispositivos: Dispositivo[]
 }
 
 export interface ConteoEvent {
