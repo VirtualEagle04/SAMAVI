@@ -75,12 +75,12 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 
 ## MQTT
 
-- Tópicos suscritos en `index.ts`: el de `MQTT_TOPIC`, `$SYS/broker/clients/connected`, `samavi/esp32/#`, `samavi/status` y `samavi/heartbeat`. [production-mqtt.handler.ts](backend/src/mqtt/production-mqtt.handler.ts) los enruta: clientes `$SYS`, estado/LWT (`online`/`offline`), heartbeat y, por defecto, conteos. El estado del dispositivo vive en [device-status.ts](backend/src/mqtt/device-status.ts) y se expone en `GET /api/v1/produccion/dispositivo-estado`.
-- Tiempo real: `registerCount` emite un evento en [produccion.events.ts](backend/src/modules/produccion/produccion.events.ts) y `GET /api/v1/produccion/eventos` lo reenvía por SSE (evento `conteo`). El frontend lo consume con `fetch` en streaming (`subscribeProductionEvents`) para enviar el JWT en `Authorization`, no con `EventSource`.
+- Tópicos suscritos en `index.ts`: el de `MQTT_TOPIC` (conteos) y `samavi/dispositivos/+/estado`. [production-mqtt.handler.ts](backend/src/mqtt/production-mqtt.handler.ts) enruta el estado de cada dispositivo y, por defecto, los conteos. El estado vive en [device-status.ts](backend/src/mqtt/device-status.ts) (un registro por dispositivo) y se expone en `GET /api/v1/produccion/dispositivo-estado`. Contrato completo en `docs/protocols/mqtt.md`.
+- Tiempo real: `registerCount` emite un evento en [produccion.events.ts](backend/src/modules/produccion/produccion.events.ts) y `GET /api/v1/produccion/eventos` lo reenvía por SSE (evento `conteo`). El mismo stream envía el evento `dispositivo` al conectarse y en cada cambio de estado del ESP32 (`emitDispositivoEstado`). El frontend lo consume con `fetch` en streaming (`subscribeProductionEvents`) para enviar el JWT en `Authorization`, no con `EventSource`.
 - Conteo: el firmware publica en `samavi/conteo` `{"galponId":1,"categoriaPeso":"A","cantidad":1,"timestamp":"..."}`. El backend lo valida con `parseProductionCountInput` ([produccion.schemas.ts](backend/src/modules/produccion/produccion.schemas.ts)): `galponId` entero positivo, `categoriaPeso` texto, `cantidad` 1 o -1, `timestamp` fecha.
 - Todo `JSON.parse` de un payload MQTT va en `try/catch` y se valida el resultado; un mensaje inválido no debe tumbar el proceso.
 - Un cambio de contrato exige actualizar firmware, backend, pruebas y `docs/protocols/mqtt.md`. No asumas que una foto, un conteo y una bandeja son la misma unidad de negocio.
-- Estado actual del firmware: publica solo `samavi/conteo` con `galponId` de la constante `GALPON_ID` (1) y keep-alive de 5 s; `mqttClient.connect` no define LWT y no publica estado ni heartbeat, aunque el backend los escucha.
+- Estado actual del firmware: publica los conteos en `samavi/conteo` con `galponId` de la constante `GALPON_ID` (1) y keep-alive de 5 s; al conectar publica `online` retenido en `samavi/dispositivos/<MAC>/estado` y declara `offline` como LWT en ese tópico. El backend considera conectado un dispositivo solo si su último estado es `online`.
 
 ## Datos
 
