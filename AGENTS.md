@@ -80,7 +80,7 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 - Conteo: el firmware publica en `samavi/conteo` `{"galponId":1,"categoriaPeso":"A","cantidad":1,"timestamp":"..."}`. El backend lo valida con `parseProductionCountInput` ([produccion.schemas.ts](backend/src/modules/produccion/produccion.schemas.ts)): `galponId` entero positivo, `categoriaPeso` texto, `cantidad` 1 o -1, `timestamp` fecha.
 - Todo `JSON.parse` de un payload MQTT va en `try/catch` y se valida el resultado; un mensaje inválido no debe tumbar el proceso.
 - Un cambio de contrato exige actualizar firmware, backend, pruebas y `docs/protocols/mqtt.md`. No asumas que una foto, un conteo y una bandeja son la misma unidad de negocio.
-- Estado actual del firmware: publica `galponId` fijo en 1 y solo `samavi/conteo`; `mqttClient.connect` no define LWT y no publica estado ni heartbeat, aunque el backend los escucha.
+- Estado actual del firmware: publica solo `samavi/conteo` con `galponId` de la constante `GALPON_ID` (1) y keep-alive de 5 s; `mqttClient.connect` no define LWT y no publica estado ni heartbeat, aunque el backend los escucha.
 
 ## Datos
 
@@ -101,11 +101,12 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 
 ## Firmware
 
-- Solo [firmware/src/main.cpp](firmware/src/main.cpp) se compila (`build_src_filter = -<*> +<main.cpp>`). Los demás `main_*.cpp` son variantes de prueba.
-- Valores actuales de `main.cpp`: seis sensores VL53L0X por I2C (`SDA` 21, `SCL` 22), pines XSHUT `{15, 4, 18, 13, 14, 33}` y categorías `{"Y","Ex","AA","A","B","C"}` por sensor. `docs/hardware.md` dice que pantallas OLED, MCP23017 y botones siguen pendientes.
+- El entorno `esp32dev` compila solo [firmware/src/main.cpp](firmware/src/main.cpp). Los `main_test_*.cpp` vigentes tienen su propio entorno en `platformio.ini` (`tft_test`, `sensores_test`); los demás `main_*.cpp` son variantes antiguas sin entorno.
+- Valores actuales de `main.cpp`: seis sensores VL53L0X por I2C (`SDA` 21, `SCL` 22), pines XSHUT `{15, 4, 18, 13, 14, 33}`, direcciones `0x30`–`0x35` y categorías `{"Y","Ex","AA","A","B","C"}` por sensor; pantalla TFT ST7789 240x320 por SPI (pines en `docs/hardware.md`). `docs/hardware.md` dice que OLED, multiplexor I2C, MCP23017 y botones siguen pendientes.
+- En modo continuo los VL53L0X se leen con `readRangeResult()`, nunca con `readRange()`. La detección solo cuenta lecturas de estado 0 dentro del rango y aplica debounce (`docs/hardware.md`).
 - No cambies pines, direcciones I2C ni secuencias XSHUT sin verificar el hardware real.
-- Debe conservar el conteo local durante caídas de Wi-Fi o MQTT, y evitar incrementos múltiples por un mismo huevo (`docs/hardware.md`).
-- Copia `firmware/include/config.h.example` a `firmware/include/config.h` (ignorado por git) con tus credenciales; nunca lo subas.
+- Debe conservar el conteo local durante caídas de Wi-Fi o MQTT, y evitar incrementos múltiples por un mismo huevo (`docs/hardware.md`). Hoy las reconexiones no bloquean el conteo, pero los huevos contados sin conexión no se reenvían.
+- Copia `firmware/include/config.h.example` a `firmware/include/config.h` (ignorado por git) con tus credenciales; nunca lo subas. Además de Wi-Fi y MQTT, define `DISTANCIA_MIN_MM`, `DISTANCIA_MAX_MM` y `DEBOUNCE_MS`; sin ellos no compila.
 
 ## Hosts de agentes
 
