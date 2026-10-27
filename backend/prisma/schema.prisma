@@ -45,6 +45,8 @@ model Usuario {
   rol          Rol    @relation(fields: [idRol], references: [id])
   alimentaciones RegistroAlimentacion[]
   auditorias   Auditoria[]
+  gastos       Gasto[]
+  cierresSemanales CierreSemanal[]
 
   @@map("usuario")
 }
@@ -91,8 +93,33 @@ model Galpon {
   bodegas          Bodega[]
   despachos        DetalleVentaGalpon[]
   alimentaciones   RegistroAlimentacion[]
+  inversiones      InversionSocio[]
+  gastos           GastoGalpon[]
+  cierresSemanales CierreSemanalGalpon[]
 
   @@map("galpon")
+}
+
+model Socio {
+  id          Int              @id @default(autoincrement())
+  nombre      String           @db.VarChar(150)
+  documento   String           @unique @db.VarChar(20)
+  contacto    Json?
+  inversiones InversionSocio[]
+  repartos    CierreSemanalSocio[]
+
+  @@map("socio")
+}
+
+model InversionSocio {
+  idSocio             Int     @map("id_socio")
+  idGalpon            Int     @map("id_galpon")
+  porcentajeInversion Decimal @map("porcentaje_inversion") @db.Decimal(5, 2)
+  socio               Socio   @relation(fields: [idSocio], references: [id], onDelete: Cascade)
+  galpon              Galpon  @relation(fields: [idGalpon], references: [id], onDelete: Cascade)
+
+  @@id([idSocio, idGalpon])
+  @@map("inversion_socio")
 }
 
 model CategoriaPeso {
@@ -337,5 +364,78 @@ model DetalleVentaGalpon {
   @@id([idVenta, codigoCategoriaPeso, idGalpon])
   @@index([idGalpon, codigoCategoriaPeso])
   @@map("detalle_venta_galpon")
+}
+
+model Gasto {
+  id        Int           @id @default(autoincrement())
+  concepto  String        @db.VarChar(150)
+  valor     Decimal       @db.Decimal(10, 2)
+  fecha     DateTime      @db.Date
+  idUsuario Int?          @map("id_usuario")
+  creadoEn  DateTime      @default(now()) @map("creado_en")
+  usuario   Usuario?      @relation(fields: [idUsuario], references: [id], onDelete: Restrict)
+  galpones  GastoGalpon[]
+
+  @@index([fecha])
+  @@map("gasto")
+}
+
+model GastoGalpon {
+  idGasto  Int    @map("id_gasto")
+  idGalpon Int    @map("id_galpon")
+  gasto    Gasto  @relation(fields: [idGasto], references: [id], onDelete: Cascade)
+  galpon   Galpon @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+
+  @@id([idGasto, idGalpon])
+  @@map("gasto_galpon")
+}
+
+model CierreSemanal {
+  id             Int                   @id @default(autoincrement())
+  desde          DateTime              @unique @db.Date
+  hasta          DateTime              @db.Date
+  totalIngresos  Decimal               @map("total_ingresos") @db.Decimal(14, 2)
+  totalInsumos   Decimal               @map("total_insumos") @db.Decimal(14, 2)
+  totalGastos    Decimal               @map("total_gastos") @db.Decimal(14, 2)
+  totalRepartido Decimal               @map("total_repartido") @db.Decimal(14, 2)
+  idUsuario      Int                   @map("id_usuario")
+  cerradoEn      DateTime              @default(now()) @map("cerrado_en")
+  usuario        Usuario               @relation(fields: [idUsuario], references: [id], onDelete: Restrict)
+  galpones       CierreSemanalGalpon[]
+
+  @@map("cierre_semanal")
+}
+
+model CierreSemanalGalpon {
+  idCierreSemanal Int                  @map("id_cierre_semanal")
+  idGalpon        Int                  @map("id_galpon")
+  ingresos        Decimal              @db.Decimal(14, 2)
+  insumos         Decimal              @db.Decimal(14, 2)
+  gastos          Decimal              @db.Decimal(14, 2)
+  resultado       Decimal              @db.Decimal(14, 2)
+  deudaAnterior   Decimal              @map("deuda_anterior") @db.Decimal(14, 2)
+  abonoDeuda      Decimal              @map("abono_deuda") @db.Decimal(14, 2)
+  deudaFinal      Decimal              @map("deuda_final") @db.Decimal(14, 2)
+  repartible      Decimal              @db.Decimal(14, 2)
+  detalle         Json                 @default("{}")
+  cierre          CierreSemanal        @relation(fields: [idCierreSemanal], references: [id], onDelete: Cascade)
+  galpon          Galpon               @relation(fields: [idGalpon], references: [id], onDelete: Restrict)
+  socios          CierreSemanalSocio[]
+
+  @@id([idCierreSemanal, idGalpon])
+  @@map("cierre_semanal_galpon")
+}
+
+model CierreSemanalSocio {
+  idCierreSemanal     Int                 @map("id_cierre_semanal")
+  idGalpon            Int                 @map("id_galpon")
+  idSocio             Int                 @map("id_socio")
+  porcentajeInversion Decimal             @map("porcentaje_inversion") @db.Decimal(5, 2)
+  valor               Decimal             @db.Decimal(14, 2)
+  cierreGalpon        CierreSemanalGalpon @relation(fields: [idCierreSemanal, idGalpon], references: [idCierreSemanal, idGalpon], onDelete: Cascade)
+  socio               Socio               @relation(fields: [idSocio], references: [id], onDelete: Restrict)
+
+  @@id([idCierreSemanal, idGalpon, idSocio])
+  @@map("cierre_semanal_socio")
 }
 
