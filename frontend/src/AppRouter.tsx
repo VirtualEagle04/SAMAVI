@@ -4,6 +4,7 @@ import RequireAuth from "./features/auth/components/RequireAuth"
 import RequireModule from "./features/auth/components/RequireModule"
 import DefaultModuleRedirect from "./features/auth/components/DefaultModuleRedirect"
 import DashboardPage from "./features/dashboard/pages/DashboardPage"
+import ConsolidacionPage from "./features/consolidacion/pages/ConsolidacionPage"
 import ProduccionPage from "./features/produccion/pages/ProduccionPage"
 import ComercialPage from "./features/comercial/pages/ComercialPage"
 import GalponesPage from "./features/galpones/pages/GalponesPage"
@@ -21,6 +22,9 @@ export default function AppRouter() {
           <Route index element={<DefaultModuleRedirect />} />
           <Route element={<RequireModule module="dashboard" />}>
             <Route path="dashboard" element={<DashboardPage />} />
+          </Route>
+          <Route element={<RequireModule module="consolidacion" />}>
+            <Route path="consolidacion" element={<ConsolidacionPage />} />
           </Route>
           <Route element={<RequireModule module="produccion" />}>
             <Route path="produccion" element={<ProduccionPage />} />

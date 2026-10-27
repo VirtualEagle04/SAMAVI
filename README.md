@@ -165,10 +165,10 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
 ## 11. Limitaciones conocidas y trabajo futuro
  
 - La fórmula matemática exacta del prorrateo de ganancias y gastos usada actualmente por Carlos Andrés todavía no está completamente documentada ni confirmada.
-- El módulo de prorrateo semanal (cálculo automático de ganancias, gastos y saldo por socio según porcentaje de inversión) todavía no está implementado en el backend.
+- El módulo de cierre semanal y prorrateo (`/consolidacion`) calcula ganancias, gastos y reparto por socio según porcentaje de inversión, pero el tratamiento de galpones con pérdida es un supuesto pendiente de confirmar. El cálculo se comparó con la hoja de prorrateo de la semana 7-13 ago 2026 y las diferencias están documentadas en `docs/domain.md`.
 - El frontend cuenta con un dashboard de monitoreo en vivo conectado a la API de producción, pero aún no cubre los flujos completos de inventario, pedidos, ventas, cierre semanal y prorrateo para los distintos roles.
 - Existen pruebas unitarias del backend (Vitest) para autenticación, comercial y producción. No hay pruebas de integración, frontend ni firmware automatizadas.
-- Queda pendiente definir con precisión qué determina la cantidad de bultos de alimento por pedido, la base del cálculo de transporte, y por qué las categorías Yumbo y B no reconcilian exactamente en el prorrateo.
+- Queda pendiente definir con precisión qué determina la cantidad de bultos de alimento por pedido, la base del cálculo de transporte, cómo registrar los huevos regalados a los trabajadores, y por qué la hoja manual reparte más bandejas de B de las vendidas.
 - Mecanismos de doble factor de autenticación y protección contra ataques de fuerza bruta fueron solicitados por el director de proyecto y siguen pendientes de implementación.
 - Migración de registros históricos físicos (cuadernos y agenda de contabilidad) al sistema, con apoyo de inteligencia artificial, sigue en fase de diseño.
 

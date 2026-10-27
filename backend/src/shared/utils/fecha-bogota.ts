@@ -16,3 +16,8 @@ export function todayBogota(now: Date = new Date()): string {
 export function toDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
+
+/** Instante en que empieza el día YYYY-MM-DD en Bogotá (UTC-5 todo el año). */
+export function startOfDayBogota(value: string): Date {
+  return new Date(`${value}T00:00:00.000-05:00`);
+}
