@@ -8,6 +8,7 @@ import { comercialRoutes } from "./modules/comercial/comercial.routes.js";
 import { inventarioRoutes } from "./modules/inventario/inventario.routes.js";
 import { galponesRoutes } from "./modules/galpones/galpones.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
+import { consolidacionRoutes } from "./modules/consolidacion/consolidacion.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
 import { deviceTracker, TOPICO_ESTADO_DISPOSITIVOS } from "./mqtt/device-status.js";
@@ -23,6 +24,7 @@ app.use("/api/v1/comercial", comercialRoutes);
 app.use("/api/v1/inventario", inventarioRoutes);
 app.use("/api/v1/galpones", galponesRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/consolidacion", consolidacionRoutes);
 app.use(errorMiddleware);
 
 const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
