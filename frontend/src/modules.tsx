@@ -1,4 +1,5 @@
 import type { ReactElement } from "react"
+import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded"
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded"
 import EggIcon from "@mui/icons-material/Egg"
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
@@ -7,7 +8,7 @@ import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./features/auth/stores/authStore"
 import type { Role } from "./features/auth/services/authService"
 
-export type ModuleId = "dashboard" | "produccion" | "comercial" | "galpones" | "inventario"
+export type ModuleId = "dashboard" | "consolidacion" | "produccion" | "comercial" | "galpones" | "inventario"
 
 export type AppModule = {
   id: ModuleId
@@ -32,6 +33,15 @@ export const APP_MODULES: AppModule[] = [
     label: "Dashboard",
     title: "Resumen Semanal",
     icon: <DashboardRoundedIcon fontSize="small" />,
+    canAccess: (role, permissions) =>
+      role === "Administrador" || permissions.includes("VER_CIERRE"),
+  },
+  {
+    id: "consolidacion",
+    path: "/consolidacion",
+    label: "Cierre semanal",
+    title: "Cierre Semanal y Prorrateo",
+    icon: <AccountBalanceWalletRoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
       role === "Administrador" || permissions.includes("VER_CIERRE"),
   },
