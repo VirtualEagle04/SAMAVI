@@ -66,9 +66,9 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 
 ## Backend
 
-- [backend/src/index.ts](backend/src/index.ts) monta `/health` y `/api/v1/{auth,produccion,comercial,inventario,galpones,dashboard}`, el middleware de errores y el cliente MQTT.
+- [backend/src/index.ts](backend/src/index.ts) monta `/health` y `/api/v1/{auth,produccion,comercial,inventario,galpones,dashboard,consolidacion}`, el middleware de errores y el cliente MQTT.
 - Cada módulo `backend/src/modules/<nombre>/` sigue `*.routes.ts -> *.controller.ts -> *.service.ts`, con `*.schemas.ts` para validación manual de entradas (sin librería de esquemas) que lanza `AppError(status, mensaje)` ([app-error.ts](backend/src/shared/errors/app-error.ts)). Replica ese patrón en módulos nuevos.
-- Autenticación JWT con `authenticate`. La autorización mezcla dos mecanismos según el módulo ([auth.middleware.ts](backend/src/middleware/auth.middleware.ts)): `requireRole(...)` en `produccion` (Administrador, Galponero) y `requirePermission("...")` en `comercial` (p. ej. `INGRESAR_PEDIDO`, `EDITAR_PRECIOS`, `REGISTRAR_VENTA`), `galpones` (`GESTIONAR_GALPONES`), `inventario` (`GESTIONAR_INVENTARIO`) y `dashboard` (`VER_CIERRE`). Revisa las rutas del módulo antes de asumir cuál aplica.
+- Autenticación JWT con `authenticate`. La autorización mezcla dos mecanismos según el módulo ([auth.middleware.ts](backend/src/middleware/auth.middleware.ts)): `requireRole(...)` en `produccion` (Administrador, Galponero) y `requirePermission("...")` en `comercial` (p. ej. `INGRESAR_PEDIDO`, `EDITAR_PRECIOS`, `REGISTRAR_VENTA`), `galpones` (`GESTIONAR_GALPONES`), `inventario` (`GESTIONAR_INVENTARIO`), `dashboard` (`VER_CIERRE`) y `consolidacion` (`VER_CIERRE`, `INGRESAR_GASTO`, `CERRAR_SEMANA`). Revisa las rutas del módulo antes de asumir cuál aplica.
 - La persistencia pasa por Prisma ([database/prisma.ts](backend/src/database/prisma.ts)) salvo excepción justificada y documentada.
 - Las fechas de negocio usan zona Bogotá: [fecha-bogota.ts](backend/src/shared/utils/fecha-bogota.ts).
 - Pruebas unitarias en `backend/tests/unit/<módulo>/` (servicios y schemas). No hay pruebas de integración.
@@ -84,20 +84,20 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 
 ## Datos
 
-- [backend/prisma/schema.prisma](backend/prisma/schema.prisma) (25 modelos) y [database/schema.sql](database/schema.sql) deben ser coherentes: ninguna entidad puede existir en Prisma sin existir antes en el SQL.
-- Discrepancia actual: el SQL tiene tablas que Prisma no modela (`socio`, `inversion_socio`, `gasto`). Respétala hasta confirmar el cambio.
+- [backend/prisma/schema.prisma](backend/prisma/schema.prisma) (32 modelos) y [database/schema.sql](database/schema.sql) deben ser coherentes: ninguna entidad puede existir en Prisma sin existir antes en el SQL. Hoy ambos modelan las mismas tablas.
 - No hay migraciones versionadas: la base se crea con `schema.sql` al inicializar el volumen de Postgres. Un cambio de esquema no se aplica a un volumen existente sin recrearlo (ver `infra:reset` arriba).
 - Un cambio de datos está completo cuando se actualizan SQL, Prisma, código consumidor (backend y frontend) y pruebas. No asumas cuál es la fuente oficial si ambos se contradicen: pregunta.
 - Dominio (categorías de peso, reglas de negocio): `docs/domain.md`; no inventes reglas financieras.
+- Cierre semanal y prorrateo: reglas y supuestos pendientes en `docs/domain.md`. El cálculo puro está en [consolidacion.calculo.ts](backend/src/modules/consolidacion/consolidacion.calculo.ts) y trabaja en centavos enteros; un cierre confirmado guarda sus valores y no se recalcula.
 
 ## Frontend
 
-- Organización por feature: `frontend/src/features/<auth|dashboard|produccion|comercial|inventario|galpones>/{pages,components,services,stores,types}`. Compartidos en `src/components/{atoms,molecules,organisms}`.
+- Organización por feature: `frontend/src/features/<auth|dashboard|consolidacion|produccion|comercial|inventario|galpones>/{pages,components,services,stores,types}`. Compartidos en `src/components/{atoms,molecules,organisms}`.
 - Cada servicio hace `fetch` a `${VITE_API_URL ?? ""}/api/v1/...`. La sesión está en Zustand ([authStore.ts](frontend/src/features/auth/stores/authStore.ts)) y se persiste en `localStorage` (`samavi_token`, `samavi_user`, `samavi_role`, `samavi_permissions`).
 - Tema MUI y tokens de diseño en `src/theme/` ([tokens.ts](frontend/src/theme/tokens.ts), [theme.ts](frontend/src/theme/theme.ts)). Usa los tokens en lugar de valores sueltos.
 - Filtros de tablas: usa [TableToolbar](frontend/src/components/molecules/TableToolbar.tsx) (título, descripción, búsqueda, botón "Filtros" y acciones) y [useTableFilters](frontend/src/hooks/useTableFilters.ts) (búsqueda, valores, página, `reset`; un valor vacío significa "sin filtrar"). Los filtros se declaran como `FilterField` (`select`, `date` o `switch`, ver [filterTypes.ts](frontend/src/components/molecules/filterTypes.ts)): `FilterPanel` los muestra en un popover (escritorio) o panel inferior (móvil) y `ActiveFilterChips` los resume bajo la barra. No pongas selects ni botones de filtro sueltos en el toolbar. Un selector que cambia de entidad (cliente, insumo) no es un filtro: usa [EntitySelect](frontend/src/components/molecules/EntitySelect.tsx). Los estilos de tabla y las etiquetas de paginación están en [tableStyles.ts](frontend/src/components/tableStyles.ts); no crees copias por módulo. El tamaño de letra de un campo va en `.MuiInputBase-input`, no en la raíz, o el label se sale de la muesca.
 - Tablas y listas sin datos: usa [EmptyState](frontend/src/components/molecules/EmptyState.tsx) (icono, título, descripción) en lugar del cuerpo de la tabla. Se muestra tanto en móvil como en escritorio, sin cabeceras ni paginación; el toolbar con título y filtros se conserva. No dibujes filas o textos vacíos a mano. Distingue "no hay datos" de "los filtros no encuentran nada" en el título y la descripción.
-- Rutas en [AppRouter.tsx](frontend/src/AppRouter.tsx): `/login` y, dentro del shell, una ruta por módulo de [modules.tsx](frontend/src/modules.tsx) (`/dashboard`, `/produccion`, `/comercial`, `/galpones/*`, `/inventario`), cada una con su guarda `RequireModule`. `/` y las rutas desconocidas llevan al primer módulo accesible, que es el orden de `APP_MODULES` (el dashboard va primero).
+- Rutas en [AppRouter.tsx](frontend/src/AppRouter.tsx): `/login` y, dentro del shell, una ruta por módulo de [modules.tsx](frontend/src/modules.tsx) (`/dashboard`, `/consolidacion`, `/produccion`, `/comercial`, `/galpones/*`, `/inventario`), cada una con su guarda `RequireModule`. `/` y las rutas desconocidas llevan al primer módulo accesible, que es el orden de `APP_MODULES` (el dashboard va primero).
 
 ## Firmware
 
