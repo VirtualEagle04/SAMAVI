@@ -1,5 +1,6 @@
 import { prisma } from "../../database/prisma.js";
 import type { Prisma } from "@prisma/client";
+import { type AuditContext, registrarAuditoria } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type {
   DistribucionInput,
@@ -15,6 +16,29 @@ const pedidoInclude = {
   venta: { include: { detalles: { include: { distribuciones: { include: { galpon: true } } } } } },
 } as const;
 
+type MayoristaRow = { nombre: string; ubicacion: string | null; contacto: Prisma.JsonValue };
+
+function mayoristaSnapshot(mayorista: MayoristaRow): Prisma.InputJsonObject {
+  return { nombre: mayorista.nombre, ubicacion: mayorista.ubicacion, contacto: mayorista.contacto };
+}
+
+type PedidoRow = {
+  idMayorista: number;
+  estado: string;
+  detalles: { codigoCategoriaPeso: string; cantidadSolicitada: number }[];
+};
+
+function pedidoSnapshot(pedido: PedidoRow): Prisma.InputJsonObject {
+  return {
+    idMayorista: pedido.idMayorista,
+    estado: pedido.estado,
+    detalles: pedido.detalles.map((detail) => ({
+      categoriaPeso: detail.codigoCategoriaPeso,
+      cantidadSolicitada: detail.cantidadSolicitada,
+    })),
+  };
+}
+
 export async function listMayoristas() {
   return prisma.mayorista.findMany({ orderBy: { nombre: "asc" } });
 }
@@ -27,19 +51,46 @@ export async function getMayorista(id: number) {
   return mayorista;
 }
 
-export async function createMayorista(input: MayoristaInput) {
-  return prisma.mayorista.create({ data: input });
+export async function createMayorista(input: MayoristaInput, context: AuditContext) {
+  return prisma.$transaction(async (transaction) => {
+    const mayorista = await transaction.mayorista.create({ data: input });
+    await registrarAuditoria(transaction, context, {
+      tabla: "mayorista",
+      idRegistro: mayorista.id,
+      accion: "INSERT",
+      despues: mayoristaSnapshot(mayorista),
+    });
+    return mayorista;
+  });
 }
 
-export async function updateMayorista(id: number, input: MayoristaInput) {
-  await getMayorista(id);
-  return prisma.mayorista.update({ where: { id }, data: input });
+export async function updateMayorista(id: number, input: MayoristaInput, context: AuditContext) {
+  const anterior = await getMayorista(id);
+  return prisma.$transaction(async (transaction) => {
+    const mayorista = await transaction.mayorista.update({ where: { id }, data: input });
+    await registrarAuditoria(transaction, context, {
+      tabla: "mayorista",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: mayoristaSnapshot(anterior),
+      despues: mayoristaSnapshot(mayorista),
+    });
+    return mayorista;
+  });
 }
 
-export async function deleteMayorista(id: number) {
-  await getMayorista(id);
+export async function deleteMayorista(id: number, context: AuditContext) {
+  const anterior = await getMayorista(id);
   try {
-    await prisma.mayorista.delete({ where: { id } });
+    await prisma.$transaction(async (transaction) => {
+      await transaction.mayorista.delete({ where: { id } });
+      await registrarAuditoria(transaction, context, {
+        tabla: "mayorista",
+        idRegistro: id,
+        accion: "DELETE",
+        antes: mayoristaSnapshot(anterior),
+      });
+    });
   } catch {
     throw new AppError(409, "No se puede eliminar un mayorista con pedidos o precios asociados");
   }
@@ -54,26 +105,39 @@ export async function listPrecios(mayoristaId: number) {
   });
 }
 
-export async function upsertPrecio(mayoristaId: number, input: PrecioInput) {
+export async function upsertPrecio(mayoristaId: number, input: PrecioInput, context: AuditContext) {
   await getMayorista(mayoristaId);
   const categoria = await prisma.categoriaPeso.findUnique({ where: { codigo: input.categoriaPeso } });
   if (!categoria) {
     throw new AppError(404, "Categoría de peso no encontrada");
   }
 
-  return prisma.precio.upsert({
-    where: {
-      idMayorista_codigoCategoriaPeso: {
-        idMayorista: mayoristaId,
-        codigoCategoriaPeso: input.categoriaPeso,
-      },
-    },
-    create: {
+  const where = {
+    idMayorista_codigoCategoriaPeso: {
       idMayorista: mayoristaId,
       codigoCategoriaPeso: input.categoriaPeso,
-      valorUnitario: input.valorUnitario,
     },
-    update: { valorUnitario: input.valorUnitario },
+  };
+  return prisma.$transaction(async (transaction) => {
+    const anterior = await transaction.precio.findUnique({ where });
+    const precio = await transaction.precio.upsert({
+      where,
+      create: {
+        idMayorista: mayoristaId,
+        codigoCategoriaPeso: input.categoriaPeso,
+        valorUnitario: input.valorUnitario,
+      },
+      update: { valorUnitario: input.valorUnitario },
+    });
+    const snapshot = { idMayorista: mayoristaId, categoriaPeso: input.categoriaPeso };
+    await registrarAuditoria(transaction, context, {
+      tabla: "precio",
+      idRegistro: `${mayoristaId}:${input.categoriaPeso}`,
+      accion: anterior ? "UPDATE" : "INSERT",
+      ...(anterior ? { antes: { ...snapshot, valorUnitario: anterior.valorUnitario.toNumber() } } : {}),
+      despues: { ...snapshot, valorUnitario: input.valorUnitario },
+    });
+    return precio;
   });
 }
 
@@ -105,21 +169,30 @@ async function validatePedidoDetails(details: PedidoInput["detalles"]) {
   }
 }
 
-export async function createPedido(input: PedidoInput) {
+export async function createPedido(input: PedidoInput, context: AuditContext) {
   await getMayorista(input.mayoristaId);
   await validatePedidoDetails(input.detalles);
 
-  return prisma.pedido.create({
-    data: {
-      fecha: new Date(),
-      estado: "pendiente",
-      idMayorista: input.mayoristaId,
-      detalles: { create: input.detalles.map((detail) => ({
-        codigoCategoriaPeso: detail.categoriaPeso,
-        cantidadSolicitada: detail.cantidadSolicitada,
-      })) },
-    },
-    include: pedidoInclude,
+  return prisma.$transaction(async (transaction) => {
+    const pedido = await transaction.pedido.create({
+      data: {
+        fecha: new Date(),
+        estado: "pendiente",
+        idMayorista: input.mayoristaId,
+        detalles: { create: input.detalles.map((detail) => ({
+          codigoCategoriaPeso: detail.categoriaPeso,
+          cantidadSolicitada: detail.cantidadSolicitada,
+        })) },
+      },
+      include: pedidoInclude,
+    });
+    await registrarAuditoria(transaction, context, {
+      tabla: "pedido",
+      idRegistro: pedido.id,
+      accion: "INSERT",
+      despues: pedidoSnapshot(pedido),
+    });
+    return pedido;
   });
 }
 
@@ -131,7 +204,7 @@ export async function getPedido(id: number) {
   return pedido;
 }
 
-export async function updatePedido(id: number, input: PedidoInput) {
+export async function updatePedido(id: number, input: PedidoInput, context: AuditContext) {
   const pedido = await getPedido(id);
   if (pedido.estado !== "pendiente") {
     throw new AppError(409, "Solo se puede editar un pedido pendiente");
@@ -141,7 +214,7 @@ export async function updatePedido(id: number, input: PedidoInput) {
 
   return prisma.$transaction(async (transaction) => {
     await transaction.detallePedido.deleteMany({ where: { idPedido: id } });
-    return transaction.pedido.update({
+    const actualizado = await transaction.pedido.update({
       where: { id },
       data: {
         idMayorista: input.mayoristaId,
@@ -153,6 +226,14 @@ export async function updatePedido(id: number, input: PedidoInput) {
       },
       include: pedidoInclude,
     });
+    await registrarAuditoria(transaction, context, {
+      tabla: "pedido",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: pedidoSnapshot(pedido),
+      despues: pedidoSnapshot(actualizado),
+    });
+    return actualizado;
   });
 }
 
@@ -161,7 +242,11 @@ const transitions: Record<string, string[]> = {
   cargado: ["cancelado"],
 };
 
-export async function changePedidoStatus(id: number, estado: "cargado" | "entregado" | "cancelado") {
+export async function changePedidoStatus(
+  id: number,
+  estado: "cargado" | "entregado" | "cancelado",
+  context: AuditContext,
+) {
   const pedido = await getPedido(id);
   if (!transitions[pedido.estado]?.includes(estado)) {
     if (estado === "entregado") {
@@ -169,7 +254,17 @@ export async function changePedidoStatus(id: number, estado: "cargado" | "entreg
     }
     throw new AppError(409, `No se puede cambiar un pedido de ${pedido.estado} a ${estado}`);
   }
-  return prisma.pedido.update({ where: { id }, data: { estado }, include: pedidoInclude });
+  return prisma.$transaction(async (transaction) => {
+    const actualizado = await transaction.pedido.update({ where: { id }, data: { estado }, include: pedidoInclude });
+    await registrarAuditoria(transaction, context, {
+      tabla: "pedido",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: { estado: pedido.estado },
+      despues: { estado },
+    });
+    return actualizado;
+  });
 }
 
 type StockReader = Pick<Prisma.TransactionClient, "bodega" | "cierreDiario" | "cierreProduccionDia" | "detalleVentaGalpon" | "galpon">;
@@ -273,7 +368,7 @@ function groupDistribution(distribution: DistribucionInput[]) {
   return grouped;
 }
 
-export async function createVenta(pedidoId: number, input: VentaInput) {
+export async function createVenta(pedidoId: number, input: VentaInput, context: AuditContext) {
   return prisma.$transaction(async (transaction) => {
     await transaction.$executeRaw`SELECT pg_advisory_xact_lock(74129031)`;
     const pedido = await transaction.pedido.findUnique({
@@ -376,7 +471,24 @@ export async function createVenta(pedidoId: number, input: VentaInput) {
       include: { detalles: { include: { distribuciones: { include: { galpon: true } } } } },
     });
     const partial = [...missingByCategory.values()].some((quantity) => quantity > 0);
-    await transaction.pedido.update({ where: { id: pedidoId }, data: { estado: partial ? "entregado_parcial" : "entregado" } });
+    const estadoPedido = partial ? "entregado_parcial" : "entregado";
+    await transaction.pedido.update({ where: { id: pedidoId }, data: { estado: estadoPedido } });
+    await registrarAuditoria(transaction, context, {
+      tabla: "venta",
+      idRegistro: venta.id,
+      accion: "INSERT",
+      despues: {
+        idPedido: pedidoId,
+        estadoPedido,
+        detalles: venta.detalles.map((detail) => ({
+          categoriaPeso: detail.codigoCategoriaPeso,
+          cantidadVendida: detail.cantidadVendida,
+          cantidadNoEntregada: detail.cantidadNoEntregada,
+          precioAplicado: detail.precioAplicado.toNumber(),
+        })),
+        distribucion: input.distribucion,
+      },
+    });
     return venta;
   });
 }

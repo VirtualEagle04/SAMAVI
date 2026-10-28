@@ -79,6 +79,7 @@ model Auditoria {
 
   @@index([tablaAfectada, idRegistroAfectado])
   @@index([fechaHora])
+  @@index([idUsuario])
   @@map("auditoria")
 }
 

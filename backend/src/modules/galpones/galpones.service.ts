@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../database/prisma.js";
+import { type AuditContext, registrarAuditoria } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { todayBogota, toDateOnly } from "../../shared/utils/fecha-bogota.js";
 import type { CambioGallinasInput } from "./galpones.schemas.js";
@@ -80,13 +81,23 @@ export async function getGalpon(id: number) {
   };
 }
 
-export async function registrarAlimentacion(id: number, userId: number) {
+export async function registrarAlimentacion(id: number, context: AuditContext) {
   const galpon = await findGalponOrFail(id);
   assertActivo(galpon.estado);
 
   try {
-    const registro = await prisma.registroAlimentacion.create({
-      data: { idGalpon: id, fecha: toDateOnly(todayBogota()), idUsuario: userId },
+    const fecha = todayBogota();
+    const registro = await prisma.$transaction(async (transaction) => {
+      const creado = await transaction.registroAlimentacion.create({
+        data: { idGalpon: id, fecha: toDateOnly(fecha), idUsuario: context.userId },
+      });
+      await registrarAuditoria(transaction, context, {
+        tabla: "registro_alimentacion",
+        idRegistro: `${id}:${fecha}`,
+        accion: "INSERT",
+        despues: { idGalpon: id, fecha },
+      });
+      return creado;
     });
     return { idGalpon: registro.idGalpon, fecha: registro.fecha, registradoEn: registro.registradoEn };
   } catch (error) {
@@ -99,9 +110,8 @@ export async function registrarAlimentacion(id: number, userId: number) {
 
 export async function cambiarGallinas(
   id: number,
-  userId: number,
   input: CambioGallinasInput,
-  ip: string | undefined,
+  context: AuditContext,
 ) {
   return prisma.$transaction(async (transaction) => {
     const anterior = await transaction.galpon.findUnique({ where: { id } });
@@ -132,17 +142,12 @@ export async function cambiarGallinas(
       cantidad: input.cantidad,
       ...(input.causa === undefined ? {} : { causa: input.causa }),
     };
-    await transaction.auditoria.create({
-      data: {
-        idUsuario: userId,
-        tablaAfectada: "galpon",
-        idRegistroAfectado: String(id),
-        accion: "UPDATE",
-        datosAnteriores: { gallinasActuales: anterior.gallinasActuales },
-        datosNuevos,
-        ...(ip === undefined ? {} : { ipOrigen: ip.slice(0, 45) }),
-        resultado: "EXITOSO",
-      },
+    await registrarAuditoria(transaction, context, {
+      tabla: "galpon",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: { gallinasActuales: anterior.gallinasActuales },
+      despues: datosNuevos,
     });
     return actualizado;
   });

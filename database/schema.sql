@@ -419,6 +419,8 @@ CREATE INDEX idx_auditoria_tabla_registro ON auditoria (tabla_afectada, id_regis
 
 CREATE INDEX idx_auditoria_fecha_hora ON auditoria (fecha_hora);
 
+CREATE INDEX idx_auditoria_usuario ON auditoria (id_usuario);
+
 -- Registros Iniciales
 INSERT INTO
     socio (nombre, documento, contacto)
@@ -624,6 +626,10 @@ VALUES
     (
         'CERRAR_SEMANA',
         'Confirmar o reabrir el cierre semanal y el reparto entre socios'
+    ),
+    (
+        'VER_AUDITORIA',
+        'Consultar el registro de auditoría de las operaciones'
     );
 
 -- Tipos de movimiento de inventario (kardex).
@@ -704,6 +710,8 @@ VALUES -- Administrador (id=1)
     -- GESTIONAR_GALPONES
     (1, 14),
     -- CERRAR_SEMANA
+    (1, 15),
+    -- VER_AUDITORIA
     -- Galponero (id=2)
     (2, 1),
     -- VER_PRODUCCION

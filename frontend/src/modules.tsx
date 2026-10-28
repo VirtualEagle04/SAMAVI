@@ -1,6 +1,7 @@
 import type { ReactElement } from "react"
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded"
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded"
+import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded"
 import EggIcon from "@mui/icons-material/Egg"
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded"
@@ -8,7 +9,14 @@ import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./features/auth/stores/authStore"
 import type { Role } from "./features/auth/services/authService"
 
-export type ModuleId = "dashboard" | "consolidacion" | "produccion" | "comercial" | "galpones" | "inventario"
+export type ModuleId =
+  | "dashboard"
+  | "consolidacion"
+  | "produccion"
+  | "comercial"
+  | "galpones"
+  | "inventario"
+  | "auditoria"
 
 export type AppModule = {
   id: ModuleId
@@ -85,6 +93,15 @@ export const APP_MODULES: AppModule[] = [
     icon: <Inventory2RoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
       role === "Administrador" || permissions.includes("GESTIONAR_INVENTARIO"),
+  },
+  {
+    id: "auditoria",
+    path: "/auditoria",
+    label: "Auditoría",
+    title: "Auditoría de Operaciones",
+    icon: <FactCheckRoundedIcon fontSize="small" />,
+    canAccess: (role, permissions) =>
+      role === "Administrador" || permissions.includes("VER_AUDITORIA"),
   },
 ]
 

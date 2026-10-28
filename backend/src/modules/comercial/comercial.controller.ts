@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { auditContext } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import {
   changePedidoStatus,
@@ -43,15 +44,19 @@ export async function getMayoristaController(request: Request, response: Respons
 }
 
 export async function createMayoristaController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createMayorista(parseMayoristaInput(request.body)));
+  response.status(201).json(await createMayorista(parseMayoristaInput(request.body), auditContext(request)));
 }
 
 export async function updateMayoristaController(request: Request, response: Response): Promise<void> {
-  response.json(await updateMayorista(parseId(request.params.id, "id"), parseMayoristaInput(request.body)));
+  response.json(await updateMayorista(
+    parseId(request.params.id, "id"),
+    parseMayoristaInput(request.body),
+    auditContext(request),
+  ));
 }
 
 export async function deleteMayoristaController(request: Request, response: Response): Promise<void> {
-  await deleteMayorista(parseId(request.params.id, "id"));
+  await deleteMayorista(parseId(request.params.id, "id"), auditContext(request));
   response.status(204).send();
 }
 
@@ -63,6 +68,7 @@ export async function upsertPrecioController(request: Request, response: Respons
   response.json(await upsertPrecio(
     parseId(request.params.mayoristaId, "mayoristaId"),
     parsePrecioInput(request.body),
+    auditContext(request),
   ));
 }
 
@@ -83,7 +89,7 @@ export async function listPedidosController(request: Request, response: Response
 }
 
 export async function createPedidoController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createPedido(parsePedidoInput(request.body)));
+  response.status(201).json(await createPedido(parsePedidoInput(request.body), auditContext(request)));
 }
 
 export async function getPedidoController(request: Request, response: Response): Promise<void> {
@@ -95,18 +101,23 @@ export async function getPedidoDisponibilidadController(request: Request, respon
 }
 
 export async function updatePedidoController(request: Request, response: Response): Promise<void> {
-  response.json(await updatePedido(parseId(request.params.id, "id"), parsePedidoInput(request.body)));
+  response.json(await updatePedido(
+    parseId(request.params.id, "id"),
+    parsePedidoInput(request.body),
+    auditContext(request),
+  ));
 }
 
 export async function changePedidoStatusController(request: Request, response: Response): Promise<void> {
   const estado = parseEstado(request.body?.estado);
-  response.json(await changePedidoStatus(parseId(request.params.id, "id"), estado));
+  response.json(await changePedidoStatus(parseId(request.params.id, "id"), estado, auditContext(request)));
 }
 
 export async function createVentaController(request: Request, response: Response): Promise<void> {
   response.status(201).json(await createVenta(
     parseId(request.params.pedidoId, "pedidoId"),
     parseVentaInput(request.body),
+    auditContext(request),
   ));
 }
 

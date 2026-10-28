@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { auditContext } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import {
   createCompra,
@@ -30,11 +31,6 @@ import {
   parseProveedorInput,
 } from "./inventario.schemas.js";
 
-function authUserId(request: Request): number {
-  if (!request.auth) throw new AppError(401, "Token requerido");
-  return request.auth.id;
-}
-
 function serializeMovement<T extends { id: bigint }>(movement: T) {
   return { ...movement, id: movement.id.toString() };
 }
@@ -48,19 +44,27 @@ export async function getInsumoController(request: Request, response: Response):
 }
 
 export async function createInsumoController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createInsumo(parseInsumoInput(request.body)));
+  response.status(201).json(await createInsumo(parseInsumoInput(request.body), auditContext(request)));
 }
 
 export async function updateInsumoController(request: Request, response: Response): Promise<void> {
-  response.json(await updateInsumo(parseId(request.params.id, "id"), parseInsumoInput(request.body)));
+  response.json(await updateInsumo(
+    parseId(request.params.id, "id"),
+    parseInsumoInput(request.body),
+    auditContext(request),
+  ));
 }
 
 export async function setInsumoActiveController(request: Request, response: Response): Promise<void> {
-  response.json(await setInsumoActive(parseId(request.params.id, "id"), parseActivoInput(request.body)));
+  response.json(await setInsumoActive(
+    parseId(request.params.id, "id"),
+    parseActivoInput(request.body),
+    auditContext(request),
+  ));
 }
 
 export async function deleteInsumoController(request: Request, response: Response): Promise<void> {
-  await deleteInsumo(parseId(request.params.id, "id"));
+  await deleteInsumo(parseId(request.params.id, "id"), auditContext(request));
   response.status(204).send();
 }
 
@@ -84,7 +88,7 @@ export async function listComprasController(request: Request, response: Response
 }
 
 export async function createCompraController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createCompra(parseCompraInput(request.body), authUserId(request), request.file));
+  response.status(201).json(await createCompra(parseCompraInput(request.body), auditContext(request), request.file));
 }
 
 export async function getCompraReceiptController(request: Request, response: Response): Promise<void> {
@@ -95,7 +99,7 @@ export async function getCompraReceiptController(request: Request, response: Res
 }
 
 export async function createMovimientoController(request: Request, response: Response): Promise<void> {
-  const movement = await createMovimiento(parseMovimientoInput(request.body), authUserId(request));
+  const movement = await createMovimiento(parseMovimientoInput(request.body), auditContext(request));
   response.status(201).json(serializeMovement(movement));
 }
 
@@ -104,19 +108,27 @@ export async function listProveedoresController(_request: Request, response: Res
 }
 
 export async function createProveedorController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createProveedor(parseProveedorInput(request.body)));
+  response.status(201).json(await createProveedor(parseProveedorInput(request.body), auditContext(request)));
 }
 
 export async function updateProveedorController(request: Request, response: Response): Promise<void> {
-  response.json(await updateProveedor(parseId(request.params.id, "id"), parseProveedorInput(request.body)));
+  response.json(await updateProveedor(
+    parseId(request.params.id, "id"),
+    parseProveedorInput(request.body),
+    auditContext(request),
+  ));
 }
 
 export async function setProveedorActiveController(request: Request, response: Response): Promise<void> {
-  response.json(await setProveedorActive(parseId(request.params.id, "id"), parseActivoInput(request.body)));
+  response.json(await setProveedorActive(
+    parseId(request.params.id, "id"),
+    parseActivoInput(request.body),
+    auditContext(request),
+  ));
 }
 
 export async function deleteProveedorController(request: Request, response: Response): Promise<void> {
-  await deleteProveedor(parseId(request.params.id, "id"));
+  await deleteProveedor(parseId(request.params.id, "id"), auditContext(request));
   response.status(204).send();
 }
 
