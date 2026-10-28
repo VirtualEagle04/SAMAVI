@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { AppError } from "../../shared/errors/app-error.js";
+import { auditContext } from "../../shared/audit/auditoria.js";
 import { parseDesde, parseGastoInput, parseHistorialQuery, parseId } from "./consolidacion.schemas.js";
 import {
   cerrarSemana,
@@ -12,13 +12,6 @@ import {
   listSocios,
   reabrirSemana,
 } from "./consolidacion.service.js";
-
-function currentUserId(request: Request): number {
-  if (!request.auth) {
-    throw new AppError(401, "Token requerido");
-  }
-  return request.auth.id;
-}
 
 export async function listCierresController(_request: Request, response: Response): Promise<void> {
   response.json(await listCierres());
@@ -34,11 +27,11 @@ export async function getHistorialController(request: Request, response: Respons
 }
 
 export async function cerrarSemanaController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await cerrarSemana(parseDesde(request.params.desde), currentUserId(request), request.ip));
+  response.status(201).json(await cerrarSemana(parseDesde(request.params.desde), auditContext(request)));
 }
 
 export async function reabrirSemanaController(request: Request, response: Response): Promise<void> {
-  response.json(await reabrirSemana(parseDesde(request.params.desde), currentUserId(request), request.ip));
+  response.json(await reabrirSemana(parseDesde(request.params.desde), auditContext(request)));
 }
 
 export async function listGastosController(request: Request, response: Response): Promise<void> {
@@ -46,11 +39,11 @@ export async function listGastosController(request: Request, response: Response)
 }
 
 export async function createGastoController(request: Request, response: Response): Promise<void> {
-  response.status(201).json(await createGasto(parseGastoInput(request.body), currentUserId(request)));
+  response.status(201).json(await createGasto(parseGastoInput(request.body), auditContext(request)));
 }
 
 export async function deleteGastoController(request: Request, response: Response): Promise<void> {
-  await deleteGasto(parseId(request.params.id, "id"));
+  await deleteGasto(parseId(request.params.id, "id"), auditContext(request));
   response.status(204).end();
 }
 

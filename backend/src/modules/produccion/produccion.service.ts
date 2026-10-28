@@ -1,4 +1,5 @@
 import { prisma } from "../../database/prisma.js";
+import { type AuditContext, registrarAuditoria } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type { ProductionCountInput } from "./produccion.schemas.js";
 import type { DailyCloseInput } from "./produccion.schemas.js";
@@ -76,7 +77,19 @@ export async function listCierres(galponId?: number, fecha?: string) {
   });
 }
 
-export async function closeDailyProduction(input: DailyCloseInput) {
+type CierreCategoria = { codigoCategoriaPeso: string; cantidadBandejas: number; cantidadSobrante: number };
+
+function categoriasSnapshot(rows: (CierreCategoria & { idGalpon: number })[], galponId: number) {
+  return rows
+    .filter((row) => row.idGalpon === galponId)
+    .map((row) => ({
+      categoriaPeso: row.codigoCategoriaPeso,
+      cantidadBandejas: row.cantidadBandejas,
+      cantidadSobrante: row.cantidadSobrante,
+    }));
+}
+
+export async function closeDailyProduction(input: DailyCloseInput, context: AuditContext) {
   const start = new Date(`${input.fecha}T00:00:00.000Z`);
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
@@ -110,6 +123,14 @@ export async function closeDailyProduction(input: DailyCloseInput) {
   }
 
   const results = await prisma.$transaction(async (transaction) => {
+    const [cerradosAntes, cierresAntes] = await Promise.all([
+      transaction.cierreProduccionDia.findMany({
+        where: { fecha: start, idGalpon: { in: galponIds } },
+        select: { idGalpon: true },
+      }),
+      transaction.cierreDiario.findMany({ where: { fecha: start, idGalpon: { in: galponIds } } }),
+    ]);
+    const yaCerrados = new Set(cerradosAntes.map((row) => row.idGalpon));
     const saved = [];
     for (const total of totals.values()) {
       if (total.cantidad < 0) {
@@ -143,6 +164,14 @@ export async function closeDailyProduction(input: DailyCloseInput) {
         where: { idGalpon_fecha: { idGalpon: galponId, fecha: start } },
         create: { idGalpon: galponId, fecha: start },
         update: { cerradoEn: new Date() },
+      });
+      const reabierto = yaCerrados.has(galponId);
+      await registrarAuditoria(transaction, context, {
+        tabla: "cierre_produccion_dia",
+        idRegistro: `${galponId}:${input.fecha}`,
+        accion: reabierto ? "UPDATE" : "INSERT",
+        ...(reabierto ? { antes: { categorias: categoriasSnapshot(cierresAntes, galponId) } } : {}),
+        despues: { fecha: input.fecha, categorias: categoriasSnapshot(saved, galponId) },
       });
     }
     return saved;

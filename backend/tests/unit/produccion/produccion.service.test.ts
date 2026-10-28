@@ -9,8 +9,9 @@ vi.mock("../../../src/database/prisma.js", () => {
     galpon: { findUnique: vi.fn(), findMany: vi.fn() },
     categoriaPeso: { findUnique: vi.fn(), findMany: vi.fn() },
     logConteo: { create: vi.fn(), findMany: vi.fn() },
-    cierreDiario: { upsert: vi.fn() },
-    cierreProduccionDia: { upsert: vi.fn() },
+    cierreDiario: { upsert: vi.fn(), findMany: vi.fn() },
+    cierreProduccionDia: { upsert: vi.fn(), findMany: vi.fn() },
+    auditoria: { create: vi.fn() },
     $transaction: vi.fn(async (callback: (tx: typeof mockPrisma) => Promise<unknown>) => callback(mockPrisma)),
   };
   return { prisma: mockPrisma };
@@ -35,6 +36,12 @@ const mockLogConteoFindMany = prisma.logConteo.findMany as ReturnType<typeof vi.
 const mockCierreDiarioUpsert = prisma.cierreDiario.upsert as ReturnType<typeof vi.fn>;
 const mockCierreProduccionDiaUpsert = prisma.cierreProduccionDia.upsert as ReturnType<typeof vi.fn>;
 
+const mockCierreDiarioFindMany = prisma.cierreDiario.findMany as ReturnType<typeof vi.fn>;
+const mockCierreProduccionDiaFindMany = prisma.cierreProduccionDia.findMany as ReturnType<typeof vi.fn>;
+const mockAuditoriaCreate = prisma.auditoria.create as ReturnType<typeof vi.fn>;
+
+const CONTEXTO = { userId: 4, ip: "127.0.0.1" };
+
 const BASE_INPUT = {
   galponId: 1,
   categoriaPeso: "AA",
@@ -47,6 +54,8 @@ beforeEach(() => {
   mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
   mockCierreDiarioUpsert.mockResolvedValue({ id: 1 });
   mockCierreProduccionDiaUpsert.mockResolvedValue({ id: 1 });
+  mockCierreDiarioFindMany.mockResolvedValue([]);
+  mockCierreProduccionDiaFindMany.mockResolvedValue([]);
 });
 
 // ─── registerCount ────────────────────────────────────────────────────────────
@@ -202,7 +211,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     ]);
     mockCierreDiarioUpsert.mockResolvedValue({ id: 1 });
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockCierreDiarioUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -219,7 +228,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     );
     mockCierreDiarioUpsert.mockResolvedValue({ id: 1 });
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockCierreDiarioUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -236,7 +245,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     ]);
     mockCierreDiarioUpsert.mockResolvedValue({ id: 1 });
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockCierreDiarioUpsert).toHaveBeenCalledTimes(3);
   });
@@ -249,7 +258,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     ]);
     mockCierreDiarioUpsert.mockResolvedValue({ id: 1 });
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockCierreDiarioUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -265,7 +274,7 @@ describe("produccion.service → closeDailyProduction()", () => {
       { idGalpon: 1, codigoCategoriaPeso: "AA", cantidad: -1 },
     ]);
 
-    await expect(closeDailyProduction({ fecha: "2026-09-25" })).rejects.toThrow(
+    await expect(closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO)).rejects.toThrow(
       new AppError(409, "No se puede cerrar AA del galpón 1: el total es negativo")
     );
   });
@@ -273,7 +282,7 @@ describe("produccion.service → closeDailyProduction()", () => {
   it("no llama a upsert si no hay conteos para el día", async () => {
     mockLogConteoFindMany.mockResolvedValue([]);
 
-    const result = await closeDailyProduction({ fecha: "2026-09-25" });
+    const result = await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockCierreDiarioUpsert).not.toHaveBeenCalled();
     expect(result).toEqual([]);
@@ -282,7 +291,7 @@ describe("produccion.service → closeDailyProduction()", () => {
   it("construye el rango de fecha correctamente (00:00:00Z al día siguiente 00:00:00Z)", async () => {
     mockLogConteoFindMany.mockResolvedValue([]);
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockLogConteoFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -300,7 +309,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     mockFindManyGalpon.mockResolvedValue([{ id: 3 }]);
     mockLogConteoFindMany.mockResolvedValue([]);
 
-    await closeDailyProduction({ fecha: "2026-09-25", galponId: 3 });
+    await closeDailyProduction({ fecha: "2026-09-25", galponId: 3 }, CONTEXTO);
 
     expect(mockFindManyGalpon).toHaveBeenCalledWith({
       where: { id: 3 },
@@ -317,7 +326,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
     mockLogConteoFindMany.mockResolvedValue([]);
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockFindManyGalpon).toHaveBeenCalledWith({
       where: { estado: "activo" },
@@ -333,7 +342,7 @@ describe("produccion.service → closeDailyProduction()", () => {
   it("lanza AppError 404 si el galpón especificado no existe", async () => {
     mockFindManyGalpon.mockResolvedValue([]);
 
-    await expect(closeDailyProduction({ fecha: "2026-09-25", galponId: 99 })).rejects.toThrow(
+    await expect(closeDailyProduction({ fecha: "2026-09-25", galponId: 99 }, CONTEXTO)).rejects.toThrow(
       new AppError(404, "Galpón no encontrado")
     );
   });
@@ -342,7 +351,7 @@ describe("produccion.service → closeDailyProduction()", () => {
     mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
     mockLogConteoFindMany.mockResolvedValue([]);
 
-    await closeDailyProduction({ fecha: "2026-09-25" });
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
 
     expect(mockCierreProduccionDiaUpsert).toHaveBeenCalledTimes(2);
     expect(mockCierreProduccionDiaUpsert).toHaveBeenCalledWith(
@@ -350,5 +359,30 @@ describe("produccion.service → closeDailyProduction()", () => {
         where: { idGalpon_fecha: { idGalpon: 1, fecha: new Date("2026-09-25T00:00:00.000Z") } },
       })
     );
+  });
+
+  it("audita cada galpón: INSERT si es el primer cierre y UPDATE con el valor anterior si se repite", async () => {
+    mockFindManyGalpon.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    mockLogConteoFindMany.mockResolvedValue([{ idGalpon: 1, codigoCategoriaPeso: "AA", cantidad: 65 }]);
+    mockCierreDiarioUpsert.mockResolvedValue({ idGalpon: 1, codigoCategoriaPeso: "AA", cantidadBandejas: 2, cantidadSobrante: 5 });
+    mockCierreProduccionDiaFindMany.mockResolvedValue([{ idGalpon: 1 }]);
+    mockCierreDiarioFindMany.mockResolvedValue([{ idGalpon: 1, codigoCategoriaPeso: "AA", cantidadBandejas: 1, cantidadSobrante: 0 }]);
+
+    await closeDailyProduction({ fecha: "2026-09-25" }, CONTEXTO);
+
+    expect(mockAuditoriaCreate).toHaveBeenCalledTimes(2);
+    expect(mockAuditoriaCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        idUsuario: 4,
+        tablaAfectada: "cierre_produccion_dia",
+        idRegistroAfectado: "1:2026-09-25",
+        accion: "UPDATE",
+        datosAnteriores: { categorias: [{ categoriaPeso: "AA", cantidadBandejas: 1, cantidadSobrante: 0 }] },
+        datosNuevos: { fecha: "2026-09-25", categorias: [{ categoriaPeso: "AA", cantidadBandejas: 2, cantidadSobrante: 5 }] },
+      }),
+    });
+    expect(mockAuditoriaCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ idRegistroAfectado: "2:2026-09-25", accion: "INSERT" }),
+    });
   });
 });

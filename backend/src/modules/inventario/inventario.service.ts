@@ -1,5 +1,6 @@
 import { prisma } from "../../database/prisma.js";
 import type { Prisma } from "@prisma/client";
+import { type AuditContext, registrarAuditoria } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type {
   CompraInput,
@@ -80,17 +81,66 @@ export async function getInsumo(id: number) {
   return stockResponse(data, movementStock(movimientos));
 }
 
-export async function createInsumo(input: InsumoInput) {
+type InsumoRow = {
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  unidadMedida: string;
+  stockMinimo: { toNumber(): number };
+  costo: { toNumber(): number };
+  activo: boolean;
+};
+
+function insumoSnapshot(insumo: InsumoRow): Prisma.InputJsonObject {
+  return {
+    codigo: insumo.codigo,
+    nombre: insumo.nombre,
+    descripcion: insumo.descripcion,
+    unidadMedida: insumo.unidadMedida,
+    stockMinimo: insumo.stockMinimo.toNumber(),
+    costo: insumo.costo.toNumber(),
+    activo: insumo.activo,
+  };
+}
+
+type ProveedorRow = { nombre: string; contacto: Prisma.JsonValue; activo: boolean };
+
+function proveedorSnapshot(proveedor: ProveedorRow): Prisma.InputJsonObject {
+  return { nombre: proveedor.nombre, contacto: proveedor.contacto, activo: proveedor.activo };
+}
+
+async function findInsumoOrFail(id: number) {
+  const insumo = await prisma.insumo.findUnique({ where: { id } });
+  if (!insumo) throw new AppError(404, "Insumo no encontrado");
+  return insumo;
+}
+
+async function findProveedorOrFail(id: number) {
+  const provider = await prisma.proveedor.findUnique({ where: { id } });
+  if (!provider) throw new AppError(404, "Proveedor no encontrado");
+  return provider;
+}
+
+export async function createInsumo(input: InsumoInput, context: AuditContext) {
   try {
-    return await prisma.insumo.create({
-      data: {
-        codigo: input.codigo,
-        nombre: input.nombre,
-        unidadMedida: input.unidadMedida,
-        stockMinimo: input.stockMinimo,
-        ...(input.descripcion === undefined ? {} : { descripcion: input.descripcion }),
-        ...(input.costo === undefined ? {} : { costo: input.costo }),
-      },
+    return await prisma.$transaction(async (transaction) => {
+      const insumo = await transaction.insumo.create({
+        data: {
+          codigo: input.codigo,
+          nombre: input.nombre,
+          unidadMedida: input.unidadMedida,
+          stockMinimo: input.stockMinimo,
+          ...(input.descripcion === undefined ? {} : { descripcion: input.descripcion }),
+          ...(input.costo === undefined ? {} : { costo: input.costo }),
+        },
+      });
+      await registrarAuditoria(transaction, context, {
+        tabla: "insumo",
+        idRegistro: insumo.id,
+        accion: "INSERT",
+        despues: insumoSnapshot(insumo),
+      });
+      return insumo;
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("Unique constraint")) {
@@ -100,19 +150,29 @@ export async function createInsumo(input: InsumoInput) {
   }
 }
 
-export async function updateInsumo(id: number, input: InsumoInput) {
-  await getInsumo(id);
+export async function updateInsumo(id: number, input: InsumoInput, context: AuditContext) {
+  const anterior = await findInsumoOrFail(id);
   try {
-    return await prisma.insumo.update({
-      where: { id },
-      data: {
-        codigo: input.codigo,
-        nombre: input.nombre,
-        unidadMedida: input.unidadMedida,
-        stockMinimo: input.stockMinimo,
-        ...(input.descripcion === undefined ? {} : { descripcion: input.descripcion }),
-        ...(input.costo === undefined ? {} : { costo: input.costo }),
-      },
+    return await prisma.$transaction(async (transaction) => {
+      const insumo = await transaction.insumo.update({
+        where: { id },
+        data: {
+          codigo: input.codigo,
+          nombre: input.nombre,
+          unidadMedida: input.unidadMedida,
+          stockMinimo: input.stockMinimo,
+          ...(input.descripcion === undefined ? {} : { descripcion: input.descripcion }),
+          ...(input.costo === undefined ? {} : { costo: input.costo }),
+        },
+      });
+      await registrarAuditoria(transaction, context, {
+        tabla: "insumo",
+        idRegistro: id,
+        accion: "UPDATE",
+        antes: insumoSnapshot(anterior),
+        despues: insumoSnapshot(insumo),
+      });
+      return insumo;
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("Unique constraint")) {
@@ -122,15 +182,33 @@ export async function updateInsumo(id: number, input: InsumoInput) {
   }
 }
 
-export async function setInsumoActive(id: number, activo: boolean) {
-  await getInsumo(id);
-  return prisma.insumo.update({ where: { id }, data: { activo } });
+export async function setInsumoActive(id: number, activo: boolean, context: AuditContext) {
+  const anterior = await findInsumoOrFail(id);
+  return prisma.$transaction(async (transaction) => {
+    const insumo = await transaction.insumo.update({ where: { id }, data: { activo } });
+    await registrarAuditoria(transaction, context, {
+      tabla: "insumo",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: { activo: anterior.activo },
+      despues: { activo },
+    });
+    return insumo;
+  });
 }
 
-export async function deleteInsumo(id: number) {
-  await getInsumo(id);
+export async function deleteInsumo(id: number, context: AuditContext) {
+  const anterior = await findInsumoOrFail(id);
   try {
-    await prisma.insumo.delete({ where: { id } });
+    await prisma.$transaction(async (transaction) => {
+      await transaction.insumo.delete({ where: { id } });
+      await registrarAuditoria(transaction, context, {
+        tabla: "insumo",
+        idRegistro: id,
+        accion: "DELETE",
+        antes: insumoSnapshot(anterior),
+      });
+    });
   } catch {
     throw new AppError(409, "No se puede eliminar un insumo con compras o movimientos asociados");
   }
@@ -179,38 +257,72 @@ export async function listProveedores() {
   return prisma.proveedor.findMany({ orderBy: { nombre: "asc" } });
 }
 
-export async function createProveedor(input: ProveedorInput) {
-  return prisma.proveedor.create({
-    data: {
-      nombre: input.nombre,
-      ...(input.contacto === undefined ? {} : { contacto: input.contacto }),
-    },
+export async function createProveedor(input: ProveedorInput, context: AuditContext) {
+  return prisma.$transaction(async (transaction) => {
+    const proveedor = await transaction.proveedor.create({
+      data: {
+        nombre: input.nombre,
+        ...(input.contacto === undefined ? {} : { contacto: input.contacto }),
+      },
+    });
+    await registrarAuditoria(transaction, context, {
+      tabla: "proveedor",
+      idRegistro: proveedor.id,
+      accion: "INSERT",
+      despues: proveedorSnapshot(proveedor),
+    });
+    return proveedor;
   });
 }
 
-export async function updateProveedor(id: number, input: ProveedorInput) {
-  const provider = await prisma.proveedor.findUnique({ where: { id } });
-  if (!provider) throw new AppError(404, "Proveedor no encontrado");
-  return prisma.proveedor.update({
-    where: { id },
-    data: {
-      nombre: input.nombre,
-      ...(input.contacto === undefined ? {} : { contacto: input.contacto }),
-    },
+export async function updateProveedor(id: number, input: ProveedorInput, context: AuditContext) {
+  const anterior = await findProveedorOrFail(id);
+  return prisma.$transaction(async (transaction) => {
+    const proveedor = await transaction.proveedor.update({
+      where: { id },
+      data: {
+        nombre: input.nombre,
+        ...(input.contacto === undefined ? {} : { contacto: input.contacto }),
+      },
+    });
+    await registrarAuditoria(transaction, context, {
+      tabla: "proveedor",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: proveedorSnapshot(anterior),
+      despues: proveedorSnapshot(proveedor),
+    });
+    return proveedor;
   });
 }
 
-export async function setProveedorActive(id: number, activo: boolean) {
-  const provider = await prisma.proveedor.findUnique({ where: { id } });
-  if (!provider) throw new AppError(404, "Proveedor no encontrado");
-  return prisma.proveedor.update({ where: { id }, data: { activo } });
+export async function setProveedorActive(id: number, activo: boolean, context: AuditContext) {
+  const anterior = await findProveedorOrFail(id);
+  return prisma.$transaction(async (transaction) => {
+    const proveedor = await transaction.proveedor.update({ where: { id }, data: { activo } });
+    await registrarAuditoria(transaction, context, {
+      tabla: "proveedor",
+      idRegistro: id,
+      accion: "UPDATE",
+      antes: { activo: anterior.activo },
+      despues: { activo },
+    });
+    return proveedor;
+  });
 }
 
-export async function deleteProveedor(id: number) {
-  const provider = await prisma.proveedor.findUnique({ where: { id } });
-  if (!provider) throw new AppError(404, "Proveedor no encontrado");
+export async function deleteProveedor(id: number, context: AuditContext) {
+  const anterior = await findProveedorOrFail(id);
   try {
-    await prisma.proveedor.delete({ where: { id } });
+    await prisma.$transaction(async (transaction) => {
+      await transaction.proveedor.delete({ where: { id } });
+      await registrarAuditoria(transaction, context, {
+        tabla: "proveedor",
+        idRegistro: id,
+        accion: "DELETE",
+        antes: proveedorSnapshot(anterior),
+      });
+    });
   } catch {
     throw new AppError(409, "No se puede eliminar un proveedor con compras asociadas");
   }
@@ -246,7 +358,8 @@ export async function getCompraReceipt(id: number) {
   return compra;
 }
 
-export async function createCompra(input: CompraInput, userId: number, file?: Express.Multer.File) {
+export async function createCompra(input: CompraInput, context: AuditContext, file?: Express.Multer.File) {
+  const userId = context.userId;
   const detailsTotal = input.detalles.reduce((sum, detail) => sum + detail.cantidad * detail.costoUnitario, 0);
   if (Math.abs(roundMoney(detailsTotal) - roundMoney(input.total)) > 0.01) {
     throw new AppError(400, "total no coincide con la suma de los detalles");
@@ -305,6 +418,23 @@ export async function createCompra(input: CompraInput, userId: number, file?: Ex
         },
       });
     }
+    await registrarAuditoria(transaction, context, {
+      tabla: "compra_insumo",
+      idRegistro: compra.id,
+      accion: "INSERT",
+      despues: {
+        fecha: input.fecha.toISOString(),
+        idProveedor: input.proveedorId,
+        numeroFactura: input.numeroFactura ?? null,
+        total: input.total,
+        detalles: input.detalles.map((detail) => ({
+          insumoId: detail.insumoId,
+          cantidad: detail.cantidad,
+          costoUnitario: detail.costoUnitario,
+        })),
+        recibo: file?.originalname ?? null,
+      },
+    });
     return transaction.compraInsumo.findUnique({
       where: { id: compra.id },
       include: { proveedor: true, detalles: { include: { insumo: true } } },
@@ -312,7 +442,8 @@ export async function createCompra(input: CompraInput, userId: number, file?: Ex
   });
 }
 
-export async function createMovimiento(input: MovimientoInput, userId: number) {
+export async function createMovimiento(input: MovimientoInput, context: AuditContext) {
+  const userId = context.userId;
   if (!manualMovementCodes.has(input.codigoTipoMovimiento)) {
     throw new AppError(400, "El tipo de movimiento no puede registrarse manualmente");
   }
@@ -337,7 +468,7 @@ export async function createMovimiento(input: MovimientoInput, userId: number) {
     if (type.efecto === "salida" && input.cantidad > stock) {
       throw new AppError(409, `Stock insuficiente. Disponible: ${roundMoney(stock)}`);
     }
-    return transaction.movimientoInsumo.create({
+    const movimiento = await transaction.movimientoInsumo.create({
       data: {
         idInsumo: input.insumoId,
         codigoTipoMovimiento: input.codigoTipoMovimiento,
@@ -350,5 +481,20 @@ export async function createMovimiento(input: MovimientoInput, userId: number) {
       },
       include: { tipoMovimiento: true, insumo: true },
     });
+    await registrarAuditoria(transaction, context, {
+      tabla: "movimiento_insumo",
+      idRegistro: movimiento.id.toString(),
+      accion: "INSERT",
+      despues: {
+        insumoId: input.insumoId,
+        tipoMovimiento: input.codigoTipoMovimiento,
+        cantidad: input.cantidad,
+        costoUnitario: movimiento.costoUnitario?.toNumber() ?? null,
+        galponId: input.galponId ?? null,
+        observaciones: input.observaciones ?? null,
+        stockAnterior: roundMoney(stock),
+      },
+    });
+    return movimiento;
   });
 }

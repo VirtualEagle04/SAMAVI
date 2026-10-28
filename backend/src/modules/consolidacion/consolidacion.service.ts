@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../database/prisma.js";
+import { type AuditContext, registrarAuditoria } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { startOfDayBogota, toDateOnly, todayBogota } from "../../shared/utils/fecha-bogota.js";
 import { getWeeklySummary } from "../dashboard/dashboard.service.js";
@@ -164,7 +165,7 @@ export async function listGastos(desde: string) {
   return gastos.map(gastoResponse);
 }
 
-export async function createGasto(input: GastoInput, userId: number) {
+export async function createGasto(input: GastoInput, context: AuditContext) {
   return prisma.$transaction(async (transaction) => {
     await bloquearCierres(transaction);
     await assertSemanaAbierta(transaction, input.fecha);
@@ -177,24 +178,45 @@ export async function createGasto(input: GastoInput, userId: number) {
         concepto: input.concepto,
         valor: input.valor,
         fecha: toDateOnly(input.fecha),
-        idUsuario: userId,
+        idUsuario: context.userId,
         galpones: { create: input.galponIds.map((idGalpon) => ({ idGalpon })) },
       },
       include: gastoInclude,
+    });
+    await registrarAuditoria(transaction, context, {
+      tabla: "gasto",
+      idRegistro: gasto.id,
+      accion: "INSERT",
+      despues: { concepto: input.concepto, valor: input.valor, fecha: input.fecha, galponIds: input.galponIds },
     });
     return gastoResponse(gasto);
   });
 }
 
-export async function deleteGasto(id: number): Promise<void> {
+export async function deleteGasto(id: number, context: AuditContext): Promise<void> {
   await prisma.$transaction(async (transaction) => {
     await bloquearCierres(transaction);
-    const gasto = await transaction.gasto.findUnique({ where: { id }, select: { fecha: true } });
+    const gasto = await transaction.gasto.findUnique({
+      where: { id },
+      select: { concepto: true, valor: true, fecha: true, galpones: { select: { idGalpon: true } } },
+    });
     if (!gasto) {
       throw new AppError(404, "Gasto no encontrado");
     }
-    await assertSemanaAbierta(transaction, toIsoDay(gasto.fecha));
+    const fecha = toIsoDay(gasto.fecha);
+    await assertSemanaAbierta(transaction, fecha);
     await transaction.gasto.delete({ where: { id } });
+    await registrarAuditoria(transaction, context, {
+      tabla: "gasto",
+      idRegistro: id,
+      accion: "DELETE",
+      antes: {
+        concepto: gasto.concepto,
+        valor: gasto.valor.toNumber(),
+        fecha,
+        galponIds: gasto.galpones.map((row) => row.idGalpon),
+      },
+    });
   });
 }
 
@@ -590,7 +612,7 @@ export async function listCierres() {
   }));
 }
 
-export async function cerrarSemana(desde: string, userId: number, ip: string | undefined) {
+export async function cerrarSemana(desde: string, context: AuditContext) {
   await prisma.$transaction(
     async (transaction) => {
       await bloquearCierres(transaction);
@@ -613,7 +635,7 @@ export async function cerrarSemana(desde: string, userId: number, ip: string | u
           totalInsumos: total("insumos"),
           totalGastos: total("gastos"),
           totalRepartido: total("repartible"),
-          idUsuario: userId,
+          idUsuario: context.userId,
           galpones: {
             create: calculo.galpones.map((galpon) => ({
               idGalpon: galpon.id,
@@ -637,16 +659,11 @@ export async function cerrarSemana(desde: string, userId: number, ip: string | u
           },
         },
       });
-      await transaction.auditoria.create({
-        data: {
-          idUsuario: userId,
-          tablaAfectada: "cierre_semanal",
-          idRegistroAfectado: String(cierre.id),
-          accion: "INSERT",
-          datosNuevos: { desde, hasta, totalRepartido: total("repartible") },
-          ...(ip === undefined ? {} : { ipOrigen: ip.slice(0, 45) }),
-          resultado: "EXITOSO",
-        },
+      await registrarAuditoria(transaction, context, {
+        tabla: "cierre_semanal",
+        idRegistro: cierre.id,
+        accion: "INSERT",
+        despues: { desde, hasta, totalRepartido: total("repartible") },
       });
     },
     { timeout: 15_000 },
@@ -655,7 +672,7 @@ export async function cerrarSemana(desde: string, userId: number, ip: string | u
 }
 
 /** Borra el último cierre para poder corregir la semana; queda registrado en la auditoría. */
-export async function reabrirSemana(desde: string, userId: number, ip: string | undefined) {
+export async function reabrirSemana(desde: string, context: AuditContext) {
   await prisma.$transaction(async (transaction) => {
     await bloquearCierres(transaction);
     const cierre = await transaction.cierreSemanal.findUnique({ where: { desde: toDateOnly(desde) } });
@@ -670,21 +687,16 @@ export async function reabrirSemana(desde: string, userId: number, ip: string | 
       throw new AppError(409, "Solo se puede reabrir el último cierre semanal");
     }
     await transaction.cierreSemanal.delete({ where: { id: cierre.id } });
-    await transaction.auditoria.create({
-      data: {
-        idUsuario: userId,
-        tablaAfectada: "cierre_semanal",
-        idRegistroAfectado: String(cierre.id),
-        accion: "DELETE",
-        datosAnteriores: {
-          desde,
-          totalIngresos: cierre.totalIngresos.toNumber(),
-          totalInsumos: cierre.totalInsumos.toNumber(),
-          totalGastos: cierre.totalGastos.toNumber(),
-          totalRepartido: cierre.totalRepartido.toNumber(),
-        },
-        ...(ip === undefined ? {} : { ipOrigen: ip.slice(0, 45) }),
-        resultado: "EXITOSO",
+    await registrarAuditoria(transaction, context, {
+      tabla: "cierre_semanal",
+      idRegistro: cierre.id,
+      accion: "DELETE",
+      antes: {
+        desde,
+        totalIngresos: cierre.totalIngresos.toNumber(),
+        totalInsumos: cierre.totalInsumos.toNumber(),
+        totalGastos: cierre.totalGastos.toNumber(),
+        totalRepartido: cierre.totalRepartido.toNumber(),
       },
     });
   });

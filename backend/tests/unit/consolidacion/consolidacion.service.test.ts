@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   cerrarSemana,
   createGasto,
+  deleteGasto,
   getHistorial,
   getSemana,
   reabrirSemana,
@@ -15,7 +16,7 @@ vi.mock("../../../src/database/prisma.js", () => {
     galpon: { findMany: vi.fn(), count: vi.fn() },
     detalleVenta: { findMany: vi.fn() },
     movimientoInsumo: { findMany: vi.fn() },
-    gasto: { findMany: vi.fn(), create: vi.fn() },
+    gasto: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
     inversionSocio: { findMany: vi.fn() },
     cierreSemanal: { findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), delete: vi.fn() },
     cierreDiario: { findMany: vi.fn() },
@@ -185,7 +186,7 @@ describe("getSemana", () => {
 
 describe("cerrarSemana", () => {
   it("guarda el resultado por galpón y socio y lo audita", async () => {
-    await cerrarSemana("2026-08-07", 9, "127.0.0.1");
+    await cerrarSemana("2026-08-07", { userId: 9, ip: "127.0.0.1" });
 
     expect(mocked.cierreSemanal!.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -221,14 +222,14 @@ describe("cerrarSemana", () => {
   it("rechaza el cierre si hay bloqueos", async () => {
     mocked.cierreDiario!.findMany!.mockResolvedValue([]);
 
-    await expect(cerrarSemana("2026-08-07", 9, undefined)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(cerrarSemana("2026-08-07", { userId: 9, ip: undefined })).rejects.toMatchObject({ statusCode: 409 });
     expect(mocked.cierreSemanal!.create).not.toHaveBeenCalled();
   });
 
   it("rechaza una semana ya cerrada", async () => {
     mocked.cierreSemanal!.findUnique!.mockResolvedValue({ id: 3 });
 
-    await expect(cerrarSemana("2026-08-07", 9, undefined)).rejects.toMatchObject({
+    await expect(cerrarSemana("2026-08-07", { userId: 9, ip: undefined })).rejects.toMatchObject({
       statusCode: 409,
       message: "La semana del 2026-08-07 ya está cerrada",
     });
@@ -282,7 +283,7 @@ describe("reabrirSemana", () => {
     mocked.cierreSemanal!.findUnique!.mockResolvedValue({ id: 3, desde: dia("2026-08-07") });
     mocked.cierreSemanal!.findFirst!.mockResolvedValue({ id: 4 });
 
-    await expect(reabrirSemana("2026-08-07", 9, undefined)).rejects.toMatchObject({
+    await expect(reabrirSemana("2026-08-07", { userId: 9, ip: undefined })).rejects.toMatchObject({
       statusCode: 409,
       message: "Solo se puede reabrir el último cierre semanal",
     });
@@ -294,11 +295,36 @@ describe("createGasto", () => {
   it("no permite registrar gastos en una semana cerrada", async () => {
     mocked.cierreSemanal!.findUnique!.mockResolvedValue({ id: 3 });
 
-    await expect(createGasto({ concepto: "Chana", valor: 1000, fecha: "2026-08-10", galponIds: [1] }, 9)).rejects.toMatchObject({
+    await expect(createGasto({ concepto: "Chana", valor: 1000, fecha: "2026-08-10", galponIds: [1] }, { userId: 9, ip: undefined })).rejects.toMatchObject({
       statusCode: 409,
       message: "La semana del 2026-08-07 ya está cerrada",
     });
     expect(mocked.cierreSemanal!.findUnique).toHaveBeenCalledWith({ where: { desde: dia("2026-08-07") }, select: { id: true } });
     expect(mocked.gasto!.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteGasto", () => {
+  it("audita el gasto borrado con sus datos", async () => {
+    mocked.cierreSemanal!.findUnique!.mockResolvedValue(null);
+    mocked.gasto!.findUnique!.mockResolvedValue({
+      concepto: "Chana",
+      valor: { toNumber: () => 1000 },
+      fecha: dia("2026-08-10"),
+      galpones: [{ idGalpon: 1 }, { idGalpon: 2 }],
+    });
+
+    await deleteGasto(5, { userId: 9, ip: undefined });
+
+    expect(mocked.gasto!.delete).toHaveBeenCalledWith({ where: { id: 5 } });
+    expect(mocked.auditoria!.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        idUsuario: 9,
+        tablaAfectada: "gasto",
+        idRegistroAfectado: "5",
+        accion: "DELETE",
+        datosAnteriores: { concepto: "Chana", valor: 1000, fecha: "2026-08-10", galponIds: [1, 2] },
+      }),
+    });
   });
 });

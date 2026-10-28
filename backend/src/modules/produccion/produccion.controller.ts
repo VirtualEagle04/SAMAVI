@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { auditContext } from "../../shared/audit/auditoria.js";
 import { parseProductionCountInput } from "./produccion.schemas.js";
 import { parseDailyCloseInput } from "./produccion.schemas.js";
 import {
@@ -51,7 +52,7 @@ export async function listCierresController(request: Request, response: Response
 
 export async function closeDailyProductionController(request: Request, response: Response): Promise<void> {
   const input = parseDailyCloseInput(request.body);
-  response.status(200).json(await closeDailyProduction(input));
+  response.status(200).json(await closeDailyProduction(input, auditContext(request)));
 }
 
 export async function getDeviceStatusController(_request: Request, response: Response): Promise<void> {
