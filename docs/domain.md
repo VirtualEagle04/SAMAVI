@@ -31,6 +31,27 @@ El sistema contempla producción por galpón, por categoría y por fecha, invent
 
 En una venta, una diferencia respecto al pedido original debe ajustar el inventario y los ingresos. Al confirmar la venta, se descuenta el inventario correspondiente. El cierre semanal consolida producción, ventas, bodega, gastos, prorrateo, ganancia por galpón y distribución por socio.
 
+## Auditoría
+
+La tabla `auditoria` registra quién hizo cada operación, cuándo, desde qué IP y con qué valores antes y después (`datos_anteriores`, `datos_nuevos`). La consulta en el módulo Auditoría (`GET /api/v1/auditoria`) exige el permiso `VER_AUDITORIA`, que solo tiene el Administrador.
+
+Se audita toda escritura que hace un usuario:
+
+- Comercial: mayoristas (crear, editar, borrar), precios (`INSERT` si el precio es nuevo, `UPDATE` con el valor anterior si ya existía), pedidos (crear, editar, cambiar de estado) y ventas.
+- Inventario: insumos y proveedores (crear, editar, activar o desactivar, borrar), compras y movimientos manuales.
+- Producción: cierre diario, un registro por galpón (`cierre_produccion_dia`, id `galpón:fecha`). Si se repite el cierre del mismo día queda como `UPDATE` con las bandejas anteriores.
+- Galpones: alimentación diaria y cambios de gallinas.
+- Cierre semanal: gastos (crear, borrar), cierre y reapertura de la semana.
+
+El registro se escribe en la misma transacción que el cambio. Si el cambio falla, no queda registro, así que hoy no hay registros con `resultado = 'FALLIDO'`.
+
+No se auditan:
+
+- Los conteos del ESP32: llegan por MQTT sin usuario y en gran volumen, y `log_conteo` ya es su traza.
+- El inicio de sesión: `accion` solo admite `INSERT`, `UPDATE` y `DELETE`.
+
+La IP es `request.ip` de Express. El backend no configura `trust proxy`, así que detrás de un proxy (el proxy de Vite en local, o nginx en el despliegue pendiente) se guarda la IP del proxy. Configurarlo queda pendiente junto con el despliegue.
+
 ## Cierre semanal y prorrateo
 
 Reglas confirmadas por el negocio:
