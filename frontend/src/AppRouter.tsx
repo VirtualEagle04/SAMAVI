@@ -10,6 +10,7 @@ import ComercialPage from "./features/comercial/pages/ComercialPage"
 import GalponesPage from "./features/galpones/pages/GalponesPage"
 import GalponDetallePage from "./features/galpones/pages/GalponDetallePage"
 import InventarioPage from "./features/inventario/pages/InventarioPage"
+import AuditoriaPage from "./features/auditoria/pages/AuditoriaPage"
 import App from "./App"
 
 export default function AppRouter() {
@@ -41,6 +42,9 @@ export default function AppRouter() {
           </Route>
           <Route element={<RequireModule module="inventario" />}>
             <Route path="inventario" element={<InventarioPage />} />
+          </Route>
+          <Route element={<RequireModule module="auditoria" />}>
+            <Route path="auditoria" element={<AuditoriaPage />} />
           </Route>
           {/* Rutas desconocidas o heredadas */}
           <Route path="*" element={<Navigate to="/" replace />} />
