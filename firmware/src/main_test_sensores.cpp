@@ -19,6 +19,7 @@
 #include <Wire.h>
 #include <Adafruit_VL53L0X.h>
 #include "config.h"
+#include "deteccion.h"
 #include <esp_system.h>
 
 #define PIN_SCL 22
@@ -29,9 +30,9 @@ const uint8_t pinesXSHUT[NUM_SENSORES] = {15, 4, 18, 13, 14, 33};
 const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
 const uint8_t DIRECCION_DEFECTO = 0x29;
 const uint8_t DIRECCION_BASE = 0x30;
-// Rango de detección en config.h. Histéresis: para soltar un huevo hace falta ver
-// el canal libre varias lecturas seguidas (a 50 ms por lectura).
-const uint8_t LECTURAS_PARA_LIBERAR = 3;
+// Rango de detección en config.h; histéresis y confirmación en deteccion.h.
+// VL53L0X, PCA9548A y SSD1306 admiten 400 kHz (igual que main.cpp).
+const uint32_t FRECUENCIA_I2C_HZ = 400000;
 const uint8_t INTENTOS_INICIO = 3;
 const unsigned long SIN_DATOS_MAX_MS = 1000;
 const unsigned long INTERVALO_REPORTE_MS = 1000;
@@ -47,9 +48,7 @@ struct EstadisticaSensor {
 
 Adafruit_VL53L0X sensores[NUM_SENSORES];
 bool sensorListo[NUM_SENSORES] = {false};
-bool sensorActivo[NUM_SENSORES] = {false};
-uint8_t lecturasLibres[NUM_SENSORES] = {0};
-unsigned long ultimoConteo[NUM_SENSORES] = {0};
+DetectorHuevo detectores[NUM_SENSORES];
 uint32_t detecciones[NUM_SENSORES] = {0};
 uint32_t reinicios[NUM_SENSORES] = {0};
 unsigned long ultimoDato[NUM_SENSORES] = {0};
@@ -103,7 +102,7 @@ void reiniciarPlazos() {
 bool iniciarSensor(uint8_t i) {
   uint8_t direccion = DIRECCION_BASE + i;
   sensorListo[i] = false;
-  sensorActivo[i] = false;
+  detectores[i] = DetectorHuevo();
 
   for (uint8_t intento = 1; intento <= INTENTOS_INICIO; intento++) {
     digitalWrite(pinesXSHUT[i], LOW);
@@ -130,8 +129,8 @@ bool iniciarSensor(uint8_t i) {
                     i + 1, categorias[i], intento, direccion);
       continue;
     }
-    if (!sensores[i].startRangeContinuous()) {
-      Serial.printf("  S%d (%s) intento %u: startRangeContinuous() fallo, Status=%d\n",
+    if (!sensores[i].startRangeContinuous(PERIODO_MEDICION_MS)) {
+      Serial.printf("  S%d (%s) intento %u: startRangeContinuous(PERIODO_MEDICION_MS) fallo, Status=%d\n",
                     i + 1, categorias[i], intento, sensores[i].Status);
       continue;
     }
@@ -217,23 +216,12 @@ void leerSensores() {
       e.maximo = max(e.maximo, lectura);
     }
 
-    // Estado 0 = medición válida; 4 = nada al frente. Los estados 1-3 (p. ej. señal
-    // débil) dan distancias poco fiables y no cambian el estado del sensor.
-    bool enRango = lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
-    bool huevoAlFrente = estado == 0 && enRango;
-    bool canalLibre = estado == 4 || (estado == 0 && !enRango);
-    bool enDebounce = millis() - ultimoConteo[i] < DEBOUNCE_MS;
-    if (huevoAlFrente) {
-      lecturasLibres[i] = 0;
-      if (!sensorActivo[i] && !enDebounce) {
-        ultimoConteo[i] = millis();
-        detecciones[i]++;
-        Serial.printf(">> Deteccion S%d (%s): %u mm\n", i + 1, categorias[i], lectura);
-        sensorActivo[i] = true;
-      }
-    } else if (canalLibre && sensorActivo[i] && !enDebounce && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
-      sensorActivo[i] = false;
-      lecturasLibres[i] = 0;
+    EventoDeteccion evento = procesarLectura(detectores[i], lectura, estado);
+    if (evento == HUEVO_NUEVO) {
+      detecciones[i]++;
+      Serial.printf(">> Deteccion S%d (%s): %u mm\n", i + 1, categorias[i], lectura);
+    } else if (evento == HUEVO_SALIO) {
+      Serial.printf("<< Libre S%d (%s): %u mm, estado %u\n", i + 1, categorias[i], lectura, estado);
     }
   }
 }
@@ -255,7 +243,7 @@ void imprimirReporte() {
                   i + 1, categorias[i], e.lecturas, e.errores, e.ultima, rango,
                   e.estados[0], e.estados[1], e.estados[2], e.estados[3], e.estados[4],
                   (unsigned long)detecciones[i], (unsigned long)reinicios[i],
-                  sensorActivo[i] ? "  (objeto al frente)" : "");
+                  detectores[i].activo ? "  (objeto al frente)" : "");
     reiniciarEstadisticas(i);
   }
   Serial.println();
@@ -281,6 +269,7 @@ void setup() {
   Serial.printf("SDA=%d SCL=%d antes de Wire.begin (deben ser 1; 0 = bus trabado)\n",
                 digitalRead(PIN_SDA), digitalRead(PIN_SCL));
   Wire.begin(PIN_SDA, PIN_SCL);
+  Wire.setClock(FRECUENCIA_I2C_HZ);
   iniciarTodos();
 }
 

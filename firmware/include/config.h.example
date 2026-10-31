@@ -7,11 +7,9 @@ const char* MQTT_SERVER = "MACHINE_IP_MQTT_SERVER";
 const uint16_t MQTT_PORT = 1883;
 
 // Rango en el que pasan los huevos frente a los VL53L0X (medido en el montaje).
-// Un huevo cuenta con una lectura válida entre MIN y MAX.
+// Con el canal vacío ningún sensor debe ver nada dentro de este rango ni a menos
+// de HISTERESIS_MM de él; la confirmación y la histéresis están en deteccion.h.
 const uint16_t DISTANCIA_MIN_MM = 60;
 const uint16_t DISTANCIA_MAX_MM = 170;
-// Debounce: tras contar un huevo, el mismo sensor no vuelve a contar hasta que
-// pase este tiempo y vea el canal libre (evita contar dos veces el mismo huevo).
-const unsigned long DEBOUNCE_MS = 300;
 
 #endif
