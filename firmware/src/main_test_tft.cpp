@@ -17,6 +17,7 @@
 #include <Adafruit_ST7789.h>
 #include <Adafruit_VL53L0X.h>
 #include "config.h"
+#include "deteccion.h"
 
 #define PIN_SCL 22
 #define PIN_SDA 21
@@ -35,10 +36,10 @@ const char* categorias[NUM_SENSORES] = {"Y", "Ex", "AA", "A", "B", "C"};
 const uint8_t DIRECCION_DEFECTO = 0x29;
 const uint8_t DIRECCION_BASE = 0x30;
 const uint8_t INTENTOS_INICIO = 3;
-// Rango de detección en config.h. Histéresis: para soltar un huevo hace falta ver
-// el canal libre varias lecturas seguidas (a 50 ms por lectura).
-const uint8_t LECTURAS_PARA_LIBERAR = 3;
-const unsigned long INTERVALO_LECTURA_MS = 50;
+// Rango de detección en config.h; histéresis y confirmación en deteccion.h.
+// VL53L0X, PCA9548A y SSD1306 admiten 400 kHz (igual que main.cpp).
+const uint32_t FRECUENCIA_I2C_HZ = 400000;
+const unsigned long INTERVALO_LECTURA_MS = 10;
 const int HUEVOS_POR_BANDEJA = 30;
 const unsigned long DURACION_DESTELLO_MS = 300;
 const unsigned long PAUSA_ARRANQUE_OK_MS = 1500;
@@ -68,9 +69,7 @@ Adafruit_ST7789 tft(&spiTft, TFT_CS, TFT_DC, TFT_RST);
 Adafruit_VL53L0X sensores[NUM_SENSORES];
 
 bool sensorDisponible[NUM_SENSORES] = {false};
-bool sensorActivo[NUM_SENSORES] = {false};
-uint8_t lecturasLibres[NUM_SENSORES] = {0};
-unsigned long ultimoConteo[NUM_SENSORES] = {0};
+DetectorHuevo detectores[NUM_SENSORES];
 int32_t conteos[NUM_SENSORES] = {0};
 bool tarjetaPendiente[NUM_SENSORES] = {false};
 bool puntoPendiente[NUM_SENSORES] = {false};
@@ -226,7 +225,7 @@ String iniciarSensor(uint8_t i) {
       char texto[32];
       snprintf(texto, sizeof(texto), "no responde en 0x%02X", direccion);
       motivo = texto;
-    } else if (!sensores[i].startRangeContinuous()) {
+    } else if (!sensores[i].startRangeContinuous(PERIODO_MEDICION_MS)) {
       motivo = "no inicia la medicion";
     } else {
       return "";
@@ -249,6 +248,7 @@ void iniciarSensores() {
   pinMode(PIN_SCL, INPUT);
   bool busLibre = digitalRead(PIN_SDA) == HIGH && digitalRead(PIN_SCL) == HIGH;
   Wire.begin(PIN_SDA, PIN_SCL);
+  Wire.setClock(FRECUENCIA_I2C_HZ);
   delay(150);
   dibujarPaso(PASO_BUS, busLibre ? CORRECTO : FALLIDO, "Bus I2C",
               busLibre ? "SDA 21 / SCL 22 libres" : "linea en bajo: bus trabado");
@@ -316,7 +316,7 @@ void dibujarPunto(uint8_t i) {
   if (!sensorDisponible[i]) {
     return;
   }
-  if (sensorActivo[i]) {
+  if (detectores[i].activo) {
     tft.fillCircle(cx, cy, 5, colorCorrecto);
   } else {
     tft.drawCircle(cx, cy, 5, colorApagado);
@@ -387,13 +387,13 @@ void actualizarPantalla() {
       dibujarTarjeta(i);
       tarjetaPendiente[i] = false;
       puntoPendiente[i] = false;
-      puntoDibujado[i] = sensorActivo[i];
+      puntoDibujado[i] = detectores[i].activo;
       destelloDibujado[i] = millis() < finDestello[i];
       continue;
     }
-    if (puntoPendiente[i] || puntoDibujado[i] != sensorActivo[i]) {
+    if (puntoPendiente[i] || puntoDibujado[i] != detectores[i].activo) {
       dibujarPunto(i);
-      puntoDibujado[i] = sensorActivo[i];
+      puntoDibujado[i] = detectores[i].activo;
       puntoPendiente[i] = false;
     }
     bool destello = millis() < finDestello[i];
@@ -476,23 +476,8 @@ void leerSensores() {
       continue;
     }
 
-    // Estado 0 = medición válida; 4 = nada al frente. Los estados 1-3 (p. ej. señal
-    // débil) dan distancias poco fiables y no cambian el estado del sensor.
-    uint8_t estado = sensores[i].readRangeStatus();
-    bool enRango = lectura >= DISTANCIA_MIN_MM && lectura <= DISTANCIA_MAX_MM;
-    bool huevoAlFrente = estado == 0 && enRango;
-    bool canalLibre = estado == 4 || (estado == 0 && !enRango);
-    bool enDebounce = millis() - ultimoConteo[i] < DEBOUNCE_MS;
-    if (huevoAlFrente) {
-      lecturasLibres[i] = 0;
-      if (!sensorActivo[i] && !enDebounce) {
-        ultimoConteo[i] = millis();
-        sensorActivo[i] = true;
-        registrarConteo(i, 1);
-      }
-    } else if (canalLibre && sensorActivo[i] && !enDebounce && ++lecturasLibres[i] >= LECTURAS_PARA_LIBERAR) {
-      sensorActivo[i] = false;
-      lecturasLibres[i] = 0;
+    if (procesarLectura(detectores[i], lectura, sensores[i].readRangeStatus()) == HUEVO_NUEVO) {
+      registrarConteo(i, 1);
     }
   }
 }
@@ -503,7 +488,8 @@ void setup() {
   spiTft.begin(TFT_SCK, -1, TFT_MOSI, TFT_CS);
   tft.init(TFT_ALTO, TFT_ANCHO);
   tft.setSPISpeed(40000000);
-  tft.setRotation(1);
+  // Girada 180° respecto a la rotación 1 por cómo va montada.
+  tft.setRotation(3);
   tft.setTextWrap(false);
 
   colorFondo = hexA565(0x14110E);
