@@ -33,8 +33,8 @@ El transporte productivo debe usar TLS.
 ## Estado actual del firmware
 
 - Publica cada huevo en `samavi/conteo` con `galponId` (constante `GALPON_ID`, hoy 1), `categoriaPeso`, `cantidad` 1 y `timestamp` en hora de Bogotá (`-05:00`) obtenida por NTP. Si se cuenta antes de sincronizar la hora, el `timestamp` sale con fecha de 1970.
-- Usa keep-alive de 5 s, así que una caída del broker se detecta en 10 s como máximo. Reintenta Wi-Fi cada 10 s y MQTT cada 5 s en segundo plano, sin dejar de contar.
+- Usa keep-alive de 5 s, así que una caída del broker se detecta en 10 s como máximo. Reintenta Wi-Fi cada 10 s y MQTT cada 5 s en una tarea propia (núcleo 0): un intento fallido tarda unos 3 s, pero no frena la lectura de los sensores.
 - Publica su estado en `samavi/dispositivos/<MAC>/estado` como se describe arriba, con su `GALPON_ID` y su IP.
-- Pendiente: los huevos contados sin conexión se muestran en la pantalla del dispositivo, pero no se reenvían al broker al reconectar, así que el backend no los recibe. Esto no cumple aún la regla de no perder el conteo local.
+- Los huevos contados sin conexión esperan en una cola en memoria (hasta 200) y se publican en orden al reconectar, con el `timestamp` de cuando se contaron. Pendiente: la cola se pierde si el ESP32 se reinicia o se apaga, y si se llena los conteos nuevos se descartan (se avisa por el monitor serie).
 
 El formato exacto del payload debe tomarse del código vigente y de las pruebas. No inventar campos ni asumir que una fotografía, un conteo o una bandeja representan la misma unidad de negocio.

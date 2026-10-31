@@ -49,7 +49,7 @@ npm run build:all
 # 5. Configurar el firmware (solo si se va a cargar al ESP32)
 copy firmware\include\config.h.example firmware\include\config.h
 # completar WIFI_SSID, WIFI_PASSWORD y MQTT_SERVER en config.h
-# y revisar el rango de detección (DISTANCIA_MIN_MM, DISTANCIA_MAX_MM) y DEBOUNCE_MS
+# y revisar el rango de detección (DISTANCIA_MIN_MM, DISTANCIA_MAX_MM)
 ```
 
 ## 5. Cómo ejecutar el proyecto

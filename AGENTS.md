@@ -101,12 +101,12 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 
 ## Firmware
 
-- El entorno `esp32dev` compila solo [firmware/src/main.cpp](firmware/src/main.cpp). Los `main_test_*.cpp` vigentes tienen su propio entorno en `platformio.ini` (`tft_test`, `sensores_test`); los demás `main_*.cpp` son variantes antiguas sin entorno.
-- Valores actuales de `main.cpp`: seis sensores VL53L0X por I2C (`SDA` 21, `SCL` 22), pines XSHUT `{15, 4, 18, 13, 14, 33}`, direcciones `0x30`–`0x35` y categorías `{"Y","Ex","AA","A","B","C"}` por sensor; pantalla TFT ST7789 240x320 por SPI (pines en `docs/hardware.md`). `docs/hardware.md` dice que OLED, multiplexor I2C, MCP23017 y botones siguen pendientes.
-- En modo continuo los VL53L0X se leen con `readRangeResult()`, nunca con `readRange()`. La detección solo cuenta lecturas de estado 0 dentro del rango y aplica debounce (`docs/hardware.md`).
+- El entorno `esp32dev` compila solo [firmware/src/main.cpp](firmware/src/main.cpp). Los `main_test_*.cpp` vigentes tienen su propio entorno en `platformio.ini` (`tft_test`, `sensores_test`, `oled_test`, `mux_test`, `integracion_test`); los demás `main_*.cpp` son variantes antiguas sin entorno.
+- Valores actuales de `main.cpp`: seis sensores VL53L0X por I2C (`SDA` 21, `SCL` 22), pines XSHUT `{15, 4, 18, 13, 14, 33}`, direcciones `0x30`–`0x35` y categorías `{"Y","Ex","AA","A","B","C"}` por sensor; pantalla TFT ST7789 240x320 por SPI con rotación 3; multiplexor PCA9548A en `0x70` (RST en GPIO 27) con una OLED SSD1306 por categoría en los canales 0 a 5 (pines en `docs/hardware.md`). `docs/hardware.md` dice que MCP23017 y botones siguen pendientes.
+- En modo continuo los VL53L0X se leen con `readRangeResult()`, nunca con `readRange()`. La detección está en [deteccion.h](firmware/include/deteccion.h), compartida por `main.cpp` y las pruebas: cuenta lecturas de estado 0 dentro del rango, con histéresis y confirmación por lecturas consecutivas, sin tiempo de debounce (`docs/hardware.md`).
 - No cambies pines, direcciones I2C ni secuencias XSHUT sin verificar el hardware real.
-- Debe conservar el conteo local durante caídas de Wi-Fi o MQTT, y evitar incrementos múltiples por un mismo huevo (`docs/hardware.md`). Hoy las reconexiones no bloquean el conteo, pero los huevos contados sin conexión no se reenvían.
-- Copia `firmware/include/config.h.example` a `firmware/include/config.h` (ignorado por git) con tus credenciales; nunca lo subas. Además de Wi-Fi y MQTT, define `DISTANCIA_MIN_MM`, `DISTANCIA_MAX_MM` y `DEBOUNCE_MS`; sin ellos no compila.
+- Debe conservar el conteo local durante caídas de Wi-Fi o MQTT, y evitar incrementos múltiples por un mismo huevo (`docs/hardware.md`). La red corre en una tarea propia del núcleo 0 y no bloquea la lectura; los conteos sin conexión esperan en una cola en memoria (hasta 200) y se publican al reconectar, pero se pierden si el ESP32 se reinicia.
+- Copia `firmware/include/config.h.example` a `firmware/include/config.h` (ignorado por git) con tus credenciales; nunca lo subas. Además de Wi-Fi y MQTT, define `DISTANCIA_MIN_MM` y `DISTANCIA_MAX_MM`; sin ellos no compila.
 
 ## Hosts de agentes
 
