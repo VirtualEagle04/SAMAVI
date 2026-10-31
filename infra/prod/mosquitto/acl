@@ -1,0 +1,17 @@
+# Permisos MQTT de producción. Un cambio de tópicos exige actualizar este archivo
+# junto con firmware, backend y docs/protocols/mqtt.md. deploy.sh y
+# mqtt-usuario.sh lo instalan en el broker y lo recargan sin cortar conexiones.
+#
+# Mosquitto avisa al arrancar de que "samavi/conteo" no contiene %c ni %u: es
+# esperado, todos los ESP32 publican en el mismo tópico de conteo.
+
+# Backend: usuario fijo; debe coincidir con MQTT_USERNAME del .env.
+# samavi/conteo es el valor actual de MQTT_TOPIC.
+user samavi-backend
+topic read samavi/conteo
+topic read samavi/dispositivos/+/estado
+
+# ESP32: cada dispositivo usa como usuario su MAC sin ":" (p. ej. 8C94DF6BEA44),
+# así solo puede publicar el estado (y el LWT) de su propio tópico.
+pattern write samavi/conteo
+pattern write samavi/dispositivos/%u/estado

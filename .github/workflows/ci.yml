@@ -1,0 +1,141 @@
+name: CI
+
+# Comprueba que todas las partes compilan: backend, frontend, firmware e imágenes
+# de producción. Las pruebas del backend están en backend-tests.yml (Unit Tests).
+# Un push a main que pasa este workflow dispara deploy.yml.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Generar cliente Prisma
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Compilar
+        working-directory: backend
+        run: npm run build
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Compilar
+        working-directory: frontend
+        run: npm run build
+
+  firmware:
+    name: Firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+
+      - name: Instalar PlatformIO
+        run: pip install platformio
+
+      # config.h está ignorado por git; el de ejemplo basta para compilar.
+      - name: Preparar config.h de ejemplo
+        run: cp firmware/include/config.h.example firmware/include/config.h
+
+      - name: Compilar esp32dev
+        working-directory: firmware
+        run: pio run -e esp32dev
+
+  imagenes:
+    name: Imágenes Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Imagen del backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Imagen del frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: false
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      # Con .env.example como .env: falla si el compose pide una variable que la plantilla no tiene.
+      # Las credenciales MQTT van vacías en la plantilla (desarrollo anónimo).
+      - name: Validar compose de producción
+        env:
+          MQTT_USERNAME: samavi-backend
+          MQTT_PASSWORD: solo-para-validar
+        run: |
+          cp .env.example .env
+          docker compose --project-directory infra/prod -f infra/prod/docker-compose.yml --env-file .env config --quiet
+
+      - name: Validar nginx
+        run: |
+          docker run --rm \
+            -e DOMAIN=ci.example.com \
+            -v "$PWD/infra/prod/nginx/templates:/etc/nginx/templates:ro" \
+            --entrypoint sh nginx:1.30-alpine -c '
+              apk add --no-cache openssl > /dev/null &&
+              mkdir -p /etc/letsencrypt/live/ci.example.com &&
+              openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=ci.example.com" \
+                -keyout /etc/letsencrypt/live/ci.example.com/privkey.pem \
+                -out /etc/letsencrypt/live/ci.example.com/fullchain.pem 2> /dev/null &&
+              /docker-entrypoint.d/20-envsubst-on-templates.sh &&
+              nginx -t'

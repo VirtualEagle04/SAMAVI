@@ -1,0 +1,4 @@
+# Los scripts y la configuración de producción se ejecutan o montan en Linux:
+# con CRLF bash y nginx fallan, aunque se editen o prueben desde Windows.
+*.sh text eol=lf
+infra/** text eol=lf

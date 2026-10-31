@@ -1,0 +1,138 @@
+name: Deploy
+
+# Publica las imágenes de un commit de main en GHCR y lo despliega en Lightsail
+# por SSH. La llave de Actions está limitada en el servidor a
+# infra/prod/scripts/deploy.sh, que recibe el sha y hace el resto
+# (docs/deployment.md).
+#
+# - Automático: cuando CI termina bien tras un push a main.
+# - Manual (Run workflow): sin sha despliega la punta de main; con el sha de un
+#   despliegue anterior vuelve a él sin recompilar (sus imágenes ya existen).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Sha completo de un commit de main ya desplegado (vacío = punta de main)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+
+# Nunca dos despliegues a la vez; el siguiente espera al anterior.
+concurrency:
+  group: deploy-produccion
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Elegir commit
+        id: commit
+        env:
+          SHA_MANUAL: ${{ inputs.sha }}
+          SHA_CI: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ -n "$SHA_MANUAL" ]; then
+            sha="$SHA_MANUAL"
+            construir=false
+          elif [ -n "$SHA_CI" ]; then
+            sha="$SHA_CI"
+            construir=true
+          else
+            sha="$GITHUB_SHA"
+            construir=true
+          fi
+          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Se esperaba el sha completo (40 caracteres hexadecimales): $sha"
+            exit 1
+          fi
+          {
+            echo "sha=$sha"
+            echo "construir=$construir"
+            # GHCR exige nombres en minúscula.
+            echo "registro=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        if: steps.commit.outputs.construir == 'true'
+        with:
+          ref: ${{ steps.commit.outputs.sha }}
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.commit.outputs.construir == 'true'
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar imagen del backend
+        if: steps.commit.outputs.construir == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ steps.commit.outputs.registro }}/samavi-backend:sha-${{ steps.commit.outputs.sha }}
+            ${{ steps.commit.outputs.registro }}/samavi-backend:latest
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Publicar imagen del frontend
+        if: steps.commit.outputs.construir == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          tags: |
+            ${{ steps.commit.outputs.registro }}/samavi-frontend:sha-${{ steps.commit.outputs.sha }}
+            ${{ steps.commit.outputs.registro }}/samavi-frontend:latest
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Comprobar que las imágenes existen
+        if: steps.commit.outputs.construir != 'true'
+        env:
+          REGISTRO: ${{ steps.commit.outputs.registro }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          for imagen in samavi-backend samavi-frontend; do
+            docker manifest inspect "$REGISTRO/$imagen:sha-$SHA" > /dev/null \
+              || { echo "::error::No existe $REGISTRO/$imagen:sha-$SHA; despliega sin sha para construirla."; exit 1; }
+          done
+
+      - name: Desplegar en el servidor
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # El servidor ignora el comando pedido y ejecuta deploy.sh con el sha (command= en authorized_keys).
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -o ServerAliveInterval=30 \
+            "$SSH_USER@$SSH_HOST" "$SHA"

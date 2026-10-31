@@ -26,17 +26,18 @@ Flujo: `VL53L0X -> ESP32 -> MQTT (Mosquitto) -> backend -> PostgreSQL <- API RES
 | `backend/` | API REST + consumidor MQTT. Express 5, TypeScript ESM, Prisma 6, Vitest |
 | `frontend/` | React 19, Vite, Material UI, Zustand, react-router-dom 7, oxlint |
 | `firmware/` | PlatformIO, entorno `esp32dev`, Arduino, PubSubClient, Adafruit_VL53L0X |
-| `infra/` | `docker-compose.yml` (PostgreSQL 16 y Mosquitto 2) y `mosquitto/mosquitto.conf` |
+| `infra/` | Desarrollo: `docker-compose.yml` (PostgreSQL 16 y Mosquitto 2) y `mosquitto/mosquitto.conf`. Producción: `prod/` (compose, nginx, Mosquitto con TLS y ACL, certbot, scripts y systemd) |
 | `database/schema.sql` | Esquema SQL; Compose lo ejecuta al crear la base (`initdb.d`) |
-| `docs/` | `overview`, `architecture`, `domain`, `hardware`, `requirements`, `protocols/mqtt` |
+| `docs/` | `overview`, `architecture`, `deployment`, `domain`, `hardware`, `requirements`, `protocols/mqtt` |
+| `.github/workflows/` | `backend-tests.yml` (Unit Tests), `ci.yml` (compila todas las partes) y `deploy.yml` (GHCR y Lightsail) |
 
-Entorno: el único `.env` está en la raíz (plantilla `.env.example`) y [backend/src/config/env.ts](backend/src/config/env.ts) lo carga desde ahí. Requeridas por el backend: `DATABASE_URL`, `JWT_SECRET` (mínimo 32 caracteres), `MQTT_URL`, `MQTT_TOPIC`, `MQTT_CLIENT_ID`; opcionales `PORT` (3001 por defecto) y `JWT_EXPIRES_IN`. El frontend usa `VITE_API_URL` opcional (vacío = mismo origen). Puertos locales: frontend 3000 con proxy `/api` -> `localhost:3001`; PostgreSQL en `127.0.0.1:${POSTGRES_PORT:-15432}`; Mosquitto en `${MOSQUITTO_PORT:-1883}`. El Mosquitto local es anónimo y sin TLS; `docs/protocols/mqtt.md` pide TLS en producción.
+Entorno: el único `.env` está en la raíz (plantilla `.env.example`) y [backend/src/config/env.ts](backend/src/config/env.ts) lo carga desde ahí. Requeridas por el backend: `DATABASE_URL`, `JWT_SECRET` (mínimo 32 caracteres), `MQTT_URL`, `MQTT_TOPIC`, `MQTT_CLIENT_ID`; opcionales `PORT` (3001 por defecto), `JWT_EXPIRES_IN` y `MQTT_USERNAME`/`MQTT_PASSWORD` (van juntas; vacías = anónimo). El frontend usa `VITE_API_URL` opcional (vacío = mismo origen). Puertos locales: frontend 3000 con proxy `/api` -> `localhost:3001`; PostgreSQL en `127.0.0.1:${POSTGRES_PORT:-15432}`; Mosquitto en `${MOSQUITTO_PORT:-1883}`. El Mosquitto local es anónimo y sin TLS; el de producción exige usuario y TLS (`docs/protocols/mqtt.md`).
 
-El despliegue (AWS Lightsail, nginx) está documentado en `docs/architecture.md` pero no existe en el código de `infra/`: trátalo como pendiente.
+Producción: AWS Lightsail (Amazon Linux 2023, sin `apt` ni cron: tareas con systemd timers) con `infra/prod/docker-compose.yml`. Las imágenes (`backend/Dockerfile`, `frontend/Dockerfile`) se construyen en GitHub Actions y se publican en GHCR; el servidor nunca compila. El dominio es siempre la variable `DOMAIN`, nunca un valor fijo en el repo. Operación, primer despliegue y configuración de GitHub: `docs/deployment.md`.
 
 ## Comandos y validación
 
-Todos desde la raíz del repositorio.
+Todos desde la raíz del repositorio, con Node 24 (`.nvmrc`). Para instalar dentro de un paquete entra a su carpeta (`cd backend && npm install`): `npm --prefix <carpeta> install` desde la raíz añade la raíz como dependencia `"samavi": "file:.."`. `npm --prefix <carpeta> ci` y `run` no tienen ese problema.
 
 | Acción | Comando |
 |---|---|
@@ -53,6 +54,8 @@ Todos desde la raíz del repositorio.
 | Lint del frontend | `npm --prefix frontend run lint` |
 | Build del frontend (`tsc -b && vite build`) | `npm --prefix frontend run build` |
 | Firmware | `pio run -e esp32dev` desde `firmware/` (confirma el entorno en `platformio.ini`) |
+| Validar compose de producción | `docker compose --project-directory infra/prod -f infra/prod/docker-compose.yml --env-file .env config --quiet` |
+| Imágenes de producción | `docker build backend` y `docker build frontend` |
 
 Qué ejecutar según el área que cambies:
 
@@ -60,6 +63,7 @@ Qué ejecutar según el área que cambies:
 - `frontend/`: lint y build. No hay pruebas automáticas de frontend.
 - `firmware/`: compila con PlatformIO. No hay pruebas automáticas de firmware.
 - `infra/`, MQTT o esquema de datos: valida los archivos afectados y, si hay entorno, prueba el arranque.
+- `infra/prod/` o Dockerfiles: `docker compose ... config`, build de las imágenes, `shellcheck` de los scripts y `nginx -t` de la plantilla (como en `ci.yml`). Nunca ejecutes los scripts de `infra/prod/scripts/` contra tu `.env`: apuntan a producción. Para probarlos usa `SAMAVI_ENV_FILE` y `COMPOSE_PROJECT_NAME` con un entorno desechable.
 - Cambios compartidos o de configuración: `npm run build:all` además de lo específico.
 
 Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar algo, di qué faltó.
@@ -82,6 +86,7 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 - Todo `JSON.parse` de un payload MQTT va en `try/catch` y se valida el resultado; un mensaje inválido no debe tumbar el proceso.
 - Un cambio de contrato exige actualizar firmware, backend, pruebas y `docs/protocols/mqtt.md`. No asumas que una foto, un conteo y una bandeja son la misma unidad de negocio.
 - Estado actual del firmware: publica los conteos en `samavi/conteo` con `galponId` de la constante `GALPON_ID` (1) y keep-alive de 5 s; al conectar publica `online` retenido en `samavi/dispositivos/<MAC>/estado` y declara `offline` como LWT en ese tópico. El backend considera conectado un dispositivo solo si su último estado es `online`.
+- Producción: el ESP32 conecta por TLS al 8883 con usuario = su MAC sin `:`. El backend conecta al 1883 interno como `samavi-backend`. Los permisos están en `infra/prod/mosquitto/acl`: un tópico nuevo exige actualizarlo.
 
 ## Datos
 
@@ -107,7 +112,8 @@ Añade o actualiza pruebas cuando cambie el comportamiento. Si no puedes validar
 - En modo continuo los VL53L0X se leen con `readRangeResult()`, nunca con `readRange()`. La detección está en [deteccion.h](firmware/include/deteccion.h), compartida por `main.cpp` y las pruebas: cuenta lecturas de estado 0 dentro del rango, con histéresis y confirmación por lecturas consecutivas, sin tiempo de debounce (`docs/hardware.md`).
 - No cambies pines, direcciones I2C ni secuencias XSHUT sin verificar el hardware real.
 - Debe conservar el conteo local durante caídas de Wi-Fi o MQTT, y evitar incrementos múltiples por un mismo huevo (`docs/hardware.md`). La red corre en una tarea propia del núcleo 0 y no bloquea la lectura; los conteos sin conexión esperan en una cola en memoria (hasta 200) y se publican al reconectar, pero se pierden si el ESP32 se reinicia.
-- Copia `firmware/include/config.h.example` a `firmware/include/config.h` (ignorado por git) con tus credenciales; nunca lo subas. Además de Wi-Fi y MQTT, define `DISTANCIA_MIN_MM` y `DISTANCIA_MAX_MM`; sin ellos no compila.
+- Copia `firmware/include/config.h.example` a `firmware/include/config.h` (ignorado por git) con tus credenciales; nunca lo subas. Además de Wi-Fi y MQTT (`MQTT_SERVER`, `MQTT_PORT`, `MQTT_USAR_TLS`, `MQTT_PASSWORD`), define `DISTANCIA_MIN_MM` y `DISTANCIA_MAX_MM`; sin ellos no compila.
+- `firmware/include/ca_mqtt.h` tiene las raíces públicas de Let's Encrypt (ISRG Root X1, X2, YE y YR) para validar el broker; no son secretos. Si Let's Encrypt cambia de jerarquía, actualízalo desde letsencrypt.org/certificates y verifica las huellas.
 
 ## Hosts de agentes
 

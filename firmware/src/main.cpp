@@ -40,9 +40,11 @@
 #include <Adafruit_VL53L0X.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <time.h>
 #include <sys/time.h>
 #include "config.h"
+#include "ca_mqtt.h"
 #include "deteccion.h"
 #include "logo.h"
 
@@ -92,6 +94,9 @@ const unsigned long PAUSA_ARRANQUE_FALLO_MS = 5000;
 const unsigned long ESPERA_WIFI_ARRANQUE_MS = 15000;
 const unsigned long REINTENTO_WIFI_MS = 10000;
 const unsigned long REINTENTO_MQTT_MS = 5000;
+// Con TLS, el certificado del broker solo se valida con la hora real (NTP).
+const unsigned long ESPERA_HORA_ARRANQUE_MS = 10000;
+const uint32_t TIMEOUT_HANDSHAKE_TLS_S = 10;
 
 // Multiplexor con A0, A1 y A2 a GND (datasheet, tabla 8-1). La OLED del sensor i
 // va en el canal canalesOled[i].
@@ -134,8 +139,11 @@ enum EstadoPaso { PENDIENTE, EN_CURSO, CORRECTO, FALLIDO };
 SPIClass spiTft(VSPI);
 Adafruit_ST7789 tft(&spiTft, TFT_CS, TFT_DC, TFT_RST);
 Adafruit_VL53L0X sensores[NUM_SENSORES];
+// MQTT_USAR_TLS (config.h) elige el cliente: TLS en producción, TCP plano contra
+// el Mosquitto local de desarrollo.
 WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
+WiFiClientSecure wifiClientSeguro;
+PubSubClient mqttClient(MQTT_USAR_TLS ? static_cast<Client&>(wifiClientSeguro) : static_cast<Client&>(wifiClient));
 Adafruit_SSD1306 oled1(OLED_ANCHO, OLED_ALTO, &Wire, -1, FRECUENCIA_I2C_HZ, FRECUENCIA_I2C_HZ);
 Adafruit_SSD1306 oled2(OLED_ANCHO, OLED_ALTO, &Wire, -1, FRECUENCIA_I2C_HZ, FRECUENCIA_I2C_HZ);
 Adafruit_SSD1306 oled3(OLED_ANCHO, OLED_ALTO, &Wire, -1, FRECUENCIA_I2C_HZ, FRECUENCIA_I2C_HZ);
@@ -530,22 +538,53 @@ String mensajeEstado(const char* estado) {
          ",\"ip\":\"" + WiFi.localIP().toString() + "\"}";
 }
 
+// Sin sincronizar, el reloj del ESP32 arranca en 1970.
+bool horaSincronizada() {
+  struct tm tiempo;
+  return getLocalTime(&tiempo, 0) && tiempo.tm_year + 1900 >= 2024;
+}
+
 // Intenta conectar al broker una vez; no bloquea más que el intento.
 bool conectarMQTT() {
+  // TLS revisa las fechas del certificado: con el reloj en 1970 lo rechazaría.
+  if (MQTT_USAR_TLS && !horaSincronizada()) {
+    Serial.println("MQTT espera la hora NTP para validar el certificado");
+    return false;
+  }
   String dispositivoId = WiFi.macAddress();
   dispositivoId.replace(":", "");
   String clientId = "samavi-esp32-" + dispositivoId;
   String topicoEstado = "samavi/dispositivos/" + dispositivoId + "/estado";
   String offline = mensajeEstado("offline");
-  Serial.println("Conectando a MQTT...");
+  // El usuario es la MAC: el ACL del broker solo le deja publicar en su tópico de
+  // estado. Sin contraseña se conecta anónimo (Mosquitto local de desarrollo).
+  bool conCredenciales = MQTT_PASSWORD[0] != '\0';
+  const char* usuario = conCredenciales ? dispositivoId.c_str() : nullptr;
+  const char* clave = conCredenciales ? MQTT_PASSWORD : nullptr;
+  Serial.println("Conectando a MQTT como " + dispositivoId + "...");
   // LWT: si el ESP32 cae sin desconectarse, el broker publica "offline" retenido.
-  if (mqttClient.connect(clientId.c_str(), topicoEstado.c_str(), 1, true, offline.c_str())) {
+  if (mqttClient.connect(clientId.c_str(), usuario, clave, topicoEstado.c_str(), 1, true, offline.c_str())) {
     mqttClient.publish(topicoEstado.c_str(), mensajeEstado("online").c_str(), true);
     Serial.println("MQTT conectado como " + clientId);
     return true;
   }
+  // rc=5: usuario o contraseña rechazados; rc=-2 con TLS: ver el error de abajo.
   Serial.printf("MQTT fallo, rc=%d\n", mqttClient.state());
+  if (MQTT_USAR_TLS) {
+    char error[100];
+    if (wifiClientSeguro.lastError(error, sizeof(error)) != 0) {
+      Serial.printf("TLS: %s\n", error);
+    }
+  }
   return false;
+}
+
+// Motivo que muestra la pantalla de arranque si el broker no conecta.
+String motivoFalloMqtt() {
+  if (MQTT_USAR_TLS && !horaSincronizada()) {
+    return "sin hora NTP para TLS";
+  }
+  return "no responde, rc=" + String(mqttClient.state());
 }
 
 void iniciar() {
@@ -688,14 +727,23 @@ void iniciar() {
   }
 
   // Paso 6: broker MQTT (solo si hay Wi-Fi).
+  if (MQTT_USAR_TLS) {
+    wifiClientSeguro.setCACert(CA_MQTT);
+    wifiClientSeguro.setHandshakeTimeout(TIMEOUT_HANDSHAKE_TLS_S);
+  }
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setKeepAlive(MQTT_KEEPALIVE_S);
   mqttConectado = false;
   if (wifiConectado) {
     dibujarPaso(PASO_MQTT, EN_CURSO, "MQTT", detalleBroker());
+    // NTP suele responder en uno o dos segundos; si no, la tarea de red reintenta.
+    unsigned long inicioHora = millis();
+    while (MQTT_USAR_TLS && !horaSincronizada() && millis() - inicioHora < ESPERA_HORA_ARRANQUE_MS) {
+      delay(250);
+    }
     mqttConectado = conectarMQTT();
     dibujarPaso(PASO_MQTT, mqttConectado ? CORRECTO : FALLIDO, "MQTT",
-                mqttConectado ? detalleBroker() : "no responde, rc=" + String(mqttClient.state()));
+                mqttConectado ? detalleBroker() : motivoFalloMqtt());
   } else {
     dibujarPaso(PASO_MQTT, FALLIDO, "MQTT", "esperando Wi-Fi");
   }
@@ -1060,7 +1108,8 @@ void setup() {
     ultimoDato[i] = millis();
   }
   colaConteos = xQueueCreate(CAPACIDAD_COLA_CONTEOS, sizeof(MensajeConteo));
-  xTaskCreatePinnedToCore(tareaRed, "red", 8192, nullptr, 1, nullptr, 0);
+  // El handshake TLS (mbedTLS) usa bastante pila: 12 KB dejan margen sobre los 8 KB de loop().
+  xTaskCreatePinnedToCore(tareaRed, "red", 12288, nullptr, 1, nullptr, 0);
   dibujarPantallaConteo();
   actualizarPantalla();
 }

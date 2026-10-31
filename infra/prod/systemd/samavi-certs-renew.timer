@@ -1,0 +1,12 @@
+[Unit]
+Description=SAMAVI: intento de renovación del certificado dos veces al día
+
+[Timer]
+# certbot solo renueva cuando faltan menos de 30 días; el resto de intentos no hace nada.
+# 03:15 y 15:15: systemd admite listas por campo, no horas completas separadas por coma.
+OnCalendar=*-*-* 03,15:15:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

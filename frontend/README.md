@@ -8,9 +8,12 @@ UI, Zustand y React Router.
 Desde la raíz del repositorio:
 
 ```bash
-npm --prefix frontend install
+cd frontend && npm install && cd ..
 npm --prefix frontend run dev
 ```
+
+No uses `npm --prefix frontend install` desde la raíz: npm añade la raíz del
+repositorio como dependencia `"samavi": "file:.."`.
 
 Comandos disponibles:
 
