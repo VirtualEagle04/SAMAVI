@@ -1,0 +1,11 @@
+[Unit]
+Description=SAMAVI: intento de renovación del certificado dos veces al día
+
+[Timer]
+# certbot solo renueva cuando faltan menos de 30 días; el resto de intentos no hace nada.
+OnCalendar=*-*-* 03:15:00,15:15:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

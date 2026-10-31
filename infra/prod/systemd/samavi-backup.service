@@ -1,0 +1,9 @@
+[Unit]
+Description=SAMAVI: respaldo de PostgreSQL (pg_dump -Fc, 7 días)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=ec2-user
+ExecStart=/usr/bin/bash /home/ec2-user/samavi/infra/prod/scripts/backup-db.sh

@@ -1,0 +1,95 @@
+# Despliegue de producción (AWS Lightsail). Guía completa: docs/deployment.md.
+# Úsalo siempre con los scripts de infra/prod/scripts/, que pasan --env-file
+# con el .env de la raíz y el .env.deploy (IMAGE_TAG) que escribe deploy.sh.
+#
+# Puertos publicados: 80 y 443 (nginx) y 8883 (MQTT con TLS). PostgreSQL y el
+# listener 1883 de Mosquitto solo existen en la red interna de Docker.
+
+name: samavi
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Solo se ejecuta al crear el volumen (no hay migraciones, ver docs/deployment.md).
+      - ../../database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      # ACL del repo. Mosquitto exige que el archivo sea del usuario 1883, así que
+      # instalar_acl (scripts/lib.sh) lo copia a mosquitto_auth, junto a passwd.
+      - ./mosquitto/acl:/mosquitto/acl-repo/acl:ro
+      - mosquitto_auth:/mosquitto/auth
+      # Copia del certificado con dueño 1883: la escribe certbot/deploy-hook.sh.
+      - mosquitto_certs:/mosquitto/certs:ro
+      - mosquitto_data:/mosquitto/data
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/${GHCR_OWNER:?Falta GHCR_OWNER en .env}/samavi-backend:${IMAGE_TAG:-latest}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      PORT: "3001"
+      MQTT_URL: mqtt://mosquitto:1883
+      MQTT_TOPIC: ${MQTT_TOPIC:?Falta MQTT_TOPIC en .env}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:?Falta MQTT_CLIENT_ID en .env}
+      MQTT_USERNAME: ${MQTT_USERNAME:?Falta MQTT_USERNAME en .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?Falta MQTT_PASSWORD en .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+
+  nginx:
+    image: ghcr.io/${GHCR_OWNER}/samavi-frontend:${IMAGE_TAG:-latest}
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?Falta DOMAIN en .env}
+    volumes:
+      # La imagen oficial de nginx sustituye ${DOMAIN} en las plantillas al arrancar.
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Solo se usa con "docker compose run" desde scripts/init-certs.sh y renew-certs.sh.
+  certbot:
+    image: certbot/certbot:v5.9.0
+    profiles: ["herramientas"]
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+      - mosquitto_certs:/mosquitto-certs
+      - ./certbot/deploy-hook.sh:/hooks/deploy-hook.sh:ro
+
+volumes:
+  postgres_data:
+  mosquitto_auth:
+  mosquitto_certs:
+  mosquitto_data:
+  letsencrypt:
+  certbot_webroot:

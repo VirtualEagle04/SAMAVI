@@ -1,0 +1,84 @@
+# Plantilla de nginx para producción. Al arrancar, la imagen oficial sustituye
+# ${DOMAIN} (variable del contenedor) y deja intactas las variables de nginx.
+
+# DNS interno de Docker: el backend se resuelve en cada petición, así un
+# contenedor recreado con otra IP no deja a nginx apuntando a la anterior.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    # Desafío HTTP-01 de Let's Encrypt (renovación por webroot).
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # Ningún location usa add_header: si lo hiciera, dejaría de heredar estas cabeceras.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Recibos de inventario: multer acepta hasta 5 MB por archivo.
+    client_max_body_size 6m;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    root /usr/share/nginx/html;
+
+    set $backend http://backend:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    location = /health {
+        proxy_pass $backend;
+    }
+
+    # SSE de producción: sin búfer y con conexión larga (docs/architecture.md).
+    location = /api/v1/produccion/eventos {
+        proxy_pass $backend;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+    }
+
+    location /api/ {
+        proxy_pass $backend;
+    }
+
+    # Vite genera nombres con hash en /assets: se pueden cachear un año.
+    location /assets/ {
+        expires 1y;
+    }
+
+    # SPA: las rutas de react-router se resuelven en index.html, que no se cachea.
+    location / {
+        try_files $uri $uri/ /index.html;
+        expires -1;
+    }
+}
