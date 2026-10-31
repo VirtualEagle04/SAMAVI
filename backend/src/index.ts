@@ -13,6 +13,7 @@ import { auditoriaRoutes } from "./modules/auditoria/auditoria.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
 import { deviceTracker, TOPICO_ESTADO_DISPOSITIVOS } from "./mqtt/device-status.js";
+import { buildMqttOptions } from "./mqtt/mqtt-options.js";
 
 const app = express();
 app.use(express.json());
@@ -29,7 +30,14 @@ app.use("/api/v1/consolidacion", consolidacionRoutes);
 app.use("/api/v1/auditoria", auditoriaRoutes);
 app.use(errorMiddleware);
 
-const client: MqttClient = mqtt.connect(env.mqttUrl, { clientId: env.mqttClientId });
+const client: MqttClient = mqtt.connect(
+  env.mqttUrl,
+  buildMqttOptions({
+    clientId: env.mqttClientId,
+    username: env.mqttUsername,
+    password: env.mqttPassword,
+  }),
+);
 
 const topicsToSubscribe = [env.mqttTopic, TOPICO_ESTADO_DISPOSITIVOS];
 

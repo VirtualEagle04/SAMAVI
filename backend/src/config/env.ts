@@ -29,6 +29,8 @@ export const env = {
   mqttUrl: required("MQTT_URL"),
   mqttTopic: required("MQTT_TOPIC"),
   mqttClientId: required("MQTT_CLIENT_ID"),
+  mqttUsername: process.env.MQTT_USERNAME || undefined,
+  mqttPassword: process.env.MQTT_PASSWORD || undefined,
 };
 
 if (env.jwtSecret.length < 32) {
