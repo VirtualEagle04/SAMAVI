@@ -22,7 +22,7 @@ El proyecto está dirigido a María Fernanda Durán Rozo, propietaria y benefici
 
 | Herramienta | Versión mínima | Notas |
 |---|---|---|
-| Node.js | 18.18+ (backend), 20.19+ (frontend/Vite) | Requerido por Prisma, Express y Vite |
+| Node.js | 24 (`.nvmrc`) | La misma versión que usan CI y las imágenes de producción |
 | npm | Incluido con Node.js | Gestor de paquetes del monorepo |
 | Docker Desktop | Última estable | Para levantar Mosquitto y PostgreSQL localmente |
 | PlatformIO | Última estable | Compilación y carga del firmware al ESP32 |
@@ -48,7 +48,8 @@ npm run build:all
  
 # 5. Configurar el firmware (solo si se va a cargar al ESP32)
 copy firmware\include\config.h.example firmware\include\config.h
-# completar WIFI_SSID, WIFI_PASSWORD y MQTT_SERVER en config.h
+# completar WIFI_SSID, WIFI_PASSWORD y la conexión MQTT en config.h
+# (MQTT_SERVER, MQTT_PORT, MQTT_USAR_TLS y MQTT_PASSWORD; ver docs/hardware.md)
 # y revisar el rango de detección (DISTANCIA_MIN_MM, DISTANCIA_MAX_MM)
 ```
 
@@ -95,6 +96,7 @@ npm --prefix backend run test:report
 SAMAVI/
 ├── docs/                      # Documentación técnica del proyecto
 │   ├── architecture.md
+│   ├── deployment.md          # Despliegue en AWS Lightsail
 │   ├── domain.md
 │   ├── hardware.md
 │   ├── overview.md
@@ -124,7 +126,8 @@ SAMAVI/
 │       ├── services/          # Servicios de comunicación con la API
 │       ├── stores/            # Estado global
 │       └── theme/             # Tema de Material UI
-├── infra/                     # Docker Compose y configuración de Mosquitto
+├── infra/                     # Docker Compose y Mosquitto de desarrollo
+│   └── prod/                  # Producción: compose, nginx, Mosquitto TLS, scripts y systemd
 ├── AGENTS.md                  # Instrucciones únicas para agentes de IA
 ├── CLAUDE.md                  # Importa AGENTS.md para Claude Code
 ├── CONTRIBUTING.md            # Guía de contribución y flujo Git
@@ -159,7 +162,7 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
 - **MQTT sobre TLS** como protocolo de comunicación entre el ESP32 y el backend, tolerante a intermitencias de red gracias a reconexión explícita de WiFi y MQTT en el firmware.
 - **Express.js + PostgreSQL + Prisma ORM + TypeScript** para el backend, elegidos por dominio del equipo, bajo costo de licenciamiento y adecuación a una API REST de baja concurrencia.
 - **React + Vite + Material UI + TypeScript** para el frontend, priorizando reactividad y facilidad de uso para usuarios con poca experiencia tecnológica.
-- **Despliegue en AWS Lightsail sobre Docker Compose** (backend, Mosquitto, PostgreSQL), preferido frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática. El frontend se servirá mediante nginx en el despliegue definido, pero esa configuración debe tratarse como pendiente mientras no exista en el código de infraestructura.
+- **Despliegue en AWS Lightsail sobre Docker Compose** (nginx con el frontend, backend, Mosquitto con TLS y PostgreSQL), preferido frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática. GitHub Actions construye las imágenes, las publica en GHCR y despliega por SSH. Ver `docs/deployment.md`.
 - **Autenticación basada en JWT** con control de acceso por roles (RBAC), validando firma, expiración y permisos en cada solicitud a un recurso protegido.
 
 ## 11. Limitaciones conocidas y trabajo futuro

@@ -58,7 +58,18 @@ Después, el firmware verifica cada paso y lo muestra en la pantalla de setup de
 2. Con todos los XSHUT en bajo, nadie responde en `0x29`.
 3. Cada sensor aparece en `0x29` al subir su XSHUT, queda en su dirección y empieza a medir. Se hacen hasta 3 intentos por sensor; un sensor que falla queda como "sin sensor" y no detiene el arranque.
 4. El multiplexor responde en `0x70` y guarda el canal elegido, y cada OLED responde en su canal. Una OLED que falla queda apagada y no detiene el arranque.
-5. Wi-Fi (muestra la IP asignada) y conexión a Mosquitto.
+5. Wi-Fi (muestra la IP asignada) y conexión a Mosquitto. Con TLS, antes espera hasta 10 s a la hora NTP; si no llega, el paso muestra "sin hora NTP para TLS" y la tarea de red sigue reintentando.
+
+La conexión al broker se configura en `firmware/include/config.h`:
+
+| Campo | Producción | Desarrollo (Mosquitto local) |
+|---|---|---|
+| `MQTT_SERVER` | Dominio del servidor (`DOMAIN`), no la IP | IP del equipo con el broker |
+| `MQTT_PORT` | `8883` | `1883` |
+| `MQTT_USAR_TLS` | `true` | `false` |
+| `MQTT_PASSWORD` | La creada con `mqtt-usuario.sh <MAC>` | `""` (anónimo) |
+
+El usuario MQTT es la MAC del ESP32 sin `:`. Detalles en `docs/protocols/mqtt.md` y `docs/deployment.md`.
 
 El breakout del VL53L0X puede incluir regulación y adaptación de nivel. Sus señales relevantes son `SCL`, `SDA` y `SHDN` o `XSHUT`. El GPIO de interrupción no forma parte de la implementación básica documentada. Verifica siempre el modelo exacto antes de asumir voltajes o características del módulo.
 

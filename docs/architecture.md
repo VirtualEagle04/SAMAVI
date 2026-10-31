@@ -2,7 +2,15 @@
 
 SAMAVI es un monolito modular con una aplicación web, una API y un dispositivo de captura.
 
-El despliegue documentado utiliza Docker Compose sobre AWS Lightsail. La infraestructura local incluye PostgreSQL y Mosquitto. El frontend puede servirse mediante nginx en el despliegue definido, pero esa configuración debe tratarse como pendiente mientras no exista en el código de infraestructura.
+La infraestructura local (`infra/docker-compose.yml`) incluye PostgreSQL y Mosquitto, que es anónimo y sin TLS.
+
+Producción usa Docker Compose sobre AWS Lightsail (`infra/prod/`) con cuatro servicios:
+- nginx sirve el frontend estático y hace de proxy de `/api` con TLS;
+- el backend;
+- Mosquitto con TLS en el 8883 y usuarios con ACL;
+- PostgreSQL, sin puertos publicados.
+
+Las imágenes se construyen en GitHub Actions (`deploy.yml`) y se publican en GHCR; el servidor solo las descarga. Guía completa en `docs/deployment.md`.
 
 ## Componentes
 
@@ -22,7 +30,9 @@ El ESP32 no escribe directamente en PostgreSQL. La lógica MQTT que persiste dat
 - Backend: `backend/src/config`, `database`, `middleware`, `modules`, `mqtt` y `shared`.
 - Frontend: `frontend/src/components`, `features`, `services`, `stores` y `theme`.
 - Firmware: `firmware/src` y `firmware/include`.
-- Infraestructura: `infra/docker-compose.yml` y configuración de Mosquitto.
+- Infraestructura: `infra/docker-compose.yml` y `infra/mosquitto/` para desarrollo. `infra/prod/` para producción: compose, nginx, Mosquitto, certbot, scripts y unidades de systemd.
+- Imágenes: `backend/Dockerfile` y `frontend/Dockerfile`.
+- CI/CD: `.github/workflows/` (`backend-tests.yml`, `ci.yml` y `deploy.yml`).
 
 La estructura real del código tiene prioridad sobre diagramas o estructuras futuras documentadas.
 
