@@ -3,8 +3,19 @@
 
 const char* WIFI_SSID = "WIFI_SSID";
 const char* WIFI_PASSWORD = "WIFI_PASSWORD";
-const char* MQTT_SERVER = "MACHINE_IP_MQTT_SERVER";
-const uint16_t MQTT_PORT = 1883;
+
+// Producción: el dominio del servidor (el de DOMAIN en el .env), puerto 8883 y
+// MQTT_USAR_TLS en true. El ESP32 valida el certificado con las raíces de
+// ca_mqtt.h y el nombre del dominio, así que aquí va el dominio y no la IP.
+// Desarrollo contra el Mosquitto local (anónimo, sin TLS): la IP de tu equipo,
+// puerto 1883, MQTT_USAR_TLS en false y MQTT_PASSWORD vacía.
+const char* MQTT_SERVER = "DOMINIO_O_IP_DEL_BROKER";
+const uint16_t MQTT_PORT = 8883;
+const bool MQTT_USAR_TLS = true;
+
+// El usuario MQTT es la MAC del ESP32 sin ":" (sale en el monitor serie al
+// conectar). La contraseña la crea infra/prod/scripts/mqtt-usuario.sh en el servidor.
+const char* MQTT_PASSWORD = "MQTT_PASSWORD";
 
 // Rango en el que pasan los huevos frente a los VL53L0X (medido en el montaje).
 // Con el canal vacío ningún sensor debe ver nada dentro de este rango ni a menos
