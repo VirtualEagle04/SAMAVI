@@ -54,7 +54,7 @@
 
 - Publica cada huevo en `samavi/conteo` con `galponId` (constante `GALPON_ID`, hoy 1), `categoriaPeso`, `cantidad` 1 y `timestamp` en hora de Bogotá (`-05:00`) obtenida por NTP. Si se cuenta antes de sincronizar la hora, el `timestamp` sale con fecha de 1970.
 - Usa keep-alive de 5 s, así que una caída del broker se detecta en 10 s como máximo. Reintenta Wi-Fi cada 10 s y MQTT cada 5 s en una tarea propia (núcleo 0): un intento fallido tarda unos 3 s (con TLS, el handshake puede llegar a 10 s), pero no frena la lectura de los sensores.
-- Con `MQTT_USAR_TLS` (`config.h`) usa `WiFiClientSecure` y no intenta conectar hasta tener la hora NTP. Al arrancar la espera hasta 10 s. Se autentica con su MAC y `MQTT_PASSWORD`; con `MQTT_PASSWORD` vacía se conecta anónimo, contra el Mosquitto local. Si falla, el monitor serie muestra el `rc` de PubSubClient (5 = credenciales rechazadas) y el error TLS.
+- Con `MQTT_USAR_TLS` (`config.h`) usa `WiFiClientSecure` y no intenta conectar hasta tener la hora NTP. Al arrancar la espera hasta 10 s. Se autentica con su MAC y `MQTT_PASSWORD`; con `MQTT_PASSWORD` vacía se conecta anónimo, contra el Mosquitto local. Si falla, el monitor serie muestra el `rc` de PubSubClient (5 = credenciales rechazadas) y, si no se abrió la conexión (`rc=-2`), el error TLS.
 - Publica su estado en `samavi/dispositivos/<MAC>/estado` como se describe arriba, con su `GALPON_ID` y su IP.
 - Los huevos contados sin conexión esperan en una cola en memoria (hasta 200) y se publican en orden al reconectar, con el `timestamp` de cuando se contaron. Pendiente: la cola se pierde si el ESP32 se reinicia o se apaga, y si se llena los conteos nuevos se descartan (se avisa por el monitor serie).
 

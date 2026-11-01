@@ -568,9 +568,11 @@ bool conectarMQTT() {
     Serial.println("MQTT conectado como " + clientId);
     return true;
   }
-  // rc=5: usuario o contraseña rechazados; rc=-2 con TLS: ver el error de abajo.
+  // rc=5: usuario o contraseña rechazados; rc=-2: no se abrió la conexión (con TLS,
+  // ver el error de abajo). mbedTLS guarda su último error aunque el handshake haya
+  // salido bien, así que solo se muestra cuando la conexión falló.
   Serial.printf("MQTT fallo, rc=%d\n", mqttClient.state());
-  if (MQTT_USAR_TLS) {
+  if (MQTT_USAR_TLS && mqttClient.state() == MQTT_CONNECT_FAILED) {
     char error[100];
     if (wifiClientSeguro.lastError(error, sizeof(error)) != 0) {
       Serial.printf("TLS: %s\n", error);
