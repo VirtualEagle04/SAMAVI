@@ -42,6 +42,8 @@ model Usuario {
   passwordHash String @map("password_hash") @db.VarChar(255)
   contacto     Json?
   idRol        Int    @map("id_rol")
+  activo       Boolean @default(true)
+  tokenVersion Int    @default(0) @map("token_version")
   rol          Rol    @relation(fields: [idRol], references: [id])
   alimentaciones RegistroAlimentacion[]
   auditorias   Auditoria[]

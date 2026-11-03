@@ -5,9 +5,10 @@ import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded"
 import EggIcon from "@mui/icons-material/Egg"
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded"
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded"
+import ManageAccountsRoundedIcon from "@mui/icons-material/ManageAccountsRounded"
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded"
 import { useAuthStore } from "./features/auth/stores/authStore"
-import type { Role } from "./features/auth/services/authService"
+import { ROL_ADMINISTRADOR, type Role } from "./features/auth/services/authService"
 
 export type ModuleId =
   | "dashboard"
@@ -17,6 +18,7 @@ export type ModuleId =
   | "galpones"
   | "inventario"
   | "auditoria"
+  | "usuarios"
 
 export type AppModule = {
   id: ModuleId
@@ -42,7 +44,7 @@ export const APP_MODULES: AppModule[] = [
     title: "Resumen Semanal",
     icon: <DashboardRoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" || permissions.includes("VER_CIERRE"),
+      role === ROL_ADMINISTRADOR || permissions.includes("VER_CIERRE"),
   },
   {
     id: "consolidacion",
@@ -51,7 +53,7 @@ export const APP_MODULES: AppModule[] = [
     title: "Cierre Semanal y Prorrateo",
     icon: <AccountBalanceWalletRoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" || permissions.includes("VER_CIERRE"),
+      role === ROL_ADMINISTRADOR || permissions.includes("VER_CIERRE"),
   },
   {
     id: "produccion",
@@ -60,9 +62,7 @@ export const APP_MODULES: AppModule[] = [
     title: "Módulo de Producción",
     icon: <EggIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" ||
-      role === "Galponero" ||
-      permissions.includes("VER_PRODUCCION"),
+      role === ROL_ADMINISTRADOR || permissions.includes("VER_PRODUCCION"),
   },
   {
     id: "comercial",
@@ -71,8 +71,7 @@ export const APP_MODULES: AppModule[] = [
     title: "Módulo Comercial",
     icon: <StorefrontRoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" ||
-      role === "Vendedor" ||
+      role === ROL_ADMINISTRADOR ||
       permissions.includes("INGRESAR_PEDIDO") ||
       permissions.includes("REGISTRAR_VENTA"),
   },
@@ -83,7 +82,7 @@ export const APP_MODULES: AppModule[] = [
     title: "Módulo de Galpones",
     icon: <HomeWorkRoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" || permissions.includes("GESTIONAR_GALPONES"),
+      role === ROL_ADMINISTRADOR || permissions.includes("GESTIONAR_GALPONES"),
   },
   {
     id: "inventario",
@@ -92,7 +91,7 @@ export const APP_MODULES: AppModule[] = [
     title: "Módulo de Inventario",
     icon: <Inventory2RoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" || permissions.includes("GESTIONAR_INVENTARIO"),
+      role === ROL_ADMINISTRADOR || permissions.includes("GESTIONAR_INVENTARIO"),
   },
   {
     id: "auditoria",
@@ -101,7 +100,16 @@ export const APP_MODULES: AppModule[] = [
     title: "Auditoría de Operaciones",
     icon: <FactCheckRoundedIcon fontSize="small" />,
     canAccess: (role, permissions) =>
-      role === "Administrador" || permissions.includes("VER_AUDITORIA"),
+      role === ROL_ADMINISTRADOR || permissions.includes("VER_AUDITORIA"),
+  },
+  {
+    id: "usuarios",
+    path: "/usuarios",
+    label: "Usuarios",
+    title: "Usuarios, Roles y Permisos",
+    icon: <ManageAccountsRoundedIcon fontSize="small" />,
+    canAccess: (role, permissions) =>
+      role === ROL_ADMINISTRADOR || permissions.includes("GESTIONAR_USUARIOS"),
   },
 ]
 

@@ -190,6 +190,10 @@ CREATE TABLE
         password_hash varchar(255) NOT NULL,
         contacto json,
         id_rol integer NOT NULL,
+        -- Un usuario inactivo no puede iniciar sesión; se conserva por su historial.
+        activo boolean NOT NULL DEFAULT true,
+        -- Se incrementa al cambiar contraseña, rol o estado: invalida los tokens emitidos antes.
+        token_version integer NOT NULL DEFAULT 0,
         CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES rol (id) ON DELETE RESTRICT
     );
 
@@ -679,6 +683,7 @@ VALUES
         'Pérdida por daño, vencimiento u otro'
     );
 
+-- El Administrador debe tener todos los permisos: al agregar uno nuevo, asígnaselo aquí.
 INSERT INTO
     rol_permiso (id_rol, id_permiso)
 VALUES -- Administrador (id=1)
@@ -840,6 +845,13 @@ FROM
 INSERT INTO
     usuario (nombre, login, password_hash, contacto, id_rol)
 VALUES
+    (
+        'Equipo SAMAVI',
+        'samavi',
+        '$2a$12$diDCT5AfftYB3SoDwBtuCe5sGuaxrfkxyFv3qWLX0y1ezorLmYOQS',
+        '{"telefono": "3118616481"}',
+        1
+    ),
     (
         'Administrador',
         'admin',

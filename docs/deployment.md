@@ -109,7 +109,7 @@ Requisitos previos: los workflows ya están en `main` y la configuración de Git
    systemctl list-timers 'samavi-*'
    ```
    Las unidades apuntan a `/home/ec2-user/samavi`. Si cambian en el repo, se vuelven a copiar.
-8. **Usuarios de prueba.** `database/schema.sql` crea usuarios de prueba. Cambia sus contraseñas antes de dar acceso a nadie.
+8. **Usuarios de prueba.** `database/schema.sql` crea usuarios de prueba. Cambia sus contraseñas desde el módulo Usuarios (o desactívalos) antes de dar acceso a nadie.
 
 ## Operación
 
@@ -172,6 +172,22 @@ En `firmware/include/config.h` (plantilla `config.h.example`):
 - `MQTT_PASSWORD`: la contraseña creada con `mqtt-usuario.sh <MAC>`. El monitor serie muestra la MAC al conectar ("Conectando a MQTT como ...").
 
 El ESP32 confía en las raíces de Let's Encrypt de `firmware/include/ca_mqtt.h` y espera a tener la hora por NTP antes de la conexión TLS.
+
+### Cambios de esquema aplicados a mano
+
+Como cada push a `main` se despliega solo, el SQL debe aplicarse **antes** de fusionar el cambio que lo necesita (es compatible con la versión anterior). Haz un respaldo primero (`backup-db.sh`).
+
+**Gestión de usuarios** (columnas `usuario.activo` y `usuario.token_version`):
+
+```bash
+docker compose --project-directory infra/prod -f infra/prod/docker-compose.yml --env-file .env \
+  exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS token_version integer NOT NULL DEFAULT 0;
+SQL
+```
+
+Al desplegar esa versión, los tokens emitidos antes dejan de valer (no traen `tv`) y todos los usuarios deben iniciar sesión de nuevo una vez.
 
 ## Pendientes
 

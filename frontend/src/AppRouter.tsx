@@ -11,6 +11,7 @@ import GalponesPage from "./features/galpones/pages/GalponesPage"
 import GalponDetallePage from "./features/galpones/pages/GalponDetallePage"
 import InventarioPage from "./features/inventario/pages/InventarioPage"
 import AuditoriaPage from "./features/auditoria/pages/AuditoriaPage"
+import UsuariosPage from "./features/usuarios/pages/UsuariosPage"
 import App from "./App"
 
 export default function AppRouter() {
@@ -45,6 +46,9 @@ export default function AppRouter() {
           </Route>
           <Route element={<RequireModule module="auditoria" />}>
             <Route path="auditoria" element={<AuditoriaPage />} />
+          </Route>
+          <Route element={<RequireModule module="usuarios" />}>
+            <Route path="usuarios" element={<UsuariosPage />} />
           </Route>
           {/* Rutas desconocidas o heredadas */}
           <Route path="*" element={<Navigate to="/" replace />} />

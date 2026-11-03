@@ -21,9 +21,18 @@ Una bandeja completa contiene 30 huevos, con disposición 5 x 6. Los huevos queb
 
 El firmware cuenta huevos detectados, no bandejas. Los huevos sobrantes no forman automáticamente una bandeja completa. La conversión conceptual es `bandejas_completas = huevos / 30`, aplicando la regla de negocio vigente para contabilizar sobrantes.
 
-## Roles
+## Usuarios, roles y permisos
 
-Los roles actuales están documentados en `database/schema.sql`, como registros de las tablas `rol`, `permiso` y `rol_permiso`. Las capacidades deben estar protegidas por autenticación JWT y autorización RBAC.
+El acceso es RBAC: cada usuario tiene un rol y cada rol, un conjunto de permisos (`rol`, `permiso` y `rol_permiso` en `database/schema.sql`). El backend autoriza siempre por permiso (`requirePermission`), nunca por nombre de rol. Se gestiona en el módulo Usuarios (`/api/v1/usuarios`), que exige `GESTIONAR_USUARIOS`.
+
+- **Permisos:** catálogo fijo. Cada código lo revisa una ruta del backend, así que solo se agregan en `schema.sql` (y al Administrador) junto con el código que los usa. Desde la interfaz se asignan a roles y se edita su descripción.
+- **Roles:** se crean, renombran, cambian de permisos y borran. Un rol con usuarios no se borra. El nombre no se repite aunque cambien mayúsculas.
+- **Administrador:** rol protegido. Tiene todos los permisos y no se renombra, borra ni cambia; el frontend lo reconoce por su nombre. Siempre debe quedar al menos un usuario activo con ese rol.
+- **Usuarios:** no se borran, se desactivan (`usuario.activo`), porque la auditoría y otras tablas los referencian. Un usuario inactivo no inicia sesión. Login de 3 a 50 caracteres (`a-z`, `0-9`, `.`, `_`, `-`), guardado en minúsculas.
+- **Sin escalada de privilegios:** un gestor solo otorga a un rol permisos que él tiene, y solo asigna o gestiona usuarios y roles cuyos permisos están dentro de los suyos. No puede cambiarse su propio rol, desactivarse, ni quitarle a su rol `GESTIONAR_USUARIOS`.
+- **Contraseñas** (NIST SP 800-63B): de 12 caracteres a 72 bytes (el límite de bcrypt), sin reglas de composición. Se rechazan las que contienen el login, repiten un solo carácter o están en la lista de comunes (`backend/src/shared/security/common-passwords.ts`). Hash bcrypt de costo 12. La política aplica al crear o restablecer; las contraseñas existentes no se revalidan.
+- **Sesiones:** el JWT lleva `{ id, tv }`. En cada solicitud el backend comprueba que el usuario siga activo y que `tv` coincida con `usuario.token_version`, y lee su rol y permisos actuales. Cambiar la contraseña, el rol o desactivar incrementa `token_version` y cierra las sesiones abiertas. Una conexión SSE de producción ya abierta sigue hasta que se cierre.
+- **Inicio de sesión:** respuesta genérica y en tiempo constante (se compara contra un hash ficticio si el login no existe o está inactivo). Como máximo 5 fallos por login y 20 por IP en 15 minutos; después responde `429` con `Retry-After`. El contador vive en memoria del proceso: se reinicia con el backend y no sirve con varias instancias.
 
 ## Flujos
 
@@ -41,6 +50,7 @@ Se audita toda escritura que hace un usuario:
 - Inventario: insumos y proveedores (crear, editar, activar o desactivar, borrar), compras y movimientos manuales.
 - Producción: cierre diario, un registro por galpón (`cierre_produccion_dia`, id `galpón:fecha`). Si se repite el cierre del mismo día queda como `UPDATE` con las bandejas anteriores.
 - Galpones: alimentación diaria y cambios de gallinas.
+- Usuarios: usuarios (`usuario`: crear, editar, activar o desactivar, restablecer contraseña, que se guarda solo como `passwordRestablecida: true`), roles (`rol`: crear, editar, borrar; los permisos asignados van como lista de códigos en antes y después) y descripción de permisos (`permiso`).
 - Cierre semanal: gastos (crear, borrar), cierre y reapertura de la semana.
 
 El registro se escribe en la misma transacción que el cambio. Si el cambio falla, no queda registro, así que hoy no hay registros con `resultado = 'FALLIDO'`.
@@ -50,7 +60,7 @@ No se auditan:
 - Los conteos del ESP32: llegan por MQTT sin usuario y en gran volumen, y `log_conteo` ya es su traza.
 - El inicio de sesión: `accion` solo admite `INSERT`, `UPDATE` y `DELETE`.
 
-La IP es `request.ip` de Express. El backend no configura `trust proxy`, así que detrás de un proxy (el proxy de Vite en local, o nginx en el despliegue pendiente) se guarda la IP del proxy. Configurarlo queda pendiente junto con el despliegue.
+La IP es `request.ip` de Express. El backend confía solo en proxies de loopback y de red privada (`trust proxy` = `loopback, uniquelocal`: nginx en la red de Docker y el proxy de Vite), así que se guarda la IP del cliente que nginx agrega a `X-Forwarded-For`. El backend no debe exponerse sin nginx delante.
 
 ## Cierre semanal y prorrateo
 

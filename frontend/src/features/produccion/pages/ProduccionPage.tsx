@@ -11,6 +11,7 @@ import FormatListNumberedRoundedIcon from "@mui/icons-material/FormatListNumbere
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
 import { useAuthStore } from "../../auth/stores/authStore";
+import { ROL_ADMINISTRADOR } from "../../auth/services/authService";
 import LiveMonitoringCard from "../components/LiveMonitoringCard";
 import ProductionKpiCards from "../components/ProductionKpiCards";
 import CountsTable from "../components/CountsTable";
@@ -60,16 +61,12 @@ const DEFAULT_CATEGORIES: CategoriaPeso[] = [
 export default function ProduccionPage() {
   const { role, permissions } = useAuthStore();
 
-  // RBAC Permission Check
+  // Los mismos permisos que exige el backend en /produccion.
   const hasAccess =
-    role === "Administrador" ||
-    role === "Galponero" ||
-    permissions.includes("VER_PRODUCCION");
+    role === ROL_ADMINISTRADOR || permissions.includes("VER_PRODUCCION");
 
-  const canPerformActions =
-    role === "Administrador" ||
-    role === "Galponero" ||
-    permissions.includes("VER_PRODUCCION");
+  const canCloseDay =
+    role === ROL_ADMINISTRADOR || permissions.includes("REGISTRAR_CIERRE_DIARIO");
 
   // State
   const [counts, setCounts] = useState<LogConteo[]>([]);
@@ -366,7 +363,7 @@ export default function ProduccionPage() {
             galpones={galpones}
             categorias={categorias}
             onOpenDailyCloseModal={() => setDailyCloseModalOpen(true)}
-            canPerformClose={canPerformActions}
+            canPerformClose={canCloseDay}
           />
         )}
 
