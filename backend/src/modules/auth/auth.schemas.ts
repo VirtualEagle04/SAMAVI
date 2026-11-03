@@ -20,5 +20,6 @@ export function parseLoginInput(body: unknown): LoginInput {
     throw new AppError(400, "login y password son obligatorios");
   }
 
-  return { login: input.login.trim(), password: input.password };
+  // Los logins se guardan en minúsculas (ver usuarios.schemas.ts).
+  return { login: input.login.trim().toLowerCase(), password: input.password };
 }

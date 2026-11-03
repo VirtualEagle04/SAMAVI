@@ -10,12 +10,16 @@ import { galponesRoutes } from "./modules/galpones/galpones.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { consolidacionRoutes } from "./modules/consolidacion/consolidacion.routes.js";
 import { auditoriaRoutes } from "./modules/auditoria/auditoria.routes.js";
+import { usuariosRoutes } from "./modules/usuarios/usuarios.routes.js";
 import { prisma } from "./database/prisma.js";
 import { handleProductionMessage } from "./mqtt/production-mqtt.handler.js";
 import { deviceTracker, TOPICO_ESTADO_DISPOSITIVOS } from "./mqtt/device-status.js";
 import { buildMqttOptions } from "./mqtt/mqtt-options.js";
 
 const app = express();
+// Solo se confía en proxies locales (nginx en la red de Docker, el proxy de Vite):
+// así request.ip es la IP real del cliente para la auditoría y el límite de login.
+app.set("trust proxy", "loopback, uniquelocal");
 app.use(express.json());
 app.get("/health", (_request, response) => {
   response.json({ status: "ok" });
@@ -28,6 +32,7 @@ app.use("/api/v1/galpones", galponesRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/consolidacion", consolidacionRoutes);
 app.use("/api/v1/auditoria", auditoriaRoutes);
+app.use("/api/v1/usuarios", usuariosRoutes);
 app.use(errorMiddleware);
 
 const client: MqttClient = mqtt.connect(

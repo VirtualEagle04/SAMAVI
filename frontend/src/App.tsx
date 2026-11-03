@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { NavLink, Outlet, matchPath, useLocation, useNavigate } from "react-router-dom"
 import Avatar from "@mui/material/Avatar"
 import Box from "@mui/material/Box"
@@ -24,7 +24,7 @@ function initials(user: string | null): string {
 
 /** Shell autenticado: sidebar, header y el módulo activo en el <Outlet />. */
 export default function App() {
-  const { user, role, logout } = useAuthStore()
+  const { user, role, logout, refreshSession } = useAuthStore()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -33,6 +33,11 @@ export default function App() {
   const activeModule = navItems.find((item) =>
     matchPath({ path: item.path, end: false }, pathname),
   )
+
+  // El rol y los permisos guardados pueden estar desactualizados (o la sesión revocada).
+  useEffect(() => {
+    void refreshSession()
+  }, [refreshSession])
 
   const handleLogout = () => {
     logout()

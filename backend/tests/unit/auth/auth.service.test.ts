@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
-import { login } from "../../../src/modules/auth/auth.service.js";
+import { login, me } from "../../../src/modules/auth/auth.service.js";
 import { prisma } from "../../../src/database/prisma.js";
 import bcrypt from "bcryptjs";
 import { AppError } from "../../../src/shared/errors/app-error.js";
@@ -30,6 +30,8 @@ type UsuarioConRol = {
   nombre: string;
   login: string;
   passwordHash: string;
+  activo: boolean;
+  tokenVersion: number;
   rol: {
     id: number;
     nombre: string;
@@ -43,6 +45,8 @@ function makeUsuario(overrides: Partial<UsuarioConRol> = {}): UsuarioConRol {
     nombre: "Ana García",
     login: "ana",
     passwordHash: "$2a$10$hashficticio",
+    activo: true,
+    tokenVersion: 4,
     rol: {
       id: 2,
       nombre: "Operador",
@@ -85,14 +89,14 @@ describe("auth.service → login()", () => {
       });
     });
 
-    it("firma el JWT con payload { id, rol, rolId }", async () => {
+    it("firma el JWT con payload { id, tv } usando la token_version actual", async () => {
       mockFindUnique.mockResolvedValue(makeUsuario());
       mockBcryptCompare.mockResolvedValue(true);
 
       await login({ login: "ana", password: "1234" });
 
       expect(mockJwtSign).toHaveBeenCalledWith(
-        { id: 1, rol: "Operador", rolId: 2 },
+        { id: 1, tv: 4 },
         expect.any(String),
         expect.objectContaining({ expiresIn: "1h" })
       );
@@ -168,15 +172,66 @@ describe("auth.service → login()", () => {
     });
   });
 
-  // Documenta que el service NO llama a bcrypt cuando el usuario no existe.
-  // Si se implementa timing-safe en el futuro, este test deberá actualizarse.
-  describe("comportamiento timing (documentación de regresión)", () => {
-    it("no llama a bcrypt.compare cuando el usuario no existe", async () => {
-      mockFindUnique.mockResolvedValue(null);
-      mockBcryptCompare.mockResolvedValue(false);
+  describe("cuando el usuario está inactivo", () => {
+    it("lanza el mismo AppError 401 genérico aunque la password sea correcta", async () => {
+      mockFindUnique.mockResolvedValue(makeUsuario({ activo: false }));
+      mockBcryptCompare.mockResolvedValue(true);
 
-      await expect(login({ login: "noexiste", password: "1234" })).rejects.toThrow(AppError);
-      expect(mockBcryptCompare).not.toHaveBeenCalled();
+      await expect(login({ login: "ana", password: "1234" })).rejects.toThrow(
+        new AppError(401, "Credenciales inválidas")
+      );
+      expect(mockJwtSign).not.toHaveBeenCalled();
     });
+
+    it("compara contra el hash ficticio, no contra el del usuario", async () => {
+      mockFindUnique.mockResolvedValue(makeUsuario({ activo: false, passwordHash: "$2a$10$hash-del-usuario" }));
+      mockBcryptCompare.mockResolvedValue(true);
+
+      await expect(login({ login: "ana", password: "1234" })).rejects.toThrow(AppError);
+      expect(mockBcryptCompare).toHaveBeenCalledWith("1234", expect.not.stringMatching("hash-del-usuario"));
+    });
+  });
+
+  // Evita que el tiempo de respuesta revele qué logins existen.
+  describe("comportamiento timing", () => {
+    it("llama a bcrypt.compare contra un hash ficticio cuando el usuario no existe", async () => {
+      mockFindUnique.mockResolvedValue(null);
+      mockBcryptCompare.mockResolvedValue(true);
+
+      await expect(login({ login: "noexiste", password: "1234" })).rejects.toThrow(
+        new AppError(401, "Credenciales inválidas")
+      );
+      expect(mockBcryptCompare).toHaveBeenCalledTimes(1);
+      expect(mockBcryptCompare).toHaveBeenCalledWith("1234", expect.stringMatching(/^\$2[ab]\$12\$/));
+    });
+  });
+});
+
+describe("auth.service → me()", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("devuelve los datos y permisos actuales sin token", async () => {
+    mockFindUnique.mockResolvedValue(makeUsuario());
+
+    const result = await me(1);
+
+    expect(result).toEqual({
+      user: {
+        id: 1,
+        nombre: "Ana García",
+        login: "ana",
+        rol: "Operador",
+        permisos: ["produccion.ver", "produccion.editar"],
+      },
+      permissions: ["produccion.ver", "produccion.editar"],
+    });
+    expect(result).not.toHaveProperty("token");
+  });
+
+  it.each([null, makeUsuario({ activo: false })])("lanza 401 si el usuario no existe o está inactivo", async (usuario) => {
+    mockFindUnique.mockResolvedValue(usuario);
+    await expect(me(1)).rejects.toThrow(expect.objectContaining({ statusCode: 401 }));
   });
 });

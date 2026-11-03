@@ -19,6 +19,7 @@ import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import ModuleTabs from "../../../components/molecules/ModuleTabs";
 import FeedbackAlert from "../../../components/organisms/FeedbackAlert";
 import { useAuthStore } from "../../auth/stores/authStore";
+import { ROL_ADMINISTRADOR } from "../../auth/services/authService";
 import WeekNavigator from "../../dashboard/components/WeekNavigator";
 import { formatWeekRange } from "../../dashboard/components/weeklySummary.utils";
 import CategoryMixChart from "../components/charts/CategoryMixChart";
@@ -84,8 +85,8 @@ function confirmacionTexto(confirmacion: Confirmacion) {
 export default function ConsolidacionPage() {
   const role = useAuthStore((state) => state.role);
   const permissions = useAuthStore((state) => state.permissions);
-  const puedeCerrar = role === "Administrador" || permissions.includes("CERRAR_SEMANA");
-  const puedeGastar = role === "Administrador" || permissions.includes("INGRESAR_GASTO");
+  const puedeCerrar = role === ROL_ADMINISTRADOR || permissions.includes("CERRAR_SEMANA");
+  const puedeGastar = role === ROL_ADMINISTRADOR || permissions.includes("INGRESAR_GASTO");
 
   const [desde, setDesde] = useState(currentFriday);
   const [tab, setTab] = useState(0);

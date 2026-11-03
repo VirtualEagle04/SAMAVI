@@ -11,6 +11,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useAuthStore } from "../../auth/stores/authStore";
+import { ROL_ADMINISTRADOR } from "../../auth/services/authService";
 import CommercialKpiCards from "../components/CommercialKpiCards";
 import PedidosTable from "../components/PedidosTable";
 import ClientesTable from "../components/ClientesTable";
@@ -41,15 +42,13 @@ import type {
 export default function ComercialPage() {
   const { role, permissions } = useAuthStore();
   const canOrder =
-    role === "Administrador" ||
-    role === "Vendedor" ||
-    permissions.includes("INGRESAR_PEDIDO");
+    role === ROL_ADMINISTRADOR || permissions.includes("INGRESAR_PEDIDO");
   const canSell =
-    role === "Administrador" || permissions.includes("REGISTRAR_VENTA");
+    role === ROL_ADMINISTRADOR || permissions.includes("REGISTRAR_VENTA");
   const canManageClients =
-    role === "Administrador" || permissions.includes("GESTIONAR_MAYORISTAS");
+    role === ROL_ADMINISTRADOR || permissions.includes("GESTIONAR_MAYORISTAS");
   const canEditPrices =
-    role === "Administrador" || permissions.includes("EDITAR_PRECIOS");
+    role === ROL_ADMINISTRADOR || permissions.includes("EDITAR_PRECIOS");
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mayoristas, setMayoristas] = useState<Mayorista[]>([]);
   const [categorias, setCategorias] = useState<CategoriaComercial[]>([]);

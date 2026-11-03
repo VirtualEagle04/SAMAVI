@@ -1,5 +1,11 @@
 import { create } from "zustand"
-import { login as authLogin, type Role } from "../services/authService"
+import {
+  fetchSession,
+  login as authLogin,
+  SessionExpiredError,
+  type Role,
+  type SessionData,
+} from "../services/authService"
 
 interface AuthState {
   user: string | null
@@ -10,13 +16,21 @@ interface AuthState {
   isLoading: boolean
   error: string | null
   login: (username: string, password: string) => Promise<void>
-  logout: () => void
+  /** Relee rol y permisos del backend; cierra la sesión si fue revocada. */
+  refreshSession: () => Promise<void>
+  logout: (message?: string) => void
   clearError: () => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+function persistSession({ user, role, permissions }: SessionData) {
+  localStorage.setItem("samavi_user", user)
+  localStorage.setItem("samavi_role", role)
+  localStorage.setItem("samavi_permissions", JSON.stringify(permissions))
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: localStorage.getItem("samavi_user"),
-  role: (localStorage.getItem("samavi_role") as Role | null) ?? null,
+  role: localStorage.getItem("samavi_role"),
   permissions: JSON.parse(localStorage.getItem("samavi_permissions") ?? "[]") as string[],
   token: localStorage.getItem("samavi_token"),
   isAuthenticated: Boolean(localStorage.getItem("samavi_token")),
@@ -28,9 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const { user, role, token, permissions } = await authLogin(username, password)
       localStorage.setItem("samavi_token", token)
-      localStorage.setItem("samavi_user", user)
-      localStorage.setItem("samavi_role", role)
-      localStorage.setItem("samavi_permissions", JSON.stringify(permissions))
+      persistSession({ user, role, permissions })
       set({ user, role, permissions, token, isAuthenticated: true, isLoading: false })
     } catch (err) {
       set({
@@ -40,12 +52,29 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  logout: () => {
+  refreshSession: async () => {
+    const token = get().token
+    if (!token) return
+    try {
+      const session = await fetchSession(token)
+      // Si la sesión cambió mientras se consultaba, se descarta el resultado.
+      if (get().token !== token) return
+      persistSession(session)
+      set({ user: session.user, role: session.role, permissions: session.permissions })
+    } catch (err) {
+      if (err instanceof SessionExpiredError && get().token === token) {
+        get().logout(err.message)
+      }
+      // Un fallo de red conserva la sesión guardada: el backend la valida en cada solicitud.
+    }
+  },
+
+  logout: (message) => {
     localStorage.removeItem("samavi_token")
     localStorage.removeItem("samavi_user")
     localStorage.removeItem("samavi_role")
     localStorage.removeItem("samavi_permissions")
-    set({ user: null, role: null, permissions: [], token: null, isAuthenticated: false, error: null })
+    set({ user: null, role: null, permissions: [], token: null, isAuthenticated: false, error: message ?? null })
   },
 
   clearError: () => set({ error: null }),
