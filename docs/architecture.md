@@ -32,7 +32,7 @@ El ESP32 no escribe directamente en PostgreSQL. La lógica MQTT que persiste dat
 - Firmware: `firmware/src` y `firmware/include`.
 - Infraestructura: `infra/docker-compose.yml` y `infra/mosquitto/` para desarrollo. `infra/prod/` para producción: compose, nginx, Mosquitto, certbot, scripts y unidades de systemd.
 - Imágenes: `backend/Dockerfile` y `frontend/Dockerfile`.
-- CI/CD: `.github/workflows/` (`backend-tests.yml`, `ci.yml` y `deploy.yml`).
+- CI/CD: `.github/workflows/` (`ci.yml` y `deploy.yml`).
 
 La estructura real del código tiene prioridad sobre diagramas o estructuras futuras documentadas.
 
