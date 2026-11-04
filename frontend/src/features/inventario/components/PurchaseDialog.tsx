@@ -1,5 +1,4 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -9,15 +8,11 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import FeedbackAlert from "../../../components/organisms/FeedbackAlert";
 import type { Insumo, Proveedor } from "../types/inventario.types";
 import { emptyLine, type PurchaseLine } from "../types/inventarioForms";
-import {
-  formatCopInput,
-  money,
-  receiptMimeTypes,
-} from "../utils/inventarioFormat";
+import { formatCopInput, money } from "../utils/inventarioFormat";
 import InventarioDialogFrame from "./InventarioDialogFrame";
+import ReceiptAttachment from "./ReceiptAttachment";
 import { tableMobileCardSx } from "../../../components/tableStyles";
 
 export default function PurchaseDialog({
@@ -217,38 +212,13 @@ export default function PurchaseDialog({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
-        <Button
-          component="label"
-          variant="outlined"
-          startIcon={<AttachFileRoundedIcon />}
-          sx={{ justifyContent: "flex-start" }}
-        >
-          {receipt ? receipt.name : "Adjuntar recibo (máx. 5 MB)"}
-          <input
-            hidden
-            type="file"
-            accept="application/pdf,image/jpeg,image/png"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              if (file.size > 5 * 1024 * 1024) {
-                setReceipt(undefined);
-                setReceiptError("El recibo supera el tamaño máximo de 5 MB.");
-                return;
-              }
-              if (!receiptMimeTypes.has(file.type)) {
-                setReceipt(undefined);
-                setReceiptError("Formato no permitido. Usa PDF, JPG o PNG.");
-                return;
-              }
-              setReceipt(file);
-              setReceiptError("");
-            }}
-          />
-        </Button>
-        {receiptError && (
-          <FeedbackAlert severity="error">{receiptError}</FeedbackAlert>
-        )}
+        <ReceiptAttachment
+          receipt={receipt}
+          setReceipt={setReceipt}
+          receiptError={receiptError}
+          setReceiptError={setReceiptError}
+          disabled={saving}
+        />
         <Box
           sx={{
             display: "flex",
