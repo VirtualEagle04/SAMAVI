@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ModuleTabs from "../../../components/molecules/ModuleTabs";
 import AddShoppingCartRoundedIcon from "@mui/icons-material/AddShoppingCartRounded";
+import PaidOutlinedIcon from "@mui/icons-material/PaidOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import Alert from "@mui/material/Alert";
@@ -17,6 +18,8 @@ import ClientesTable from "../components/ClientesTable";
 import PedidoDetailsDialog from "../components/PedidoDetailsDialog";
 import PedidoFormDialog from "../components/PedidoFormDialog";
 import PreciosDialog from "../components/PreciosDialog";
+import PreciosTable from "../components/PreciosTable";
+import { precioConfigurado } from "../components/comercial.format";
 import VentaDialog from "../components/VentaDialog";
 import {
   createMayorista,
@@ -70,6 +73,8 @@ export default function ComercialPage() {
   );
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [priceClient, setPriceClient] = useState<Mayorista | null>(null);
+  const [priceFocus, setPriceFocus] = useState<string | null>(null);
+  const [pricesVersion, setPricesVersion] = useState(0);
 
   const loadData = useCallback(async (initial = false) => {
     if (initial) setLoading(true);
@@ -122,14 +127,17 @@ export default function ComercialPage() {
     );
     return client;
   };
-  const openPrices = async (client: Mayorista) => {
-    setPriceClient(client);
+  const countConfigured = (prices: PrecioMayorista[]) =>
+    prices.filter((price) => precioConfigurado(price) !== null).length;
+  // Se consultan los precios antes de abrir para que el formulario no muestre los de otro cliente.
+  const openPrices = async (client: Mayorista, categoria?: string) => {
     try {
       const current = await getPreciosMayorista(client.id);
       setClientPrices(current);
-      setPriceCounts((counts) => ({ ...counts, [client.id]: current.length }));
+      setPriceCounts((counts) => ({ ...counts, [client.id]: countConfigured(current) }));
+      setPriceFocus(categoria ?? null);
+      setPriceClient(client);
     } catch (e) {
-      setPriceClient(null);
       setToast(
         e instanceof Error ? e.message : "No se pudieron cargar los precios.",
       );
@@ -162,18 +170,42 @@ export default function ComercialPage() {
       setOrderPrices([]);
     }
   };
-  const savePrice = async (category: string, price: number) => {
+  const savePrices = async (
+    cambios: { categoriaPeso: string; valorUnitario: number }[],
+  ) => {
     if (!priceClient) return;
-    await savePrecio(priceClient.id, {
-      categoriaPeso: category,
-      valorUnitario: price,
-    });
-    setClientPrices(await getPreciosMayorista(priceClient.id));
-    setPriceCounts((counts) => ({
-      ...counts,
-      [priceClient.id]: (counts[priceClient.id] ?? 0) + 1,
-    }));
-    setToast("Precio actualizado.");
+    const client = priceClient;
+    let saved = 0;
+    try {
+      for (const cambio of cambios) {
+        await savePrecio(client.id, cambio);
+        saved += 1;
+      }
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "Error desconocido.";
+      throw new Error(
+        saved > 0
+          ? `Se guardaron ${saved} de ${cambios.length} precios. ${reason}`
+          : reason,
+      );
+    } finally {
+      // Aunque falle a mitad, se refrescan los precios para mostrar lo que sí quedó guardado.
+      if (saved > 0) {
+        setPricesVersion((version) => version + 1);
+        try {
+          const current = await getPreciosMayorista(client.id);
+          setClientPrices(current);
+          setPriceCounts((counts) => ({ ...counts, [client.id]: countConfigured(current) }));
+        } catch {
+          // La tabla vuelve a consultar con `pricesVersion`.
+        }
+      }
+    }
+    setToast(
+      saved === 1
+        ? `Precio de ${client.nombre} actualizado.`
+        : `${saved} precios de ${client.nombre} actualizados.`,
+    );
   };
   const openSale = async (pedido: Pedido) => {
     setSaleOrder(pedido);
@@ -276,6 +308,10 @@ export default function ComercialPage() {
           tabs={[
             { label: "Pedidos", icon: <ShoppingBagOutlinedIcon sx={{ fontSize: 18 }} /> },
             { label: "Clientes", icon: <PeopleAltOutlinedIcon sx={{ fontSize: 18 }} /> },
+            // Consultar precios exige INGRESAR_PEDIDO en el backend.
+            ...(canOrder
+              ? [{ label: "Precios", icon: <PaidOutlinedIcon sx={{ fontSize: 18 }} /> }]
+              : []),
           ]}
         />
 
@@ -304,6 +340,16 @@ export default function ComercialPage() {
           />
         )}
 
+        {/* Tab 2: Precios */}
+        {tab === 2 && canOrder && (
+          <PreciosTable
+            mayoristas={mayoristas}
+            categorias={categorias}
+            canEditPrices={canEditPrices}
+            onOpenPrices={(cliente, categoria) => void openPrices(cliente, categoria)}
+            refreshKey={pricesVersion}
+          />
+        )}
       </Box>
       <PedidoFormDialog
         open={orderOpen}
@@ -338,8 +384,9 @@ export default function ComercialPage() {
         cliente={priceClient}
         categorias={categorias}
         precios={clientPrices}
+        focusCategoria={priceFocus}
         onClose={() => setPriceClient(null)}
-        onSave={savePrice}
+        onSave={savePrices}
       />
       <Snackbar
         open={Boolean(toast)}
