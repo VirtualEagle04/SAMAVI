@@ -5,8 +5,8 @@ import type { ResultadoGalpon } from "../../types/consolidacion.types";
 import { formatMoney } from "../consolidacion.utils";
 import ChartCard, { LegendItem } from "./ChartCard";
 
-const INGRESOS = designTokens.color.success.main;
-const EGRESOS = designTokens.color.secondary.main;
+const INGRESOS = designTokens.color.chart.ingresos;
+const EGRESOS = designTokens.color.chart.egresos;
 
 function Barra({ valor, maximo, color }: { valor: number; maximo: number; color: string }) {
   return (
