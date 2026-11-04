@@ -1,7 +1,7 @@
 name: CI
 
-# Comprueba que todas las partes compilan: backend, frontend, firmware e imágenes
-# de producción. Las pruebas del backend están en backend-tests.yml (Unit Tests).
+# Comprueba que todas las partes compilan (backend, frontend, firmware e imágenes
+# de producción) y corre las pruebas unitarias del backend (job Unit Tests).
 # Un push a main que pasa este workflow dispara deploy.yml.
 
 on:
@@ -41,6 +41,41 @@ jobs:
       - name: Compilar
         working-directory: backend
         run: npm run build
+
+  # Conserva el nombre "Unit Tests": es el check requerido en la protección de main.
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    # Valores ficticios: las pruebas no conectan a PostgreSQL ni a Mosquitto,
+    # pero env.ts exige estas variables al cargarse.
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://samavi:samavi@localhost:25432/samavi
+      JWT_SECRET: secreto-ficticio-solo-para-las-pruebas-de-ci
+      JWT_EXPIRES_IN: 1h
+      MQTT_URL: mqtt://localhost:1883
+      MQTT_TOPIC: samavi/conteo
+      MQTT_CLIENT_ID: samavi-backend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Generar cliente Prisma
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Pruebas unitarias
+        working-directory: backend
+        run: npm run test:once
 
   frontend:
     name: Frontend

@@ -29,7 +29,7 @@ Flujo: `VL53L0X -> ESP32 -> MQTT (Mosquitto) -> backend -> PostgreSQL <- API RES
 | `infra/` | Desarrollo: `docker-compose.yml` (PostgreSQL 16 y Mosquitto 2) y `mosquitto/mosquitto.conf`. Producción: `prod/` (compose, nginx, Mosquitto con TLS y ACL, certbot, scripts y systemd) |
 | `database/schema.sql` | Esquema SQL; Compose lo ejecuta al crear la base (`initdb.d`) |
 | `docs/` | `overview`, `architecture`, `deployment`, `domain`, `hardware`, `requirements`, `protocols/mqtt` |
-| `.github/workflows/` | `backend-tests.yml` (Unit Tests), `ci.yml` (compila todas las partes) y `deploy.yml` (GHCR y Lightsail) |
+| `.github/workflows/` | `ci.yml` (compila todas las partes y corre las pruebas del backend) y `deploy.yml` (GHCR y Lightsail) |
 
 Entorno: el único `.env` está en la raíz (plantilla `.env.example`) y [backend/src/config/env.ts](backend/src/config/env.ts) lo carga desde ahí. Requeridas por el backend: `DATABASE_URL`, `JWT_SECRET` (mínimo 32 caracteres), `MQTT_URL`, `MQTT_TOPIC`, `MQTT_CLIENT_ID`; opcionales `PORT` (3001 por defecto), `JWT_EXPIRES_IN` y `MQTT_USERNAME`/`MQTT_PASSWORD` (van juntas; vacías = anónimo). El frontend usa `VITE_API_URL` opcional (vacío = mismo origen). Puertos locales: frontend 3000 con proxy `/api` -> `localhost:3001`; PostgreSQL en `127.0.0.1:${POSTGRES_PORT:-15432}`; Mosquitto en `${MOSQUITTO_PORT:-1883}`. El Mosquitto local es anónimo y sin TLS; el de producción exige usuario y TLS (`docs/protocols/mqtt.md`).
 
