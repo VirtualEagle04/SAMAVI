@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { NavLink, Outlet, matchPath, useLocation, useNavigate } from "react-router-dom"
-import Avatar from "@mui/material/Avatar"
 import Box from "@mui/material/Box"
 import Drawer from "@mui/material/Drawer"
 import IconButton from "@mui/material/IconButton"
@@ -12,6 +11,7 @@ import Typography from "@mui/material/Typography"
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
 import SessionExpiredDialog from "./features/auth/components/SessionExpiredDialog"
+import UserMenu from "./features/auth/components/UserMenu"
 import { useAuthStore } from "./features/auth/stores/authStore"
 import { useAccessibleModules } from "./modules"
 import samanLogoText from "./assets/saman_logo_text.png"
@@ -19,13 +19,9 @@ import samanLogoNoText from "./assets/saman_logo_notext.png"
 
 const drawerWidth = 260
 
-function initials(user: string | null): string {
-  return user?.slice(0, 2).toUpperCase() ?? "SA"
-}
-
 /** Shell autenticado: sidebar, header y el módulo activo en el <Outlet />. */
 export default function App() {
-  const { user, role, logout, refreshSession } = useAuthStore()
+  const { logout, refreshSession } = useAuthStore()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -276,28 +272,7 @@ export default function App() {
             </Typography>
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor: "primary.light",
-                color: "primary.dark",
-                fontWeight: 800,
-                fontSize: "0.95rem",
-              }}
-            >
-              {initials(user)}
-            </Avatar>
-            <Box sx={{ display: { xs: "none", sm: "block" } }}>
-              <Typography sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: "0.95rem" }}>
-                {user ?? "Usuario"}
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
-                {role ?? "Invitado"}
-              </Typography>
-            </Box>
-          </Box>
+          <UserMenu onLogout={handleLogout} />
         </Box>
 
         {/* Main Content */}
