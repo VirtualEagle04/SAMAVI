@@ -15,10 +15,14 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
+  /** Motivo de una sesión vencida o revocada; mientras no sea `null` se muestra el aviso. */
+  sessionExpired: string | null
   login: (username: string, password: string) => Promise<void>
   /** Relee rol y permisos del backend; cierra la sesión si fue revocada. */
   refreshSession: () => Promise<void>
   logout: (message?: string) => void
+  /** Marca la sesión como vencida para avisar al usuario antes de llevarlo al login. */
+  expireSession: (message?: string) => void
   clearError: () => void
 }
 
@@ -36,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: Boolean(localStorage.getItem("samavi_token")),
   isLoading: false,
   error: null,
+  sessionExpired: null,
 
   login: async (username, password) => {
     set({ isLoading: true, error: null })
@@ -63,7 +68,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user: session.user, role: session.role, permissions: session.permissions })
     } catch (err) {
       if (err instanceof SessionExpiredError && get().token === token) {
-        get().logout(err.message)
+        get().expireSession(err.message)
       }
       // Un fallo de red conserva la sesión guardada: el backend la valida en cada solicitud.
     }
@@ -74,7 +79,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem("samavi_user")
     localStorage.removeItem("samavi_role")
     localStorage.removeItem("samavi_permissions")
-    set({ user: null, role: null, permissions: [], token: null, isAuthenticated: false, error: message ?? null })
+    set({ user: null, role: null, permissions: [], token: null, isAuthenticated: false, error: message ?? null, sessionExpired: null })
+  },
+
+  expireSession: (message) => {
+    const { isAuthenticated, sessionExpired } = get()
+    if (!isAuthenticated || sessionExpired !== null) return
+    set({ sessionExpired: message ?? "Tu sesión terminó; inicia sesión de nuevo" })
   },
 
   clearError: () => set({ error: null }),

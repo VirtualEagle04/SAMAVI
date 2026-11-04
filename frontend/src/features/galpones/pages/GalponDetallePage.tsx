@@ -9,7 +9,6 @@ import Alert from "@mui/material/Alert"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Chip from "@mui/material/Chip"
-import CircularProgress from "@mui/material/CircularProgress"
 import Snackbar from "@mui/material/Snackbar"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
@@ -24,6 +23,7 @@ import AlimentacionDialog from "../components/AlimentacionDialog"
 import GallinasDialog from "../components/GallinasDialog"
 import { cambiarGallinas, getGalpon, registrarAlimentacion } from "../services/galponesService"
 import type { CambioGallinasPayload, GalponDetalle, TipoCambioGallinas } from "../types/galpones.types"
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons"
 
 const HISTORY_DAYS = 7
 const panel = { p: { xs: 2, sm: 2.5 } } as const
@@ -91,9 +91,7 @@ export default function GalponDetallePage() {
 
   if (loading)
     return (
-      <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}>
-        <CircularProgress />
-      </Box>
+      <PageSkeleton content="cards" />
     )
   if (pageError || !galpon)
     return (

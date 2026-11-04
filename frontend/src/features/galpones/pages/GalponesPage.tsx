@@ -9,7 +9,6 @@ import Card from "@mui/material/Card"
 import CardActionArea from "@mui/material/CardActionArea"
 import CardContent from "@mui/material/CardContent"
 import Chip from "@mui/material/Chip"
-import CircularProgress from "@mui/material/CircularProgress"
 import Grid from "@mui/material/Grid"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
@@ -23,6 +22,7 @@ import FeedbackAlert from "../../../components/organisms/FeedbackAlert"
 import SurfaceCard from "../../../components/atoms/SurfaceCard"
 import { getGalpones } from "../services/galponesService"
 import type { EstadoGalpon, GalponResumen } from "../types/galpones.types"
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons"
 
 const estadoLabel: Record<EstadoGalpon, string> = {
   activo: "Activo",
@@ -64,9 +64,7 @@ export default function GalponesPage() {
 
   if (loading)
     return (
-      <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}>
-        <CircularProgress />
-      </Box>
+      <PageSkeleton kpis={2} kpiColumns={2} content="cards" />
     )
   if (pageError)
     return (

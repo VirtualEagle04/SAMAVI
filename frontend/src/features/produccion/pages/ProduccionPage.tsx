@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import ModuleTabs from "../../../components/molecules/ModuleTabs";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import Snackbar from "@mui/material/Snackbar";
 import Typography from "@mui/material/Typography";
@@ -42,6 +41,7 @@ import type {
   LogConteo,
   ResumenConteoDiario,
 } from "../types/produccion.types";
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons";
 
 // Ventana para agrupar ráfagas de lecturas del ESP32 en una sola recarga
 const LIVE_REFRESH_THROTTLE_MS = 150;
@@ -291,17 +291,7 @@ export default function ProduccionPage() {
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: 350,
-          py: 6,
-        }}
-      >
-        <CircularProgress color="primary" />
-      </Box>
+      <PageSkeleton kpis={2} kpiColumns={2} tabs={3} />
     );
   }
 

@@ -75,6 +75,10 @@ export const theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: { root: { borderRadius: designTokens.shape.inputRadius, "& .MuiOutlinedInput-notchedOutline": { borderColor: designTokens.color.divider }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: designTokens.color.secondary.main } } },
     },
+    // Aplica también a InputLabel, que extiende FormLabel: cubre todos los formularios.
+    MuiFormLabel: {
+      styleOverrides: { asterisk: { color: designTokens.color.required, fontWeight: 700 } },
+    },
     MuiChip: { styleOverrides: { root: { borderRadius: designTokens.shape.chipRadius } } },
   },
 })

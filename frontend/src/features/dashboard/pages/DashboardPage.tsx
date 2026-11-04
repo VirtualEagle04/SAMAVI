@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
-import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
 import CalendarViewWeekRoundedIcon from "@mui/icons-material/CalendarViewWeekRounded";
 import EmptyState from "../../../components/molecules/EmptyState";
@@ -14,6 +13,7 @@ import WeeklySheetTable from "../components/WeeklySheetTable";
 import { formatWeekRange } from "../components/weeklySummary.utils";
 import { getResumenSemanal } from "../services/dashboardService";
 import type { ResumenSemanal } from "../types/dashboard.types";
+import { KpiCardsSkeleton, TableSkeleton } from "../../../components/molecules/LoadingSkeletons";
 
 /**
  * Resumen de la semana productiva: lo que la dueña lleva en el cuaderno
@@ -69,8 +69,9 @@ export default function DashboardPage() {
       {error && <Alert severity="error">{error}</Alert>}
 
       {!data && isLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-          <CircularProgress color="primary" />
+        <Box role="status" aria-label="Cargando" sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <TableSkeleton rows={6} columns={7} />
+          <KpiCardsSkeleton count={3} />
         </Box>
       ) : (
         <>
