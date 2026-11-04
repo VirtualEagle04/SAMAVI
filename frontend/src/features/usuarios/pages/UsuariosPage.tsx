@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react"
 import Alert from "@mui/material/Alert"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
-import CircularProgress from "@mui/material/CircularProgress"
 import Snackbar from "@mui/material/Snackbar"
 import Typography from "@mui/material/Typography"
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined"
@@ -21,6 +20,7 @@ import UsuarioFormDialog from "../components/UsuarioFormDialog"
 import UsuariosTable from "../components/UsuariosTable"
 import * as api from "../services/usuariosService"
 import type { Permiso, Rol, Usuario } from "../types/usuarios.types"
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons"
 
 type Dialogo =
   | { tipo: "usuario"; usuario: Usuario | null }
@@ -71,7 +71,7 @@ export default function UsuariosPage() {
   const cerrar = () => setDialogo(null)
 
   if (loading) {
-    return <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress aria-label="Cargando usuarios" /></Box>
+    return <PageSkeleton tabs={3} />
   }
 
   return (

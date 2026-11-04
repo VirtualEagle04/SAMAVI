@@ -1,4 +1,4 @@
-import { useAuthStore } from "../../auth/stores/authStore"
+import { apiFetch } from "../../../services/apiClient"
 import type {
   CrearUsuarioPayload,
   EditarUsuarioPayload,
@@ -8,19 +8,12 @@ import type {
   Usuario,
 } from "../types/usuarios.types"
 
-const API_URL = import.meta.env.VITE_API_URL ?? ""
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = useAuthStore.getState().token
   let response: Response
   try {
-    response = await fetch(`${API_URL}/api/v1/usuarios${path}`, {
+    response = await apiFetch(`/usuarios${path}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      },
+      headers: { "Content-Type": "application/json", ...options.headers },
     })
   } catch {
     throw new Error("No se pudo conectar con el servidor")
@@ -29,10 +22,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null
   const message = typeof body?.error === "string" ? body.error : `No se pudo completar la solicitud (${response.status})`
-  if (response.status === 401) {
-    // Sesión revocada (contraseña, rol o estado cambiados): se vuelve al login.
-    useAuthStore.getState().logout(message)
-  }
   if (!response.ok) throw new Error(message)
   return body as T
 }

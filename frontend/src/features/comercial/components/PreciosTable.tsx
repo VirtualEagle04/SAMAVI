@@ -5,13 +5,13 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import CategoryBadge from "../../../components/atoms/CategoryBadge";
@@ -141,9 +141,16 @@ export default function PreciosTable({
         {/* Mobile Card List View */}
         <Box sx={{ display: { xs: "grid", sm: "none" }, gap: 1, p: 1.5 }}>
           {loading ? (
-            <Box sx={{ py: 5, textAlign: "center" }}>
-              <CircularProgress size={28} />
-            </Box>
+            categorias.map((cat) => (
+              <Box key={cat.codigo} sx={tableMobileCardSx}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: 0.8 }}>
+                  <Skeleton variant="rounded" width={88} height={24} />
+                  <Skeleton variant="rounded" width={84} height={24} />
+                </Box>
+                <Skeleton variant="text" width="50%" />
+                <Skeleton variant="text" width="35%" />
+              </Box>
+            ))
           ) : (
             categorias.map((cat) => {
               const priceRecord = prices.find(
@@ -237,11 +244,15 @@ export default function PreciosTable({
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <CircularProgress size={28} />
-                  </TableCell>
-                </TableRow>
+                categorias.map((cat) => (
+                  <TableRow key={cat.codigo}>
+                    <TableCell><Skeleton variant="rounded" width={88} height={24} /></TableCell>
+                    <TableCell><Skeleton variant="text" width={110} /></TableCell>
+                    <TableCell align="right"><Skeleton variant="text" width={90} sx={{ ml: "auto" }} /></TableCell>
+                    <TableCell align="center"><Skeleton variant="rounded" width={84} height={24} sx={{ mx: "auto" }} /></TableCell>
+                    <TableCell align="center"><Skeleton variant="rounded" width={96} height={32} sx={{ mx: "auto" }} /></TableCell>
+                  </TableRow>
+                ))
               ) : (
                 categorias.map((cat) => {
                   const priceRecord = prices.find(

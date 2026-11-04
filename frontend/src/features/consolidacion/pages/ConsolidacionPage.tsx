@@ -3,7 +3,6 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -43,6 +42,7 @@ import {
   reabrirSemana,
 } from "../services/consolidacionService";
 import type { GastoPayload, GastoSemana, SemanaConsolidada, SemanaHistorial } from "../types/consolidacion.types";
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons";
 
 type Confirmacion =
   | { tipo: "cerrar" }
@@ -243,9 +243,7 @@ export default function ConsolidacionPage() {
       {error && <Alert severity="error">{error}</Alert>}
 
       {!data && isLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-          <CircularProgress color="primary" />
-        </Box>
+        <PageSkeleton header={false} kpis={6} tabs={4} />
       ) : data && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, ...loadingSx }}>
           {data.bloqueos.length > 0 && (

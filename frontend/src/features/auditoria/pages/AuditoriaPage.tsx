@@ -5,7 +5,6 @@ import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Card from "@mui/material/Card"
 import Chip from "@mui/material/Chip"
-import CircularProgress from "@mui/material/CircularProgress"
 import LinearProgress from "@mui/material/LinearProgress"
 import Table from "@mui/material/Table"
 import TableBody from "@mui/material/TableBody"
@@ -33,6 +32,7 @@ import AuditoriaDetalleDialog from "../components/AuditoriaDetalleDialog"
 import { ACCIONES, formatFechaHora, tablaLabel } from "../components/auditoria.labels"
 import { getAuditoria, getAuditoriaOpciones } from "../services/auditoriaService"
 import type { AuditoriaOpciones, AuditoriaPage as Resultado, RegistroAuditoria } from "../types/auditoria.types"
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons"
 
 const FILTER_KEYS = ["tabla", "accion", "usuarioId", "desde", "hasta"] as const
 const SEARCH_DELAY_MS = 350
@@ -105,9 +105,7 @@ export default function AuditoriaPage() {
 
   if (loading && !resultado && !error)
     return (
-      <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}>
-        <CircularProgress />
-      </Box>
+      <PageSkeleton />
     )
 
   const items = resultado?.items ?? []

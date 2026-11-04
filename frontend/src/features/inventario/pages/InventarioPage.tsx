@@ -11,7 +11,6 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -64,6 +63,7 @@ import ProveedoresView from "../components/ProveedoresView";
 import ProviderDialog from "../components/ProviderDialog";
 import PurchaseDialog from "../components/PurchaseDialog";
 import StockTable from "../components/StockTable";
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons";
 
 type DialogName =
   | "insumo"
@@ -466,9 +466,7 @@ export default function InventarioPage() {
 
   if (loading)
     return (
-      <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}>
-        <CircularProgress />
-      </Box>
+      <PageSkeleton kpis={4} kpiColumns={4} tabs={4} />
     );
   if (pageError)
     return (

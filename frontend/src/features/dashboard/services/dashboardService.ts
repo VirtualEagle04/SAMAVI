@@ -1,16 +1,8 @@
-import { useAuthStore } from "../../auth/stores/authStore"
+import { apiFetch } from "../../../services/apiClient"
 import type { ResumenSemanal } from "../types/dashboard.types"
 
-const API_URL = import.meta.env.VITE_API_URL ?? ""
-
 async function request<T>(path: string): Promise<T> {
-  const token = useAuthStore.getState().token
-  const response = await fetch(`${API_URL}/api/v1${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  })
+  const response = await apiFetch(path, { headers: { "Content-Type": "application/json" } })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     throw new Error(typeof body?.error === "string" ? body.error : `No se pudo completar la solicitud (${response.status})`)

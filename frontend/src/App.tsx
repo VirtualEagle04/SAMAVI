@@ -11,6 +11,7 @@ import ListItemText from "@mui/material/ListItemText"
 import Typography from "@mui/material/Typography"
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded"
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded"
+import SessionExpiredDialog from "./features/auth/components/SessionExpiredDialog"
 import { useAuthStore } from "./features/auth/stores/authStore"
 import { useAccessibleModules } from "./modules"
 import samanLogoText from "./assets/saman_logo_text.png"
@@ -314,6 +315,7 @@ export default function App() {
           <Outlet />
         </Box>
       </Box>
+      <SessionExpiredDialog />
     </Box>
   )
 }

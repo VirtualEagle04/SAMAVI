@@ -2,12 +2,12 @@
 import Alert from "@mui/material/Alert"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
-import CircularProgress from "@mui/material/CircularProgress"
 import Dialog from "@mui/material/Dialog"
 import DialogActions from "@mui/material/DialogActions"
 import DialogContent from "@mui/material/DialogContent"
 import DialogTitle from "@mui/material/DialogTitle"
 import Divider from "@mui/material/Divider"
+import Skeleton from "@mui/material/Skeleton"
 import Stack from "@mui/material/Stack"
 import TextField from "@mui/material/TextField"
 import Typography from "@mui/material/Typography"
@@ -63,7 +63,7 @@ export default function VentaDialog({ pedido, disponibilidad, loading, precios, 
     <DialogTitle sx={{ fontWeight: 800 }}>Cargar pedido · #{pedido?.id}</DialogTitle>
     <DialogContent>
       <Typography color="text.secondary" sx={{ mb: 2 }}>Revisa la existencia de hoy y confirma de qué galpones se toma cada presentación.</Typography>
-      {loading ? <Box sx={{ minHeight: 240, display: "grid", placeItems: "center" }}><CircularProgress /></Box> : !disponibilidad?.cierreRealizado ? <Alert severity="warning">Todavía no hay un cierre diario para hoy. Cierra la producción antes de cargar pedidos.</Alert> : <>
+      {loading ? <Stack spacing={1.5} role="status" aria-label="Cargando existencia"><Skeleton variant="rounded" height={48} />{[0, 1, 2].map((item) => <Skeleton key={item} variant="rounded" height={96} />)}</Stack> : !disponibilidad?.cierreRealizado ? <Alert severity="warning">Todavía no hay un cierre diario para hoy. Cierra la producción antes de cargar pedidos.</Alert> : <>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mb: 2, p: 1.5, bgcolor: "#f7f3ef", borderRadius: 2, justifyContent: "space-between", alignItems: { sm: "center" } }}><Typography variant="body2">Existencia consultada para {new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${disponibilidad.fecha}T00:00:00Z`))}</Typography><Typography sx={{ fontWeight: 800 }}>Estimado: ${total.toLocaleString("en-US")} COP</Typography></Stack>
         {disponibilidad.categorias.map((line) => <Box key={line.categoriaPeso} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2, mb: 1.5 }}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { sm: "center" }, mb: 1 }}><CategoryBadge codigo={line.categoriaPeso} nombre={line.nombre} /><Stack direction="row" spacing={1.5}><Typography variant="body2">Pedido: <b>{line.cantidadSolicitada}</b></Typography><Typography variant="body2">Disponible: <b>{line.cantidadDisponible}</b></Typography><Typography variant="body2" color="primary.main">Cargar: <b>{line.cantidadRecomendada}</b></Typography></Stack></Stack>

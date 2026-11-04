@@ -6,7 +6,6 @@ import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -38,6 +37,7 @@ import type {
   Pedido,
   PrecioMayorista,
 } from "../types/comercial.types";
+import PageSkeleton from "../../../components/molecules/LoadingSkeletons";
 
 export default function ComercialPage() {
   const { role, permissions } = useAuthStore();
@@ -214,9 +214,7 @@ export default function ComercialPage() {
 
   if (loading)
     return (
-      <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}>
-        <CircularProgress />
-      </Box>
+      <PageSkeleton kpis={6} tabs={2} />
     );
   if (pageError)
     return (

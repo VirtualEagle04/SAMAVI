@@ -10,6 +10,8 @@ export const designTokens = {
     info: { main: "#A88C52", light: "#EDE3D1" },
     success: { main: "#6B8E62" },
     error: { main: "#C05C56" },
+    /** Asterisco de los campos obligatorios. */
+    required: "#C05C56",
   },
   shape: { borderRadius: 12, buttonRadius: 10, cardRadius: 16, chipRadius: 8, inputRadius: 10 },
   control: { height: 40 },

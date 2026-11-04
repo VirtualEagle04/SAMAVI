@@ -1,4 +1,4 @@
-import { useAuthStore } from "../../auth/stores/authStore"
+import { apiFetch } from "../../../services/apiClient"
 import type {
   CategoriaPeso,
   CierreDiario,
@@ -13,14 +13,9 @@ import type {
   ResumenConteoDiario,
 } from "../types/produccion.types"
 
-const API_URL = import.meta.env.VITE_API_URL ?? ""
-
-function getAuthHeaders(): HeadersInit {
-  const token = useAuthStore.getState().token
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
+/** El JWT lo agrega `apiFetch`; aquí solo va el tipo de contenido. */
+function jsonHeaders(): HeadersInit {
+  return { "Content-Type": "application/json" }
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -40,25 +35,25 @@ export async function getCounts(galponId?: number, limit = 200): Promise<LogCont
   if (galponId) params.append("galponId", galponId.toString())
   if (limit) params.append("limit", limit.toString())
 
-  const response = await fetch(
-    `${API_URL}/api/v1/produccion/conteos${params.toString() ? `?${params.toString()}` : ""}`,
+  const response = await apiFetch(
+    `/produccion/conteos${params.toString() ? `?${params.toString()}` : ""}`,
     {
-      headers: getAuthHeaders(),
+      headers: jsonHeaders(),
     }
   )
   return handleResponse<LogConteo[]>(response)
 }
 
 export async function getGalpones(): Promise<Galpon[]> {
-  const response = await fetch(`${API_URL}/api/v1/produccion/galpones`, {
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/produccion/galpones`, {
+    headers: jsonHeaders(),
   })
   return handleResponse<Galpon[]>(response)
 }
 
 export async function getCategorias(): Promise<CategoriaPeso[]> {
-  const response = await fetch(`${API_URL}/api/v1/produccion/categorias`, {
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/produccion/categorias`, {
+    headers: jsonHeaders(),
   })
   return handleResponse<CategoriaPeso[]>(response)
 }
@@ -68,18 +63,18 @@ export async function getCierres(galponId?: number, fecha?: string): Promise<Cie
   if (galponId) params.append("galponId", galponId.toString())
   if (fecha) params.append("fecha", fecha)
 
-  const response = await fetch(
-    `${API_URL}/api/v1/produccion/cierres${params.toString() ? `?${params.toString()}` : ""}`,
+  const response = await apiFetch(
+    `/produccion/cierres${params.toString() ? `?${params.toString()}` : ""}`,
     {
-      headers: getAuthHeaders(),
+      headers: jsonHeaders(),
     }
   )
   return handleResponse<CierreDiario[]>(response)
 }
 
 export async function getDailyCountSummary(): Promise<ResumenConteoDiario[]> {
-  const response = await fetch(`${API_URL}/api/v1/produccion/conteos/resumen-diario`, {
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/produccion/conteos/resumen-diario`, {
+    headers: jsonHeaders(),
   });
   return handleResponse<ResumenConteoDiario[]>(response);
 }
@@ -88,7 +83,7 @@ export async function getCierresProduccion(galponId?: number, fecha?: string): P
   const params = new URLSearchParams()
   if (galponId) params.append("galponId", galponId.toString())
   if (fecha) params.append("fecha", fecha)
-  const response = await fetch(`${API_URL}/api/v1/produccion/cierres-realizados${params.toString() ? `?${params}` : ""}`, { headers: getAuthHeaders() })
+  const response = await apiFetch(`/produccion/cierres-realizados${params.toString() ? `?${params}` : ""}`, { headers: jsonHeaders() })
   return handleResponse<CierreProduccionDia[]>(response)
 }
 
@@ -96,31 +91,31 @@ export async function getBodega(galponId?: number, fechaCorte?: string): Promise
   const params = new URLSearchParams()
   if (galponId) params.append("galponId", galponId.toString())
   if (fechaCorte) params.append("fechaCorte", fechaCorte)
-  const response = await fetch(`${API_URL}/api/v1/produccion/bodega${params.toString() ? `?${params}` : ""}`, { headers: getAuthHeaders() })
+  const response = await apiFetch(`/produccion/bodega${params.toString() ? `?${params}` : ""}`, { headers: jsonHeaders() })
   return handleResponse<BodegaStock[]>(response)
 }
 
 export async function registerCount(payload: RegisterCountPayload): Promise<LogConteo> {
-  const response = await fetch(`${API_URL}/api/v1/produccion/conteos`, {
+  const response = await apiFetch(`/produccion/conteos`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: jsonHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<LogConteo>(response)
 }
 
 export async function closeDailyProduction(payload: DailyClosePayload): Promise<CierreDiario[]> {
-  const response = await fetch(`${API_URL}/api/v1/produccion/cierres`, {
+  const response = await apiFetch(`/produccion/cierres`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: jsonHeaders(),
     body: JSON.stringify(payload),
   })
   return handleResponse<CierreDiario[]>(response)
 }
 
 export async function getDeviceStatus(): Promise<DeviceStatus> {
-  const response = await fetch(`${API_URL}/api/v1/produccion/dispositivo-estado`, {
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/produccion/dispositivo-estado`, {
+    headers: jsonHeaders(),
   })
   return handleResponse<DeviceStatus>(response)
 }
@@ -161,11 +156,11 @@ export function subscribeProductionEvents({ onConteo, onDispositivo }: Productio
 
   const connect = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/produccion/eventos`, {
-        headers: { ...getAuthHeaders(), Accept: "text/event-stream" },
+      const response = await apiFetch(`/produccion/eventos`, {
+        headers: { ...jsonHeaders(), Accept: "text/event-stream" },
         signal: controller.signal,
       })
-      // Sin sesión válida no tiene sentido reintentar; el polling de la página sigue funcionando.
+      // Sin sesión válida no tiene sentido reintentar: un 401 ya lo avisa `apiFetch`.
       if (response.status === 401 || response.status === 403) {
         console.error("Stream de producción rechazado:", response.status)
         return
