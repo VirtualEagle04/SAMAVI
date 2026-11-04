@@ -12,6 +12,11 @@ export const designTokens = {
     error: { main: "#C05C56" },
     /** Asterisco de los campos obligatorios. */
     required: "#C05C56",
+    /**
+     * Series de gráficas financieras. Par validado para daltonismo (protan, deutan,
+     * tritan) contra la superficie blanca; el verde de `success` no se distingue del terracota.
+     */
+    chart: { ingresos: "#3172B5", egresos: "#C87A57" },
   },
   shape: { borderRadius: 12, buttonRadius: 10, cardRadius: 16, chipRadius: 8, inputRadius: 10 },
   control: { height: 40 },

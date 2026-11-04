@@ -293,7 +293,7 @@ export default function ConsolidacionPage() {
             {tab === 2 && (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <GalponResultsTable galpones={data.galpones} />
-                <SociosTable socios={data.socios} />
+                <SociosTable galpones={data.galpones} socios={data.socios} />
               </Box>
             )}
 

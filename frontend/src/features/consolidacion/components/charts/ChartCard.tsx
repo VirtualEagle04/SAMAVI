@@ -11,15 +11,17 @@ type ChartCardProps = {
   actions?: ReactNode;
   /** Resumen en texto de la gráfica para lectores de pantalla. */
   ariaLabel: string;
+  /** La gráfica tiene controles (columnas enfocables): se expone como grupo, no como imagen. */
+  interactive?: boolean;
   children: ReactNode;
 };
 
 /** Tarjeta de gráfica con el mismo encabezado que las tablas. */
-export default function ChartCard({ title, description, actions, ariaLabel, children }: ChartCardProps) {
+export default function ChartCard({ title, description, actions, ariaLabel, interactive = false, children }: ChartCardProps) {
   return (
     <Card elevation={0} variant="outlined" sx={{ ...tableCardSx, height: "100%" }}>
       <TableToolbar title={title} description={description} actions={actions} />
-      <Box role="img" aria-label={ariaLabel} sx={{ p: { xs: 1.5, sm: 2 } }}>
+      <Box role={interactive ? "group" : "img"} aria-label={ariaLabel} sx={{ p: { xs: 1.5, sm: 2 } }}>
         {children}
       </Box>
     </Card>
