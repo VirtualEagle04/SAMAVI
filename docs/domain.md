@@ -84,6 +84,8 @@ Es decir, la pérdida la cubren los socios del propio galpón y no queda como de
 
 Proceso: un cierre exige que la semana haya terminado, que cada galpón activo tenga cierre diario los siete días y que la semana anterior esté cerrada si ya hay cierres. Al confirmar, los valores quedan guardados (también el detalle de cada galpón: bandejas vendidas por categoría y precio, insumos y bandejas disponibles, en `cierre_semanal_galpon.detalle`) y no se pueden agregar ni borrar gastos de esa semana; solo se puede reabrir el último cierre, y queda en la auditoría. Las ventas y los movimientos de insumos no se bloquean en semanas cerradas.
 
+Al abrir el módulo se muestra la semana del último cierre diario registrado hasta hoy (`GET /api/v1/consolidacion/semana-reciente`), igual que el resumen del dashboard; sin cierres diarios, la semana en curso.
+
 Discrepancia conocida: el resumen semanal del dashboard toma, sin fecha, los siete días que terminan en el último cierre diario, no la semana de viernes a jueves.
 
 Validación contra la semana 7-13 ago 2026 (datos semilla). La fuente son las fotos del cuaderno (producción, ventas y el prorrateo de Carlos Andrés por galpón); la semilla y la planilla de apoyo se transcribieron de ellas. Ventas ($14.016.000) y gastos por galpón ($4.015.724, $3.995.806, $2.908.232 y $637.500) coinciden con el cuaderno. Los ingresos por galpón difieren en $35.000 en total, que el prorrateo del cuaderno suma de más:
