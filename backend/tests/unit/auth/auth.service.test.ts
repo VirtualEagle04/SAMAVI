@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { AppError } from "../../../src/shared/errors/app-error.js";
 
 vi.mock("../../../src/database/prisma.js", () => ({
-  prisma: { usuario: { findUnique: vi.fn() } },
+  prisma: { usuario: { findUnique: vi.fn() }, auditoria: { create: vi.fn() } },
 }));
 
 vi.mock("bcryptjs", () => ({
@@ -62,6 +62,7 @@ function makeUsuario(overrides: Partial<UsuarioConRol> = {}): UsuarioConRol {
 const mockFindUnique = prisma.usuario.findUnique as ReturnType<typeof vi.fn>;
 const mockBcryptCompare = bcrypt.compare as ReturnType<typeof vi.fn>;
 const mockJwtSign = jwt.sign as ReturnType<typeof vi.fn>;
+const mockAuditoriaCreate = prisma.auditoria.create as ReturnType<typeof vi.fn>;
 
 describe("auth.service → login()", () => {
   beforeEach(() => {
@@ -113,6 +114,25 @@ describe("auth.service → login()", () => {
       );
     });
 
+    it("registra el inicio de sesión en la auditoría con la IP de origen", async () => {
+      mockFindUnique.mockResolvedValue(makeUsuario());
+      mockBcryptCompare.mockResolvedValue(true);
+
+      await login({ login: "ana", password: "1234" }, "192.168.1.20");
+
+      expect(mockAuditoriaCreate).toHaveBeenCalledWith({
+        data: {
+          idUsuario: 1,
+          tablaAfectada: "usuario",
+          idRegistroAfectado: "1",
+          accion: "LOGIN",
+          datosNuevos: { login: "ana", rol: "Operador" },
+          ipOrigen: "192.168.1.20",
+          resultado: "EXITOSO",
+        },
+      });
+    });
+
     it("mapea correctamente un rol sin permisos", async () => {
       mockFindUnique.mockResolvedValue(
         makeUsuario({ rol: { id: 3, nombre: "Invitado", permisos: [] } })
@@ -161,6 +181,14 @@ describe("auth.service → login()", () => {
 
       await expect(login({ login: "ana", password: "wrongpass" })).rejects.toThrow(AppError);
       expect(mockJwtSign).not.toHaveBeenCalled();
+    });
+
+    it("no registra el intento en la auditoría", async () => {
+      mockFindUnique.mockResolvedValue(makeUsuario());
+      mockBcryptCompare.mockResolvedValue(false);
+
+      await expect(login({ login: "ana", password: "wrongpass" })).rejects.toThrow(AppError);
+      expect(mockAuditoriaCreate).not.toHaveBeenCalled();
     });
 
     it("compara la password contra el hash almacenado del usuario", async () => {

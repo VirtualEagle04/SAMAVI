@@ -183,7 +183,7 @@ El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura
 - **React + Vite + Material UI + TypeScript** para el frontend, priorizando reactividad y facilidad de uso para usuarios con poca experiencia tecnológica.
 - **Despliegue en AWS Lightsail sobre Docker Compose** (nginx con el frontend, backend, Mosquitto con TLS y PostgreSQL), preferido frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática. GitHub Actions construye las imágenes, las publica en GHCR y despliega por SSH. Ver `docs/deployment.md`.
 - **Autenticación basada en JWT** con roles dinámicos y autorización por permiso: en cada solicitud se valida firma y expiración, y se consultan en la base el estado del usuario, la versión de sesión y sus permisos actuales, de modo que cambiar la contraseña, el rol o desactivar a un usuario cierra sus sesiones. Política de contraseñas NIST SP 800-63B y límite de intentos de inicio de sesión. Ver `docs/domain.md`.
-- **Auditoría** de toda escritura hecha por un usuario (valores antes y después, usuario e IP), registrada en la misma transacción que el cambio.
+- **Auditoría** de toda escritura hecha por un usuario (valores antes y después, usuario e IP), registrada en la misma transacción que el cambio, y de cada inicio de sesión exitoso.
 
 ## 11. Limitaciones conocidas y trabajo futuro
  

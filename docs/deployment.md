@@ -189,6 +189,16 @@ SQL
 
 Al desplegar esa versión, los tokens emitidos antes dejan de valer (no traen `tv`) y todos los usuarios deben iniciar sesión de nuevo una vez.
 
+**Inicios de sesión en la auditoría** (acción `LOGIN` en `auditoria.accion`). Sin este cambio, cada inicio de sesión falla con error 500 porque el `CHECK` anterior rechaza el registro:
+
+```bash
+docker compose --project-directory infra/prod -f infra/prod/docker-compose.yml --env-file .env   exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+ALTER TABLE auditoria DROP CONSTRAINT IF EXISTS auditoria_accion_check;
+ALTER TABLE auditoria ADD CONSTRAINT auditoria_accion_check
+  CHECK (accion IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN'));
+SQL
+```
+
 ## Pendientes
 
 - **Migraciones:** no hay plan. `schema.sql` solo se aplica al crear el volumen `postgres_data`. Un cambio de esquema con datos reales exige un SQL manual revisado, aplicado después de un respaldo. Recrear el volumen borra todo.

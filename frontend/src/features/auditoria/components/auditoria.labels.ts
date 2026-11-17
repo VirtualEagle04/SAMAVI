@@ -101,10 +101,11 @@ const VALORES: Record<string, string> = {
   ingreso: "Ingreso",
 }
 
-export const ACCIONES: Record<AccionAuditoria, { label: string; color: "success" | "info" | "error" }> = {
+export const ACCIONES: Record<AccionAuditoria, { label: string; color: "success" | "info" | "error" | "primary" }> = {
   INSERT: { label: "Creación", color: "success" },
   UPDATE: { label: "Modificación", color: "info" },
   DELETE: { label: "Eliminación", color: "error" },
+  LOGIN: { label: "Inicio de sesión", color: "primary" },
 }
 
 export const formatFechaHora = (value: string) =>

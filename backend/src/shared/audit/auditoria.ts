@@ -8,7 +8,8 @@ export type AuditContext = {
   ip: string | undefined;
 };
 
-export type AccionAuditoria = "INSERT" | "UPDATE" | "DELETE";
+/** `LOGIN` registra un inicio de sesión exitoso; las demás, escrituras. */
+export type AccionAuditoria = "INSERT" | "UPDATE" | "DELETE" | "LOGIN";
 
 export type EntradaAuditoria = {
   /** Nombre de la tabla en `database/schema.sql`. */

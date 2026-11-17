@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
+import { registrarAuditoria } from "../../shared/audit/auditoria.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type { TokenPayload } from "../../middleware/auth.middleware.js";
 import type { LoginInput } from "./auth.schemas.js";
@@ -42,7 +43,13 @@ function sesion(user: UsuarioSesion) {
   };
 }
 
-export async function login(input: LoginInput) {
+/**
+ * Valida las credenciales y emite el token. Un inicio de sesión exitoso queda en
+ * la auditoría (acción `LOGIN`). Los fallidos no: con un login inexistente no hay
+ * usuario al que asociarlos, y registrar solo los de cuentas existentes haría que
+ * el tiempo de respuesta revelara qué cuentas existen.
+ */
+export async function login(input: LoginInput, ip?: string) {
   const user = await prisma.usuario.findUnique({
     where: { login: input.login },
     include: usuarioConPermisos,
@@ -58,6 +65,13 @@ export async function login(input: LoginInput) {
   const token = jwt.sign(payload, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn,
   } as SignOptions);
+
+  await registrarAuditoria(prisma, { userId: user.id, ip }, {
+    tabla: "usuario",
+    idRegistro: user.id,
+    accion: "LOGIN",
+    despues: { login: user.login, rol: user.rol.nombre },
+  });
 
   return { token, ...sesion(user) };
 }

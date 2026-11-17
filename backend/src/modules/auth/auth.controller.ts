@@ -16,7 +16,7 @@ export async function loginController(request: Request, response: Response): Pro
   }
 
   try {
-    const result = await login(input);
+    const result = await login(input, request.ip);
     loginLimiter.registrarExito(input.login);
     response.status(200).json(result);
   } catch (error) {

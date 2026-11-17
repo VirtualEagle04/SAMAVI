@@ -151,7 +151,7 @@ export default function AuditoriaPage() {
             description={
               filtrando
                 ? "Cambia los filtros o el id de registro buscado."
-                : "Las creaciones, modificaciones y eliminaciones aparecerán aquí."
+                : "Los inicios de sesión, creaciones, modificaciones y eliminaciones aparecerán aquí."
             }
           />
         ) : (
@@ -213,7 +213,7 @@ export default function AuditoriaPage() {
                         </TableCell>
                         <TableCell align="center">
                           <Button size="small" startIcon={<VisibilityRoundedIcon />} onClick={() => setDetalle(item)}>
-                            Ver cambios
+                            {item.accion === "LOGIN" ? "Ver detalle" : "Ver cambios"}
                           </Button>
                         </TableCell>
                       </TableRow>
