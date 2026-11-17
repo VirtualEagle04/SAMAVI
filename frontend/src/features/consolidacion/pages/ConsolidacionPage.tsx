@@ -39,6 +39,7 @@ import {
   deleteGasto,
   getHistorial,
   getSemana,
+  getSemanaReciente,
   reabrirSemana,
 } from "../services/consolidacionService";
 import type { GastoPayload, GastoSemana, SemanaConsolidada, SemanaHistorial } from "../types/consolidacion.types";
@@ -89,6 +90,8 @@ export default function ConsolidacionPage() {
   const puedeGastar = role === ROL_ADMINISTRADOR || permissions.includes("INGRESAR_GASTO");
 
   const [desde, setDesde] = useState(currentFriday);
+  // Hasta saber cuál es la semana del último cierre diario no se carga ninguna.
+  const [semanaInicialLista, setSemanaInicialLista] = useState(false);
   const [tab, setTab] = useState(0);
   const [data, setData] = useState<SemanaConsolidada | null>(null);
   const [historial, setHistorial] = useState<SemanaHistorial[]>([]);
@@ -124,10 +127,27 @@ export default function ConsolidacionPage() {
     }
   }, []);
 
+  // Como el dashboard, abre la semana del último cierre diario; si falla, la semana en curso.
   useEffect(() => {
+    let cancelado = false;
+    getSemanaReciente()
+      .then(({ desde: reciente }) => {
+        if (!cancelado) setDesde(reciente);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelado) setSemanaInicialLista(true);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!semanaInicialLista) return;
     void load(desde);
     void loadHistorial(desde);
-  }, [desde, load, loadHistorial]);
+  }, [desde, semanaInicialLista, load, loadHistorial]);
 
   const guardarGasto = async (payload: GastoPayload) => {
     await createGasto(payload);

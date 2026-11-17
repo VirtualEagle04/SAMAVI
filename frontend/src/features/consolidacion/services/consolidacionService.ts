@@ -14,6 +14,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>
 }
 
+export const getSemanaReciente = () => request<{ desde: string }>("/consolidacion/semana-reciente")
 export const getSemana = (desde: string) => request<SemanaConsolidada>(`/consolidacion/semanas/${desde}`)
 export const getHistorial = (hasta: string, semanas = 8) =>
   request<SemanaHistorial[]>(`/consolidacion/historial?hasta=${hasta}&semanas=${semanas}`)

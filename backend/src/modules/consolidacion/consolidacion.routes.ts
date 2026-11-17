@@ -6,6 +6,7 @@ import {
   deleteGastoController,
   getHistorialController,
   getSemanaController,
+  getSemanaRecienteController,
   listCierresController,
   listGastosController,
   listSociosController,
@@ -17,6 +18,7 @@ consolidacionRoutes.use(authenticate);
 
 consolidacionRoutes.get("/cierres", requirePermission("VER_CIERRE"), listCierresController);
 consolidacionRoutes.get("/historial", requirePermission("VER_CIERRE"), getHistorialController);
+consolidacionRoutes.get("/semana-reciente", requirePermission("VER_CIERRE"), getSemanaRecienteController);
 consolidacionRoutes.get("/semanas/:desde", requirePermission("VER_CIERRE"), getSemanaController);
 consolidacionRoutes.post("/semanas/:desde/cierre", requirePermission("CERRAR_SEMANA"), cerrarSemanaController);
 consolidacionRoutes.delete("/semanas/:desde/cierre", requirePermission("CERRAR_SEMANA"), reabrirSemanaController);

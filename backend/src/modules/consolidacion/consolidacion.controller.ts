@@ -7,6 +7,7 @@ import {
   deleteGasto,
   getHistorial,
   getSemana,
+  getSemanaReciente,
   listCierres,
   listGastos,
   listSocios,
@@ -15,6 +16,10 @@ import {
 
 export async function listCierresController(_request: Request, response: Response): Promise<void> {
   response.json(await listCierres());
+}
+
+export async function getSemanaRecienteController(_request: Request, response: Response): Promise<void> {
+  response.json(await getSemanaReciente());
 }
 
 export async function getSemanaController(request: Request, response: Response): Promise<void> {

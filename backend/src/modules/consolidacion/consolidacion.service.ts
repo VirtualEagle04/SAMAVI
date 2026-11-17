@@ -128,6 +128,20 @@ export function viernesDeLaSemana(fecha: string): string {
   return moverDias(fecha, -retroceso);
 }
 
+/**
+ * Semana que se abre por defecto: la del último cierre diario registrado hasta
+ * hoy, como el resumen del dashboard. Sin cierres diarios, la semana en curso.
+ */
+export async function getSemanaReciente(): Promise<{ desde: string }> {
+  const hoy = todayBogota();
+  const ultimoCierre = await prisma.cierreDiario.findFirst({
+    where: { fecha: { lte: toDateOnly(hoy) } },
+    orderBy: { fecha: "desc" },
+    select: { fecha: true },
+  });
+  return { desde: viernesDeLaSemana(ultimoCierre ? toIsoDay(ultimoCierre.fecha) : hoy) };
+}
+
 async function bloquearCierres(reader: Reader): Promise<void> {
   await reader.$executeRaw`SELECT pg_advisory_xact_lock(${LOCK_CIERRE_SEMANAL})`;
 }

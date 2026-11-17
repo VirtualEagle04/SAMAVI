@@ -5,6 +5,7 @@ import {
   deleteGasto,
   getHistorial,
   getSemana,
+  getSemanaReciente,
   reabrirSemana,
   viernesDeLaSemana,
 } from "../../../src/modules/consolidacion/consolidacion.service.js";
@@ -19,7 +20,7 @@ vi.mock("../../../src/database/prisma.js", () => {
     gasto: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
     inversionSocio: { findMany: vi.fn() },
     cierreSemanal: { findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), delete: vi.fn() },
-    cierreDiario: { findMany: vi.fn() },
+    cierreDiario: { findMany: vi.fn(), findFirst: vi.fn() },
     auditoria: { create: vi.fn() },
     $executeRaw: vi.fn(),
     $transaction: vi.fn(),
@@ -100,6 +101,28 @@ describe("viernesDeLaSemana", () => {
     expect(viernesDeLaSemana("2026-08-07")).toBe("2026-08-07");
     expect(viernesDeLaSemana("2026-08-13")).toBe("2026-08-07");
     expect(viernesDeLaSemana("2026-08-14")).toBe("2026-08-14");
+  });
+});
+
+describe("getSemanaReciente", () => {
+  it("abre la semana del último cierre diario registrado hasta hoy", async () => {
+    vi.setSystemTime(new Date("2026-11-17T15:00:00.000Z"));
+    mocked.cierreDiario!.findFirst!.mockResolvedValue({ fecha: dia("2026-08-13") });
+
+    await expect(getSemanaReciente()).resolves.toEqual({ desde: "2026-08-07" });
+    expect(mocked.cierreDiario!.findFirst).toHaveBeenCalledWith({
+      where: { fecha: { lte: dia("2026-11-17") } },
+      orderBy: { fecha: "desc" },
+      select: { fecha: true },
+    });
+  });
+
+  it("sin cierres diarios abre la semana en curso según Bogotá", async () => {
+    // 17 nov 2026, 2:00 a. m. UTC = lunes 16 nov en Bogotá: su semana empieza el viernes 13.
+    vi.setSystemTime(new Date("2026-11-17T02:00:00.000Z"));
+    mocked.cierreDiario!.findFirst!.mockResolvedValue(null);
+
+    await expect(getSemanaReciente()).resolves.toEqual({ desde: "2026-11-13" });
   });
 });
 
