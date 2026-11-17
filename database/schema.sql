@@ -787,7 +787,7 @@ VALUES
     (4, 'B', 11000);
 
 -- Gastos de la semana 7-13 ago 2026 según el prorrateo manual de Carlos Andrés.
--- El alimento se registra como gasto del galpón porque la semilla no tiene insumos.
+-- El alimento se registra como gasto del galpón porque la semilla no registra entregas de insumos a galpones.
 INSERT INTO
     gasto (concepto, valor, fecha)
 VALUES
@@ -2005,3 +2005,164 @@ VALUES
     (3, 'B', '2026-08-13', 7),
     (4, 'A', '2026-08-13', 16),
     (4, 'B', '2026-08-13', 4);
+-- Inventario de ejemplo: catálogo, proveedores, compras y movimientos de julio a
+-- noviembre de 2026. Los datos de contacto son ficticios. No incluye entregas a
+-- galpones (CONSUMO_GALPON) ni devoluciones: el cierre semanal las resta como
+-- gasto del galpón y cambiarían el prorrateo validado de la semana 7-13 ago 2026,
+-- cuyo alimento ya está en los gastos de la semilla.
+INSERT INTO
+    insumo (
+        codigo,
+        nombre,
+        descripcion,
+        unidad_medida,
+        stock_minimo,
+        costo,
+        activo
+    )
+VALUES
+    ('ALI-PONEDORA', 'Alimento ponedora', 'Bulto de 40 kg para gallinas en postura', 'bulto', 40, 73541, true),
+    ('ALI-PREPOSTURA', 'Alimento prepostura', 'Bulto de 40 kg para el inicio del ciclo productivo', 'bulto', 10, 76000, true),
+    ('BAN-CARTON', 'Bandejas de cartón x30', 'Torre de bandejas de cartón para 30 huevos', 'torre', 5, 35000, true),
+    ('CASCARILLA', 'Cascarilla de arroz', 'Bulto para el piso de los galpones', 'bulto', 10, 9000, true),
+    ('CAL-AGRICOLA', 'Cal agrícola', 'Bulto de 25 kg para desinfectar pisos y entradas', 'bulto', 4, 12000, true),
+    ('GLUTANOL', 'Glutanol vinagre', 'Acidificante para el agua de bebida', 'galón', 2, 30000, true),
+    ('VAC-NEWCASTLE', 'Vacuna Newcastle', 'Frasco de 1.000 dosis; requiere cadena de frío', 'frasco', 2, 48000, true),
+    ('VIT-AD3E', 'Vitaminas AD3E', 'Suplemento vitamínico para el agua de bebida', 'litro', 2, 42000, true),
+    ('DESINF-YODO', 'Desinfectante yodado', 'Limpieza de bebederos, comederos y equipos', 'galón', 4, 38000, true),
+    ('COMEDERO-TOLVA', 'Comedero de tolva', 'Reemplazado por el comedero lineal; ya no se compra', 'unidad', 0, 55000, false);
+
+INSERT INTO
+    proveedor (nombre, contacto, activo)
+VALUES
+    ('Italcol', '{"telefono": "3201112233", "email": "ventas.italcol@example.com"}', true),
+    ('Contegral', '{"telefono": "3202223344", "email": "ventas.contegral@example.com"}', true),
+    ('Agropecuaria La Plata', '{"telefono": "3203334455", "email": "agrolaplata@example.com"}', true),
+    ('Empaques del Huila', '{"telefono": "3204445566", "email": "empaqueshuila@example.com"}', true),
+    ('Veterinaria El Campo', '{"telefono": "3205556677", "email": "vetelcampo@example.com"}', true),
+    ('Molinos del Sur', '{"telefono": "3206667788"}', false);
+
+INSERT INTO
+    compra_insumo (
+        fecha,
+        id_proveedor,
+        numero_factura,
+        observaciones,
+        total
+    )
+SELECT
+    compra.fecha::timestamp,
+    proveedor.id,
+    compra.factura,
+    compra.observaciones,
+    compra.total
+FROM
+    (
+        VALUES
+            ('2026-07-17 14:30', 'Italcol', 'IT-20871', 'Pedido mensual de alimento', 4412460),
+            ('2026-07-20 15:10', 'Agropecuaria La Plata', 'AL-1132', NULL, 276000),
+            ('2026-07-24 16:00', 'Empaques del Huila', 'EH-3301', NULL, 350000),
+            ('2026-07-29 13:45', 'Veterinaria El Campo', 'VE-0412', 'Vacunas transportadas en nevera de icopor', 438000),
+            ('2026-09-04 14:20', 'Contegral', 'CG-55410', 'Alimento para el lote nuevo del Galpón 5', 1520000),
+            ('2026-10-02 15:30', 'Veterinaria El Campo', 'VE-0457', NULL, 174000),
+            ('2026-10-16 16:15', 'Empaques del Huila', 'EH-3390', NULL, 280000),
+            ('2026-11-06 14:00', 'Agropecuaria La Plata', 'AL-1310', NULL, 135000)
+    ) AS compra (fecha, proveedor, factura, observaciones, total)
+    JOIN proveedor ON proveedor.nombre = compra.proveedor;
+
+INSERT INTO
+    detalle_compra_insumo (
+        id_compra,
+        id_insumo,
+        cantidad,
+        costo_unitario,
+        subtotal,
+        lote,
+        fecha_vencimiento
+    )
+SELECT
+    compra_insumo.id,
+    insumo.id,
+    detalle.cantidad,
+    detalle.costo,
+    detalle.cantidad * detalle.costo,
+    detalle.lote,
+    detalle.vencimiento::date
+FROM
+    (
+        VALUES
+            ('IT-20871', 'ALI-PONEDORA', 60, 73541, 'IT-L0726', '2026-10-15'),
+            ('AL-1132', 'CASCARILLA', 20, 9000, NULL, NULL),
+            ('AL-1132', 'CAL-AGRICOLA', 8, 12000, NULL, NULL),
+            ('EH-3301', 'BAN-CARTON', 10, 35000, NULL, NULL),
+            ('VE-0412', 'VAC-NEWCASTLE', 4, 48000, 'NC-2607', '2027-01-31'),
+            ('VE-0412', 'VIT-AD3E', 3, 42000, 'VT-118', '2027-06-30'),
+            ('VE-0412', 'GLUTANOL', 4, 30000, NULL, NULL),
+            ('CG-55410', 'ALI-PREPOSTURA', 20, 76000, 'CG-L0831', '2026-12-01'),
+            ('VE-0457', 'DESINF-YODO', 3, 38000, 'DY-0926', '2028-09-30'),
+            ('VE-0457', 'GLUTANOL', 2, 30000, NULL, NULL),
+            ('EH-3390', 'BAN-CARTON', 8, 35000, NULL, NULL),
+            ('AL-1310', 'CASCARILLA', 15, 9000, NULL, NULL)
+    ) AS detalle (factura, codigo, cantidad, costo, lote, vencimiento)
+    JOIN compra_insumo ON compra_insumo.numero_factura = detalle.factura
+    JOIN insumo ON insumo.codigo = detalle.codigo;
+
+-- Cada línea de compra entra al kardex como COMPRA, igual que en la API.
+INSERT INTO
+    movimiento_insumo (
+        fecha,
+        id_insumo,
+        codigo_tipo_movimiento,
+        cantidad,
+        costo_unitario,
+        id_compra,
+        id_usuario
+    )
+SELECT
+    compra_insumo.fecha,
+    detalle_compra_insumo.id_insumo,
+    'COMPRA',
+    detalle_compra_insumo.cantidad,
+    detalle_compra_insumo.costo_unitario,
+    compra_insumo.id,
+    usuario.id
+FROM
+    detalle_compra_insumo
+    JOIN compra_insumo ON compra_insumo.id = detalle_compra_insumo.id_compra
+    JOIN usuario ON usuario.login = 'admin';
+
+-- Movimientos manuales sin galpón; el costo unitario es el del insumo, como en la API.
+INSERT INTO
+    movimiento_insumo (
+        fecha,
+        id_insumo,
+        codigo_tipo_movimiento,
+        cantidad,
+        costo_unitario,
+        observaciones,
+        id_usuario
+    )
+SELECT
+    movimiento.fecha::timestamp,
+    insumo.id,
+    movimiento.tipo,
+    movimiento.cantidad,
+    insumo.costo,
+    movimiento.observaciones,
+    usuario.id
+FROM
+    (
+        VALUES
+            ('2026-08-01 12:00', 'BAN-CARTON', 'CONSUMO_PRODUCCION', 4, 'Empaque de la clasificación de la semana'),
+            ('2026-08-15 12:00', 'BAN-CARTON', 'CONSUMO_PRODUCCION', 3, 'Empaque de la clasificación de la semana'),
+            ('2026-08-20 17:30', 'ALI-PONEDORA', 'MERMA', 1, 'Bulto mojado por una gotera en la bodega'),
+            ('2026-09-05 12:00', 'BAN-CARTON', 'CONSUMO_PRODUCCION', 4, 'Empaque de la clasificación de la semana'),
+            ('2026-09-10 08:15', 'VAC-NEWCASTLE', 'MERMA', 1, 'Frasco descartado: se cortó la cadena de frío por un corte de energía'),
+            ('2026-10-03 12:00', 'BAN-CARTON', 'CONSUMO_PRODUCCION', 3, 'Empaque de la clasificación de la semana'),
+            ('2026-10-24 12:00', 'BAN-CARTON', 'CONSUMO_PRODUCCION', 2, 'Empaque de la clasificación de la semana'),
+            ('2026-10-31 16:00', 'CAL-AGRICOLA', 'AJUSTE_NEG', 1, 'Conteo físico de fin de mes: falta un bulto'),
+            ('2026-10-31 16:10', 'VIT-AD3E', 'AJUSTE_POS', 0.5, 'Conteo físico de fin de mes: frasco abierto sin registrar'),
+            ('2026-11-07 11:00', 'GLUTANOL', 'MERMA', 1, 'Galón con la tapa rota, se derramó')
+    ) AS movimiento (fecha, codigo, tipo, cantidad, observaciones)
+    JOIN insumo ON insumo.codigo = movimiento.codigo
+    JOIN usuario ON usuario.login = 'admin';
