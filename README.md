@@ -4,11 +4,15 @@
 
 ## 1. Descripción
 
-SAMAVI es una plataforma para el conteo automático de huevos y la gestión y monitoreo de una granja avícola. El sistema busca reemplazar el registro manual en cuadernos y fotografías que actualmente usa la Granja El Samán (recolección, clasificación, conteo diario, pedidos, ventas, consolidación semanal y prorrateo de ganancias entre socios) por un flujo digital: un dispositivo ESP32 con sensores ópticos VL53L0X cuenta los huevos por peso directamente en la máquina clasificadora y envía los datos por MQTT a un backend que centraliza toda la información en una base de datos relacional, accesible por los distintos roles del negocio desde cualquier navegador.
+SAMAVI es una plataforma para el conteo automático de huevos y la gestión y monitoreo de una granja avícola. El sistema busca reemplazar el registro manual en cuadernos y fotografías que actualmente usa la Granja El Samán (recolección, clasificación, conteo diario, pedidos, ventas, consolidación semanal y prorrateo de ganancias entre socios) por un flujo digital: un dispositivo ESP32 instalado en la máquina clasificadora cuenta los huevos de cada categoría de peso y envía los datos por MQTT a un backend que centraliza toda la información en una base de datos relacional, accesible por los distintos roles del negocio desde cualquier navegador.
 
-El proyecto está dirigido a María Fernanda Durán Rozo, propietaria y beneficiaria de la Granja El Samán (La Plata, Huila), y a su equipo operativo y administrativo.
+Hoy una misma cifra de producción pasa por al menos cuatro registros manuales (cuaderno del galponero, agenda de la propietaria, Excel de Carlos Andrés y de vuelta a la agenda), y la fotografía enviada por WhatsApp es el único mecanismo de integración entre la operación y la administración. Con SAMAVI, el galponero pasa de registrar el conteo a verificarlo en el display de cada categoría, la bodega se actualiza sin intervención y el prorrateo semanal que hoy se hace en Excel se calcula en el sistema.
 
-**Código Proyecto:** DT_2026-02-01 **Periodo Académico:** 2026-2
+El sistema incluye los módulos de dashboard (información rápida y KPIs), cierre semanal (consolidación y prorrateo), producción (conteos y cierres diarios), comercial (ventas, clientes y pedidos), galpones (gallinas, galpones activos y alimentación diaria), inventario (insumos, compras, movimientos y proveedores), auditoría (acciones por usuario y fecha) y usuarios (usuarios, roles y permisos), con acceso diferenciado por rol. La generación de reportes y la migración de los registros históricos siguen pendientes.
+
+El proyecto está dirigido a María Fernanda Durán Rozo, propietaria y beneficiaria de la Granja El Samán (Vereda Matanzas, Paicol, Huila), y a su equipo operativo y administrativo. La beneficiaria aceptó el proyecto para los periodos 2026-2 y 2027-1.
+
+**Código Proyecto:** DT_2026-02-01 **Periodo Académico:** 2026-2 **Modalidad:** Desarrollo Tecnológico **Director:** John Fredy Chacón Sánchez
 
 ## 2. Integrantes
 
@@ -71,7 +75,7 @@ npm --prefix backend run dev     # Backend con tsx watch
 npm --prefix frontend run dev    # Frontend con Vite
 ```
 
-El frontend queda en `http://localhost:3000` y redirige `/api` al backend en `http://localhost:3001`. La base se crea con `database/schema.sql` al inicializar el volumen de PostgreSQ. No hay migraciones versionadas, así que un cambio de esquema exige recrear el volumen con `npm run infra:reset` (borra los datos locales).
+El frontend queda en `http://localhost:3000` y redirige `/api` al backend en `http://localhost:3001`. La base se crea con `database/schema.sql` al inicializar el volumen de PostgreSQL. No hay migraciones versionadas, así que un cambio de esquema exige recrear el volumen con `npm run infra:reset` (borra los datos locales).
 
 El firmware se compila desde `firmware/` con `pio run -e esp32dev`. El despliegue en producción (AWS Lightsail) está en [docs/deployment.md](docs/deployment.md).
 
@@ -165,36 +169,42 @@ El flujo completo está en [CONTRIBUTING.md](CONTRIBUTING.md). En resumen:
 
 ## 9. Estado del proyecto y avances
 
-El cronograma del proyecto se organiza en cuatro fases (ver Anexo 14: Estructura de Desglose del Trabajo, y Anexo 15: Diagrama de Gantt):
- 
+El proyecto se organiza en cuatro fases (Análisis y Propuesta, Diseño del Sistema, Desarrollo Iterativo en Scrum y Cierre del Proyecto); la fase de desarrollo se divide en siete sprints de tres semanas (ver Anexo 14: Estructura de Desglose del Trabajo, y Anexo 15: Diagrama de Gantt). Las fases de Análisis y Diseño están completas. En Proyecto de Grado 1 (2026-2) se completaron los cuatro primeros sprints; los tres restantes, las pruebas piloto en campo, la capacitación y la entrega definitiva corresponden a Proyecto de Grado 2 (2027-1).
+
 | Fase | Fecha | Alcance comprometido | Estado |
 |---|---|---|---|
-| Sprint 1 | Agosto 24 - Septiembre 6 | Completar el diseño técnico base de SAMAVI (diagramas de casos de uso, MER/MR, arquitectura, componentes, despliegue y esquema de autenticación), los mockups del dashboard, el informe de levantamiento de información en campo, y dejar listo el repositorio con la estructura monorepo, como base para iniciar la implementación en el siguiente sprint. | Completado |
-| Sprint 2 | Septiembre 7 - Septiembre 27 | Construir la base de persistencia real del sistema (contenedor PostgreSQL, esquema relacional de las 18 tablas e integracion de Prisma en el backend), e implementar los modulos de Autenticacion/Roles y Registro de Produccion y Pedidos/Ventas con sus pruebas de seguridad y unitarias correspondientes. Cerrar el sprint actualizando los diagramas de secuencia de los flujos criticos con base en la implementacion real ya construida, en lugar de una suposicion de diseño hecha en Sprint 1. | Completado |
-| Sprint 3 | Septiembre 28 - Octubre 18 | Completar el ciclo operativo del sistema implementando los módulos de Gestión de Galpones, e Inventario de Insumos con sus respectivas pantallas, cubrir con pruebas unitarias y de integración todos los módulos del backend. | Completado |
-| Sprint 4 | Octubre 19 - Noviembre 8 | Completar el modulo de Prorrateo, finalizar integración con el hardware del ESP32 y empezar con el despliege en AWS Lightsail. | En proceso... |
+| Sprint 1 | 24 ago - 6 sep 2026 | Completar el diseño técnico base y el levantamiento de información: informe de levantamiento, BPMN AS-IS y TO-BE, casos de uso, MER, MR, arquitectura, componentes, despliegue, esquema de autenticación y mockups. | Completado |
+| Sprint 2 | 7 sep - 27 sep 2026 | Construir la persistencia real e implementar los módulos núcleo: repositorio monorepo, PostgreSQL en Docker Compose, esquema relacional, Prisma, autenticación y roles, registro de producción, pedidos y ventas, pruebas unitarias y de seguridad, y diagramas de secuencia de los flujos críticos. | Completado |
+| Sprint 3 | 28 sep - 18 oct 2026 | Completar el ciclo operativo y la cobertura de pruebas: gestión de galpones, inventario de insumos, vista tabular de producción con el formato de los registros físicos, mejoras de frontend y pruebas unitarias con Vitest. | Completado |
+| Sprint 4 | 19 oct - 8 nov 2026 | Consolidación semanal (prorrateo), módulo de auditoría, despliegue automático en AWS Lightsail con GitHub Actions y ajustes de la interfaz. Integración en vivo del ESP32 con el backend por Wi-Fi y MQTT, con conteo en tiempo real. | Completado |
+| Sprint 5 | Receso e inicio de 2027-1 | Migración masiva de los cuadernos históricos (con apoyo de inteligencia artificial) y reemplazo de los sensores VL53L0X por sensores infrarrojos de barrera. | Pendiente |
+| Sprints 6 y 7 | 2027-1 | Instalación del hardware en la máquina clasificadora, pruebas piloto en campo, pruebas de rendimiento, seguridad y aceptación, capacitación del personal, documentación final y entrega del sistema. | Pendiente |
 
 ## 10. Decisiones técnicas relevantes
 
-- **Arquitectura de monolito modular** (no microservicios), acorde a un equipo pequeño y una concurrencia esperada de máximo 3 usuarios simultáneos.
-- **Sensores ópticos VL53L0X + ESP32** para el conteo no invasivo de huevos por peso, evaluados con pruebas satisfactorias de conectividad y ya adquiridos antes de definir el resto de la arquitectura.
-- **MQTT sobre TLS** como protocolo de comunicación entre el ESP32 y el backend (en producción el ESP32 se autentica con un usuario por dispositivo). El firmware reconecta Wi-Fi y MQTT en una tarea propia y guarda en memoria hasta 200 conteos mientras no hay conexión. El backend reenvía los conteos y el estado del dispositivo al frontend en tiempo real por SSE. Contrato en `docs/protocols/mqtt.md`.
+- **Arquitectura de monolito modular** (no microservicios), acorde a un equipo de tres desarrolladores, sin personal técnico en la granja y con una concurrencia esperada de máximo 3 usuarios simultáneos. Solo el firmware y el broker MQTT van aparte, porque la captura ocurre en un dispositivo físico distinto al servidor.
+- **Sensores infrarrojos de barrera + ESP32** para el conteo no invasivo de huevos por categoría de peso: un par emisor-receptor por categoría, cada uno en su propio pin digital, de modo que la falla de un sensor no afecta a los demás. Reemplazan a los sensores de distancia VL53L0X del prototipo, que en la maqueta pedida por el director dieron lecturas inestables, conteos falsos y una actualización lenta para el ritmo de la clasificadora (Anexos 44 y 45). El firmware actual (`firmware/src/main.cpp`) todavía usa los VL53L0X; el cambio está planeado para el Sprint 5. El bus I2C, con un multiplexor PCA9548A, queda solo para los displays OLED de cada categoría.
+- **MQTT sobre TLS** como protocolo de comunicación entre el ESP32 y el backend, por estar pensado para entornos con recursos y ancho de banda limitados, como la conexión satelital de la granja. En producción el ESP32 se autentica con un usuario por dispositivo. El firmware reconecta Wi-Fi y MQTT en una tarea propia y guarda en memoria hasta 200 conteos mientras no hay conexión, que publica con su hora original al reconectar. El backend reenvía los conteos y el estado del dispositivo al frontend en tiempo real por SSE, que basta porque los datos solo van del sensor a la pantalla. Contrato en `docs/protocols/mqtt.md`.
 - **Express.js + PostgreSQL + Prisma ORM + TypeScript** para el backend, elegidos por dominio del equipo, bajo costo de licenciamiento y adecuación a una API REST de baja concurrencia.
 - **React + Vite + Material UI + TypeScript** para el frontend, priorizando reactividad y facilidad de uso para usuarios con poca experiencia tecnológica.
-- **Despliegue en AWS Lightsail sobre Docker Compose** (nginx con el frontend, backend, Mosquitto con TLS y PostgreSQL), preferido frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática. GitHub Actions construye las imágenes, las publica en GHCR y despliega por SSH. Ver `docs/deployment.md`.
+- **Despliegue en AWS Lightsail sobre Docker Compose** (nginx con el frontend, backend, Mosquitto con TLS y PostgreSQL), en el plan de 2 GB con Amazon Linux acordado con el director. Se prefirió frente al despliegue local en Raspberry Pi por mayor confiabilidad ante cortes eléctricos y una IP pública estática, y frente a EC2 por su precio mensual fijo para una carga pequeña y estable. GitHub Actions construye las imágenes, las publica en GHCR y despliega por SSH. Los respaldos son un snapshot diario de Lightsail y una copia diaria de la base de datos, ambos conservados siete días. Ver `docs/deployment.md`.
 - **Autenticación basada en JWT** con roles dinámicos y autorización por permiso: en cada solicitud se valida firma y expiración, y se consultan en la base el estado del usuario, la versión de sesión y sus permisos actuales, de modo que cambiar la contraseña, el rol o desactivar a un usuario cierra sus sesiones. Política de contraseñas NIST SP 800-63B y límite de intentos de inicio de sesión. Ver `docs/domain.md`.
 - **Auditoría** de toda escritura hecha por un usuario (valores antes y después, usuario e IP), registrada en la misma transacción que el cambio.
 
 ## 11. Limitaciones conocidas y trabajo futuro
  
+- Los sensores infrarrojos están comprados y pendientes de llegar; el firmware sigue usando los VL53L0X. El módulo de captura se ha validado en banco de pruebas y en una demostración controlada, pero no dentro de la máquina clasificadora, así que su precisión real frente al conteo manual aún no se conoce. Además, la propietaria reportó que la clasificadora actual está desajustada y pidió investigar máquinas disponibles en el mercado.
+- La línea base de tiempos del proceso manual (unos 3 minutos 30 segundos por balde clasificado y hasta 4 minutos para el conteo y registro diario) proviene de una única visita de tres días; debe repetirse en la visita de instalación.
 - La fórmula matemática exacta del prorrateo de ganancias y gastos usada actualmente por Carlos Andrés todavía no está completamente documentada ni confirmada.
 - El módulo de cierre semanal y prorrateo (`/consolidacion`) calcula ganancias, gastos y reparto por socio según porcentaje de inversión, pero el tratamiento de galpones con pérdida es un supuesto pendiente de confirmar. El cálculo se comparó con la hoja de prorrateo de la semana 7-13 ago 2026 y las diferencias están documentadas en `docs/domain.md`.
 - El dashboard calcula su resumen semanal con los siete días que terminan en el último cierre diario, no con la semana productiva de viernes a jueves que usa el cierre semanal.
 - Solo hay pruebas unitarias del backend (Vitest). No hay pruebas de integración, frontend ni firmware automatizadas.
 - Queda pendiente definir con precisión qué determina la cantidad de bultos de alimento por pedido, la base del cálculo de transporte, cómo registrar los huevos regalados a los trabajadores, y por qué la hoja manual reparte más bandejas de B de las vendidas.
-- Los conteos que el ESP32 guarda sin conexión viven en memoria: se pierden si el dispositivo se reinicia antes de reconectar.
+- Los conteos que el ESP32 guarda sin conexión viven en memoria: se pierden si el dispositivo se reinicia antes de reconectar. Guardarlos en memoria flash, para cubrir los cortes de energía de la bodega, queda pendiente.
+- Los respaldos (snapshots y copias de la base) dependen de la misma instancia de Lightsail: falta llevar una copia a otro lugar.
 - El límite de intentos de inicio de sesión vive en memoria del backend y se reinicia con él. El doble factor de autenticación, solicitado por el director de proyecto, sigue pendiente.
-- Migración de registros históricos físicos (cuadernos y agenda de contabilidad) al sistema, con apoyo de inteligencia artificial, sigue en fase de diseño.
+- La migración de los registros históricos físicos (cuadernos y agenda de contabilidad) sigue pendiente para el Sprint 5: el PDF de los cuadernos se dividirá en cerca de diez partes y se compararán varias herramientas de inteligencia artificial para elegir la que extraiga los datos con mayor precisión.
+- Siguen pendientes la generación de reportes y la aplicación móvil híbrida (`.apk`) planeada.
 
 ## 12. Créditos y referencias
 
