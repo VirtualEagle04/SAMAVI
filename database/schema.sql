@@ -340,7 +340,8 @@ CREATE TABLE auditoria (
     id_usuario integer NOT NULL,
     tabla_afectada varchar(50) NOT NULL,
     id_registro_afectado varchar(50) NOT NULL,
-    accion varchar(20) NOT NULL CHECK (accion IN ('INSERT', 'UPDATE', 'DELETE')),
+    -- LOGIN: inicio de sesión exitoso (tabla usuario, registro = id del usuario).
+    accion varchar(20) NOT NULL CHECK (accion IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN')),
     datos_anteriores json,
     datos_nuevos json,
     fecha_hora timestamp NOT NULL DEFAULT now(),

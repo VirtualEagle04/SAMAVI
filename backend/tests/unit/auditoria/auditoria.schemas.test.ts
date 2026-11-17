@@ -35,8 +35,12 @@ describe("parseAuditoriaQuery", () => {
     });
   });
 
+  it("acepta filtrar por inicios de sesión", () => {
+    expect(parseAuditoriaQuery({ accion: "LOGIN" })).toEqual({ accion: "LOGIN", page: 1, limit: 25 });
+  });
+
   it.each([
-    [{ accion: "LOGIN" }],
+    [{ accion: "LOGOUT" }],
     [{ usuarioId: "0" }],
     [{ usuarioId: "abc" }],
     [{ desde: "2026-02-30" }],

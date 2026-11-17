@@ -12,7 +12,7 @@ export type AuditoriaFilters = {
   limit: number;
 };
 
-const ACCIONES: readonly AccionAuditoria[] = ["INSERT", "UPDATE", "DELETE"];
+const ACCIONES: readonly AccionAuditoria[] = ["INSERT", "UPDATE", "DELETE", "LOGIN"];
 const LIMIT_POR_DEFECTO = 25;
 const LIMIT_MAXIMO = 100;
 
@@ -65,7 +65,7 @@ function optionalAccion(value: unknown): AccionAuditoria | undefined {
   }
   const accion = ACCIONES.find((candidate) => candidate === value);
   if (!accion) {
-    throw new AppError(400, "accion debe ser INSERT, UPDATE o DELETE");
+    throw new AppError(400, "accion debe ser INSERT, UPDATE, DELETE o LOGIN");
   }
   return accion;
 }

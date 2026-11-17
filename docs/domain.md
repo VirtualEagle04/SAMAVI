@@ -53,12 +53,14 @@ Se audita toda escritura que hace un usuario:
 - Usuarios: usuarios (`usuario`: crear, editar, activar o desactivar, restablecer contraseña, que se guarda solo como `passwordRestablecida: true`), roles (`rol`: crear, editar, borrar; los permisos asignados van como lista de códigos en antes y después) y descripción de permisos (`permiso`).
 - Cierre semanal: gastos (crear, borrar), cierre y reapertura de la semana.
 
+También se registra cada inicio de sesión exitoso: `accion = 'LOGIN'`, tabla `usuario`, registro = id del usuario, con su login y rol en `datos_nuevos` y la IP de origen.
+
 El registro se escribe en la misma transacción que el cambio. Si el cambio falla, no queda registro, así que hoy no hay registros con `resultado = 'FALLIDO'`.
 
 No se auditan:
 
 - Los conteos del ESP32: llegan por MQTT sin usuario y en gran volumen, y `log_conteo` ya es su traza.
-- El inicio de sesión: `accion` solo admite `INSERT`, `UPDATE` y `DELETE`.
+- Los intentos de inicio de sesión fallidos: con un login inexistente no hay usuario al que asociarlos (`id_usuario` es obligatorio), y registrar solo los de cuentas existentes haría que el tiempo de respuesta revelara qué cuentas existen. El límite de intentos (`login-limiter`) sigue aplicando.
 
 La IP es `request.ip` de Express. El backend confía solo en proxies de loopback y de red privada (`trust proxy` = `loopback, uniquelocal`: nginx en la red de Docker y el proxy de Vite), así que se guarda la IP del cliente que nginx agrega a `X-Forwarded-For`. El backend no debe exponerse sin nginx delante.
 

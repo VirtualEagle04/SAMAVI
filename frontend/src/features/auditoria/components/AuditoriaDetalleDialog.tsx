@@ -24,6 +24,7 @@ const DESCRIPCION: Record<RegistroAuditoria["accion"], string> = {
   INSERT: "Valores con los que se creó",
   UPDATE: "Valores antes y después del cambio",
   DELETE: "Valores que tenía al eliminarse",
+  LOGIN: "Datos de la sesión iniciada",
 }
 
 function Metadato({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
@@ -59,7 +60,7 @@ function Metadato({ icon, label, value }: { icon: ReactNode; label: string; valu
 }
 
 function ValorCampo({ campo, accion }: { campo: CampoCambio; accion: RegistroAuditoria["accion"] }) {
-  if (accion === "INSERT") return <ValorAuditoria value={campo.despues} />
+  if (accion === "INSERT" || accion === "LOGIN") return <ValorAuditoria value={campo.despues} />
   if (accion === "DELETE") return <ValorAuditoria value={campo.antes} />
   if (!campo.cambio) return <ValorAuditoria value={campo.despues} />
   return (
